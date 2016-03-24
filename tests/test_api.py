@@ -42,7 +42,6 @@ class HandoverResourceTestCase(HandoverApiTestCase):
         rv = self.app.get('/handovers/1')
         assert rv.status_code == 200
 
-    # COMMIT all this junk
 
 if __name__ == '__main__':
     unittest.main()
