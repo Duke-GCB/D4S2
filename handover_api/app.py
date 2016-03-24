@@ -12,6 +12,7 @@ api.add_resource(Handover, '/handovers/<string:id>')
 api.add_resource(Draft, '/drafts', '/drafts/<string:id>')
 
 def main(debug=True):
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
     db.create_all()
     app.run(debug=debug)
 
