@@ -47,6 +47,9 @@ class HandoverResourceTestCase(HandoverApiTestCase):
         rv = self.app.post('/handovers/',data=json.dumps(handover))
         assert rv.status_code == 201 # CREATED
 
+    def testPostDuplicateHandover(self):
+        self.fail('not yet implemented')
+        
 class HandoverSchemaTestCase(HandoverApiTestCase):
 
     def testDeserialize(self):
