@@ -1,8 +1,8 @@
 from flask_restful import Resource, abort
-from models import HandoverModel
+from models import HandoverModel, db
 from schemas import HandoverSchema
 
-from flask import jsonify
+from flask import jsonify, request
 
 
 class HandoverApiResource(Resource):
@@ -13,10 +13,21 @@ class HandoverApiResource(Resource):
 class HandoverList(HandoverApiResource):
     def __init__(self):
         self.schema = HandoverSchema(many=True)
+
     def get(self):
         handovers = HandoverModel.query.all()
         result = self.schema.dump(handovers)
         return jsonify(results=result.data)
+
+    def post(self):
+        print request.data
+        payload = self.schema.load(request.json, many=False)
+        h = payload.data
+        db.session.add(h)
+        db.session.commit()
+        response_data = self.schema.dump(h, many=False)
+        print response_data.data
+        return response_data.data, 201
 
 
 class Handover(HandoverApiResource):

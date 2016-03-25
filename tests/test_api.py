@@ -42,6 +42,21 @@ class HandoverResourceTestCase(HandoverApiTestCase):
         rv = self.app.get('/handovers/1')
         assert rv.status_code == 200
 
+    def testPostHandover(self):
+        handover = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
+        rv = self.app.post('/handovers/',data=json.dumps(handover))
+        assert rv.status_code == 201 # CREATED
+
+class HandoverSchemaTestCase(HandoverApiTestCase):
+
+    def testDeserialize(self):
+        handover_dict = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
+        schema = schemas.HandoverSchema()
+        deserialized = schema.load(handover_dict)
+        handover = deserialized.data
+        self.assertEqual(handover.project_id, 'project-id-2')
+        self.assertEqual(handover.from_user_id, 'user1')
+        self.assertEqual(handover.to_user_id, 'user2')
 
 if __name__ == '__main__':
     unittest.main()
