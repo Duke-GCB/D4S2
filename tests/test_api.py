@@ -29,7 +29,6 @@ class HandoverResourceTestCase(HandoverApiTestCase):
 
     def testNotFound(self):
         rv = self.client.get('/handovers/131')
-        assert "handover 131 doesn't exist" in rv.data
         assert rv.status_code == 404
 
     def createHandover(self, project_id, from_user, to_user):
@@ -72,6 +71,10 @@ class HandoverResourceTestCase(HandoverApiTestCase):
         rv = self.client.delete('/handovers/1', headers=self.headers)
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(self.countHandovers(), 0)
+
+    def testFailDeleteHandover(self):
+        rv = self.client.delete('/handovers/1', headers=self.headers)
+        self.assertEqual(rv.status_code, 404)
 
 
 class HandoverSchemaTestCase(HandoverApiTestCase):

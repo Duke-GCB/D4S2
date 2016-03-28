@@ -6,9 +6,6 @@ from flask import jsonify, request
 
 
 class HandoverApiResource(Resource):
-    def not_found(self, name, id):
-        abort(404, message="{} {} doesn't exist".format(name, id))
-
     def fail(self, action, name, error):
         abort(400, message="Unable to {} {}: {}".format(action, name, error))
 
@@ -40,9 +37,7 @@ class Handover(HandoverApiResource):
         self.schema = HandoverSchema(many=False)
 
     def get(self, id):
-        handover = HandoverModel.query.get(id)
-        if handover is None:
-            self.not_found('handover', id)
+        handover = HandoverModel.query.filter_by(id=id).first_or_404()
         result = self.schema.dump(handover)
         return jsonify(result.data)
 
@@ -51,24 +46,23 @@ class Handover(HandoverApiResource):
         if errors:
             return jsonify(errors), 422
 
-        existing = HandoverModel.query.get(id)
+        handover = HandoverModel.query.filter_by(id=id).first_or_404()
         for k, v in request.json.iteritems():
-            setattr(existing, k, v)
+            setattr(handover, k, v)
         try:
             db.session.commit()
         except Exception as e:
             self.fail('update', 'handover', e)
-        response_data = self.schema.dump(existing, many=False)
+        response_data = self.schema.dump(handover, many=False)
         return response_data.data, 200
 
     def delete(self, id):
-        existing = HandoverModel.query.get(id)
-        db.session.delete(existing)
+        handover = HandoverModel.query.filter_by(id=id).first_or_404()
+        db.session.delete(handover)
         try:
             db.session.commit()
         except Exception as e:
-            self.fail('update', 'handover', e)
-        response_data = self.schema.dump(existing, many=False)
+            self.fail('delete', 'handover', e)
         return {}, 200
 
 class Draft(Resource):
