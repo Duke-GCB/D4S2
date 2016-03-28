@@ -5,18 +5,16 @@ from schemas import HandoverSchema
 from flask import jsonify, request
 
 
-class HandoverApiResource(Resource):
+class ApiResource(Resource):
     def fail(self, action, name, error):
         abort(400, message="Unable to {} {}: {}".format(action, name, error))
 
 
-class HandoverList(HandoverApiResource):
-    def __init__(self):
-        self.schema = HandoverSchema(many=True)
+class ListResource(ApiResource):
 
     def get(self):
-        handovers = HandoverModel.query.all()
-        result, error = self.schema.dump(handovers)
+        objects = self.model.query.all()
+        result, error = self.schema.dump(objects)
         return jsonify(results=result)
 
     def post(self):
@@ -27,12 +25,19 @@ class HandoverList(HandoverApiResource):
         try:
             db.session.commit()
         except Exception as e:
-            self.fail('create', 'handover', e)
+            self.fail('create', self.name, e)
         response_data = self.schema.dump(deserialized, many=False)
         return response_data.data, 201
 
 
-class Handover(HandoverApiResource):
+class HandoverList(ListResource):
+    def __init__(self):
+        self.schema = HandoverSchema(many=True)
+        self.name = 'handover'
+        self.model = HandoverModel
+
+
+class Handover(ApiResource):
     def __init__(self):
         self.schema = HandoverSchema(many=False)
 
