@@ -29,6 +29,37 @@ class ListResource(ApiResource):
         response_data = self.schema.dump(deserialized, many=False)
         return response_data.data, 201
 
+class SingleResource(ApiResource):
+
+    def get(self, id):
+        object = self.model.query.filter_by(id=id).first_or_404()
+        result = self.schema.dump(object)
+        return jsonify(result.data)
+
+    def put(self, id):
+        deserialized, errors = self.schema.load(request.json, many=False)
+        if errors:
+            return jsonify(errors), 422
+
+        object = self.model.query.filter_by(id=id).first_or_404()
+        for k, v in request.json.iteritems():
+            setattr(object, k, v)
+        try:
+            db.session.commit()
+        except Exception as e:
+            self.fail('update', self.name, e)
+        response_data = self.schema.dump(object, many=False)
+        return response_data.data, 200
+
+    def delete(self, id):
+        object = self.model.query.filter_by(id=id).first_or_404()
+        db.session.delete(object)
+        try:
+            db.session.commit()
+        except Exception as e:
+            self.fail('delete', self.name, e)
+        return {}, 200
+
 
 class HandoverList(ListResource):
     def __init__(self):
@@ -37,38 +68,12 @@ class HandoverList(ListResource):
         self.model = HandoverModel
 
 
-class Handover(ApiResource):
+class Handover(SingleResource):
     def __init__(self):
         self.schema = HandoverSchema(many=False)
+        self.name = 'handover'
+        self.model = HandoverModel
 
-    def get(self, id):
-        handover = HandoverModel.query.filter_by(id=id).first_or_404()
-        result = self.schema.dump(handover)
-        return jsonify(result.data)
-
-    def put(self, id):
-        deserialized, errors = self.schema.load(request.json, many=False)
-        if errors:
-            return jsonify(errors), 422
-
-        handover = HandoverModel.query.filter_by(id=id).first_or_404()
-        for k, v in request.json.iteritems():
-            setattr(handover, k, v)
-        try:
-            db.session.commit()
-        except Exception as e:
-            self.fail('update', 'handover', e)
-        response_data = self.schema.dump(handover, many=False)
-        return response_data.data, 200
-
-    def delete(self, id):
-        handover = HandoverModel.query.filter_by(id=id).first_or_404()
-        db.session.delete(handover)
-        try:
-            db.session.commit()
-        except Exception as e:
-            self.fail('delete', 'handover', e)
-        return {}, 200
 
 class Draft(Resource):
     def get(self):
