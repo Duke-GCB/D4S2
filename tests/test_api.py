@@ -9,11 +9,11 @@ class HandoverApiTestCase(unittest.TestCase):
 
     def setUp(self):
         self.db_fd, self.database_file = tempfile.mkstemp()
-        self.client = app.app.test_client()
-        db = models.db
-        app.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + self.database_file
-        db.create_all()
-        self.session = db.session
+        self.app = app.create_app('sqlite:///' + self.database_file)
+        self.client = self.app.test_client()
+        with self.app.app_context():
+            models.db.create_all()
+
 
     def tearDown(self):
         os.close(self.db_fd)
@@ -34,8 +34,9 @@ class HandoverResourceTestCase(HandoverApiTestCase):
 
     def createHandover(self, project_id, from_user, to_user):
         h = models.HandoverModel(project_id, from_user, to_user)
-        self.session.add(h)
-        self.session.commit()
+        with self.app.app_context():
+            models.db.session.add(h)
+            models.db.session.commit()
 
     def testGetHandover(self):
         self.createHandover('project-id-1','from', 'to')
