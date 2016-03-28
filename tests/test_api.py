@@ -9,9 +9,10 @@ class HandoverApiTestCase(unittest.TestCase):
 
     def setUp(self):
         self.db_fd, self.database_file = tempfile.mkstemp()
-        self.app = app.create_app('sqlite:///' + self.database_file)
-        self.client = self.app.test_client()
+        handover_api = app.create_app('sqlite:///' + self.database_file)
+        self.client = handover_api.test_client()
         models.db.create_all()
+        self.session = models.db.session
 
 
     def tearDown(self):
@@ -33,8 +34,8 @@ class HandoverResourceTestCase(HandoverApiTestCase):
 
     def createHandover(self, project_id, from_user, to_user):
         h = models.HandoverModel(project_id, from_user, to_user)
-        models.db.session.add(h)
-        models.db.session.commit()
+        self.session.add(h)
+        self.session.commit()
 
     def testGetHandover(self):
         self.createHandover('project-id-1','from', 'to')
