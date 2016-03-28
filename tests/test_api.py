@@ -25,11 +25,11 @@ class HandoverResourceTestCase(HandoverApiTestCase):
     def testEmptyList(self):
         rv = self.client.get('/handovers/')
         payload = json.loads(rv.data)
-        assert len(payload['results']) == 0
+        self.assertEqual(len(payload['results']), 0)
 
     def testNotFound(self):
         rv = self.client.get('/handovers/131')
-        assert rv.status_code == 404
+        self.assertEqual(rv.status_code, 404)
 
     def createHandover(self, project_id, from_user, to_user):
         h = models.HandoverModel(project_id, from_user, to_user)
@@ -42,28 +42,28 @@ class HandoverResourceTestCase(HandoverApiTestCase):
     def testGetHandover(self):
         self.createHandover('project-id-1','from', 'to')
         rv = self.client.get('/handovers/1')
-        assert rv.status_code == 200
+        self.assertEqual(rv.status_code, 200)
 
     def testPostHandover(self):
         handover = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
-        assert rv.status_code == 201 # CREATED
+        self.assertEqual(rv.status_code, 201) # CREATED
 
     def testPostHandoverDuplicate(self):
         handover = {'project_id':'project-id-1', 'from_user_id': 'me', 'to_user_id': 'you'}
         rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
-        assert rv.status_code == 201 # CREATED
+        self.assertEqual(rv.status_code, 201) # CREATED
         rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
-        assert rv.status_code == 400 # Bad request
+        self.assertEqual(rv.status_code, 400) # Bad request
 
     def testPutHandover(self):
         handover = {'project_id':'project-id-1', 'from_user_id': 'me', 'to_user_id': 'you'}
         rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
-        assert "user2" not in rv.data
+        self.assertNotIn('user2', rv.data)
         handover['from_user_id'] = 'user2'
         rv = self.client.put('/handovers/1', headers=self.headers, data=json.dumps(handover))
-        assert rv.status_code == 200
-        assert "user2" in rv.data
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('user2',rv.data)
 
     def testDeleteHandover(self):
         self.createHandover('project-id-abc','frank','tom')
