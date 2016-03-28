@@ -62,32 +62,38 @@ class SingleResource(ApiResource):
         return {}, 200
 
 
-class HandoverList(ListResource):
-    def __init__(self):
-        self.schema = HandoverSchema(many=True)
+class HandoverBase(object):
+    def __init__(self, many):
+        self.schema = HandoverSchema(many=many)
         self.name = 'handover'
         self.model = HandoverModel
 
 
-class Handover(SingleResource):
+class HandoverList(HandoverBase, ListResource):
     def __init__(self):
-        self.schema = HandoverSchema(many=False)
-        self.name = 'handover'
-        self.model = HandoverModel
+        super(HandoverList, self).__init__(True)
 
 
-class UserList(ListResource):
+class Handover(HandoverBase, SingleResource):
     def __init__(self):
-        self.schema = UserSchema(many=True)
+        super(Handover, self).__init__(False)
+
+
+class UserBase(object):
+    def __init__(self, many):
+        self.schema = UserSchema(many=many)
         self.name = 'user'
         self.model = UserModel
 
 
-class User(SingleResource):
+class UserList(UserBase, ListResource):
     def __init__(self):
-        self.schema = UserSchema(many=False)
-        self.name = 'user'
-        self.model = UserModel
+        super(UserList, self).__init__(True)
+
+
+class User(UserBase, SingleResource):
+    def __init__(self):
+        super(User, self).__init__(False)
 
 
 class Draft(Resource):
