@@ -1,11 +1,12 @@
 from flask_restful import Resource, abort
-from models import HandoverModel, db
-from schemas import HandoverSchema
+from models import HandoverModel, UserModel, db
+from schemas import HandoverSchema, UserSchema
 
 from flask import jsonify, request
 
 
 class ApiResource(Resource):
+
     def fail(self, action, name, error):
         abort(400, message="Unable to {} {}: {}".format(action, name, error))
 
@@ -73,6 +74,20 @@ class Handover(SingleResource):
         self.schema = HandoverSchema(many=False)
         self.name = 'handover'
         self.model = HandoverModel
+
+
+class UserList(ListResource):
+    def __init__(self):
+        self.schema = UserSchema(many=True)
+        self.name = 'user'
+        self.model = UserModel
+
+
+class User(SingleResource):
+    def __init__(self):
+        self.schema = UserSchema(many=False)
+        self.name = 'user'
+        self.model = UserModel
 
 
 class Draft(Resource):
