@@ -32,4 +32,3 @@ class HandoverModel(db.Model):
 
 class DraftModel(HandoverModel):
     states = ['Notified']
-    pass
