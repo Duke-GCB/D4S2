@@ -9,6 +9,8 @@ class HandoverApiResource(Resource):
     def not_found(self, name, id):
         abort(404, message="{} {} doesn't exist".format(name, id))
 
+    def fail(self, action, name, error):
+        abort(400, message="Unable to {} {}: {}".format(action, error))
 
 class HandoverList(HandoverApiResource):
     def __init__(self):
@@ -24,9 +26,11 @@ class HandoverList(HandoverApiResource):
         payload = self.schema.load(request.json, many=False)
         h = payload.data
         db.session.add(h)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            self.fail('create', 'handover', e)
         response_data = self.schema.dump(h, many=False)
-        print response_data.data
         return response_data.data, 201
 
 
