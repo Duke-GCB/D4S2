@@ -37,6 +37,9 @@ class HandoverResourceTestCase(HandoverApiTestCase):
         self.session.add(h)
         self.session.commit()
 
+    def countHandovers(self):
+        return len(models.HandoverModel.query.all())
+
     def testGetHandover(self):
         self.createHandover('project-id-1','from', 'to')
         rv = self.client.get('/handovers/1')
@@ -62,6 +65,13 @@ class HandoverResourceTestCase(HandoverApiTestCase):
         rv = self.client.put('/handovers/1', headers=self.headers, data=json.dumps(handover))
         assert rv.status_code == 200
         assert "user2" in rv.data
+
+    def testDeleteHandover(self):
+        self.createHandover('project-id-abc','frank','tom')
+        self.assertEqual(self.countHandovers(), 1)
+        rv = self.client.delete('/handovers/1', headers=self.headers)
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(self.countHandovers(), 0)
 
 
 class HandoverSchemaTestCase(HandoverApiTestCase):

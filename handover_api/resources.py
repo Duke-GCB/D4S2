@@ -12,14 +12,15 @@ class HandoverApiResource(Resource):
     def fail(self, action, name, error):
         abort(400, message="Unable to {} {}: {}".format(action, name, error))
 
+
 class HandoverList(HandoverApiResource):
     def __init__(self):
         self.schema = HandoverSchema(many=True)
 
     def get(self):
         handovers = HandoverModel.query.all()
-        result = self.schema.dump(handovers)
-        return jsonify(results=result.data)
+        result, error = self.schema.dump(handovers)
+        return jsonify(results=result)
 
     def post(self):
         deserialized, errors = self.schema.load(request.json, many=False)
@@ -60,6 +61,15 @@ class Handover(HandoverApiResource):
         response_data = self.schema.dump(existing, many=False)
         return response_data.data, 200
 
+    def delete(self, id):
+        existing = HandoverModel.query.get(id)
+        db.session.delete(existing)
+        try:
+            db.session.commit()
+        except Exception as e:
+            self.fail('update', 'handover', e)
+        response_data = self.schema.dump(existing, many=False)
+        return {}, 200
 
 class Draft(Resource):
     def get(self):
