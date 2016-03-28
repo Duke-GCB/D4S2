@@ -1,5 +1,5 @@
 from marshmallow import Schema, fields, post_load
-from models import HandoverModel
+from models import HandoverModel, UserModel
 class HandoverSchema(Schema):
     id = fields.Int(dump_only=True)
     project_id = fields.Str()
@@ -10,3 +10,12 @@ class HandoverSchema(Schema):
     @post_load
     def make_handover(self, data):
         return HandoverModel(**data)
+
+class UserSchema(Schema):
+    id = fields.Int(dump_only=True)
+    dds_id = fields.Str()
+    api_key = fields.Str()
+
+    @post_load
+    def make_user(self, data):
+        return UserModel(**data)
