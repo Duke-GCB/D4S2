@@ -48,6 +48,7 @@ class HandoverResourceTestCase(ApiTestCase):
         handover = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
         self.assertEqual(rv.status_code, 201) # CREATED
+        self.assertIn('Initiated', rv.data) # Initial state should be initiated
 
     def testPostHandoverDuplicate(self):
         handover = {'project_id':'project-id-1', 'from_user_id': 'me', 'to_user_id': 'you'}
@@ -173,6 +174,7 @@ class DraftResourceTestCase(ApiTestCase):
         draft = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         rv = self.client.post('/drafts/', headers=self.headers, data=json.dumps(draft))
         self.assertEqual(rv.status_code, 201) # CREATED
+        self.assertIn('Notified', rv.data) # Initial state should be notified
 
     def testPostDraftDuplicate(self):
         draft = {'project_id':'project-id-1', 'from_user_id': 'me', 'to_user_id': 'you'}
