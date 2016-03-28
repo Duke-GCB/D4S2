@@ -10,7 +10,7 @@ class HandoverApiResource(Resource):
         abort(404, message="{} {} doesn't exist".format(name, id))
 
     def fail(self, action, name, error):
-        abort(400, message="Unable to {} {}: {}".format(action, error))
+        abort(400, message="Unable to {} {}: {}".format(action, name, error))
 
 class HandoverList(HandoverApiResource):
     def __init__(self):
