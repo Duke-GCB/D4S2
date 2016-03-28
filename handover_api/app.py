@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_restful import Api
-from resources import Handover, HandoverList, Draft
+from resources import Handover, HandoverList, User, UserList, Draft
 from models import db
 
 
@@ -10,7 +10,8 @@ def create_app(database_uri):
 
     api.add_resource(HandoverList, '/handovers/')
     api.add_resource(Handover, '/handovers/<string:id>')
-
+    api.add_resource(UserList, '/users/')
+    api.add_resource(User, '/users/<string:id>')
     api.add_resource(Draft, '/drafts', '/drafts/<string:id>')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
