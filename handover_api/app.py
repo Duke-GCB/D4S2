@@ -15,14 +15,14 @@ def create_app(database_uri):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
     db.init_app(app)
+    db.app = app
     return app
 
 
 
 def main(debug=True):
     app = create_app('sqlite:////tmp/test.db')
-    with app.app_context():
-        db.create_all()
+    db.create_all()
     app.run(debug=debug)
 
 if __name__ == "__main__":
