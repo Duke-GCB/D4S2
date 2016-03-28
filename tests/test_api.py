@@ -6,13 +6,13 @@ from handover_api import app, models, schemas
 
 
 class HandoverApiTestCase(unittest.TestCase):
-
     def setUp(self):
         self.db_fd, self.database_file = tempfile.mkstemp()
         handover_api = app.create_app('sqlite:///' + self.database_file)
         self.client = handover_api.test_client()
         models.db.create_all()
         self.session = models.db.session
+        self.headers = {'content-type': 'application/json'}
 
 
     def tearDown(self):
@@ -44,15 +44,24 @@ class HandoverResourceTestCase(HandoverApiTestCase):
 
     def testPostHandover(self):
         handover = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
-        rv = self.client.post('/handovers/', headers={'content-type': 'application/json'}, data=json.dumps(handover))
+        rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
         assert rv.status_code == 201 # CREATED
 
     def testPostHandoverDuplicate(self):
         handover = {'project_id':'project-id-1', 'from_user_id': 'me', 'to_user_id': 'you'}
-        rv = self.client.post('/handovers/', headers={'content-type': 'application/json'}, data=json.dumps(handover))
+        rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
         assert rv.status_code == 201 # CREATED
-        rv = self.client.post('/handovers/', headers={'content-type': 'application/json'}, data=json.dumps(handover))
+        rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
         assert rv.status_code == 400 # Bad request
+
+    def testPutHandover(self):
+        handover = {'project_id':'project-id-1', 'from_user_id': 'me', 'to_user_id': 'you'}
+        rv = self.client.post('/handovers/', headers=self.headers, data=json.dumps(handover))
+        assert "user2" not in rv.data
+        handover['from_user_id'] = 'user2'
+        rv = self.client.put('/handovers/1', headers=self.headers, data=json.dumps(handover))
+        assert rv.status_code == 200
+        assert "user2" in rv.data
 
 
 class HandoverSchemaTestCase(HandoverApiTestCase):

@@ -22,26 +22,43 @@ class HandoverList(HandoverApiResource):
         return jsonify(results=result.data)
 
     def post(self):
-        payload = self.schema.load(request.json, many=False)
-        h = payload.data
-        db.session.add(h)
+        deserialized, errors = self.schema.load(request.json, many=False)
+        if errors:
+            return jsonify(errors), 422
+        db.session.add(deserialized)
         try:
             db.session.commit()
         except Exception as e:
             self.fail('create', 'handover', e)
-        response_data = self.schema.dump(h, many=False)
+        response_data = self.schema.dump(deserialized, many=False)
         return response_data.data, 201
 
 
 class Handover(HandoverApiResource):
     def __init__(self):
         self.schema = HandoverSchema(many=False)
+
     def get(self, id):
         handover = HandoverModel.query.get(id)
         if handover is None:
             self.not_found('handover', id)
         result = self.schema.dump(handover)
         return jsonify(result.data)
+
+    def put(self, id):
+        deserialized, errors = self.schema.load(request.json, many=False)
+        if errors:
+            return jsonify(errors), 422
+
+        existing = HandoverModel.query.get(id)
+        for k, v in request.json.iteritems():
+            setattr(existing, k, v)
+        try:
+            db.session.commit()
+        except Exception as e:
+            self.fail('update', 'handover', e)
+        response_data = self.schema.dump(existing, many=False)
+        return response_data.data, 200
 
 
 class Draft(Resource):

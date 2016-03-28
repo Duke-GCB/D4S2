@@ -2,7 +2,6 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-
 class UserModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dds_id = db.Column(db.String(36), unique=True) # UUID
