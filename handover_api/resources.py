@@ -22,7 +22,6 @@ class HandoverList(HandoverApiResource):
         return jsonify(results=result.data)
 
     def post(self):
-        print request.data
         payload = self.schema.load(request.json, many=False)
         h = payload.data
         db.session.add(h)

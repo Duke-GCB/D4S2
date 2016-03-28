@@ -9,9 +9,9 @@ class HandoverApiTestCase(unittest.TestCase):
 
     def setUp(self):
         self.db_fd, self.database_file = tempfile.mkstemp()
-        app.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://' + self.database_file
-        self.app = app.app.test_client()
+        self.client = app.app.test_client()
         db = models.db
+        app.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + self.database_file
         db.create_all()
         self.session = db.session
 
@@ -23,12 +23,12 @@ class HandoverApiTestCase(unittest.TestCase):
 class HandoverResourceTestCase(HandoverApiTestCase):
 
     def testEmptyList(self):
-        rv = self.app.get('/handovers/')
+        rv = self.client.get('/handovers/')
         payload = json.loads(rv.data)
         assert len(payload['results']) == 0
 
     def testNotFound(self):
-        rv = self.app.get('/handovers/131')
+        rv = self.client.get('/handovers/131')
         assert "handover 131 doesn't exist" in rv.data
         assert rv.status_code == 404
 
@@ -39,17 +39,22 @@ class HandoverResourceTestCase(HandoverApiTestCase):
 
     def testGetHandover(self):
         self.createHandover('project-id-1','from', 'to')
-        rv = self.app.get('/handovers/1')
+        rv = self.client.get('/handovers/1')
         assert rv.status_code == 200
 
     def testPostHandover(self):
         handover = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
-        rv = self.app.post('/handovers/',data=json.dumps(handover))
+        rv = self.client.post('/handovers/', headers={'content-type': 'application/json'}, data=json.dumps(handover))
         assert rv.status_code == 201 # CREATED
 
-    def testPostDuplicateHandover(self):
-        self.fail('not yet implemented')
-        
+    def testPostHandoverDuplicate(self):
+        handover = {'project_id':'project-id-1', 'from_user_id': 'me', 'to_user_id': 'you'}
+        rv = self.client.post('/handovers/', headers={'content-type': 'application/json'}, data=json.dumps(handover))
+        assert rv.status_code == 201 # CREATED
+        rv = self.client.post('/handovers/', headers={'content-type': 'application/json'}, data=json.dumps(handover))
+        assert rv.status_code == 400 # Bad request
+
+
 class HandoverSchemaTestCase(HandoverApiTestCase):
 
     def testDeserialize(self):
