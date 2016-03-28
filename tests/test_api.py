@@ -5,7 +5,7 @@ import json
 from handover_api import app, models, schemas
 
 
-class HandoverApiTestCase(unittest.TestCase):
+class ApiTestCase(unittest.TestCase):
     def setUp(self):
         self.db_fd, self.database_file = tempfile.mkstemp()
         handover_api = app.create_app('sqlite:///' + self.database_file)
@@ -20,7 +20,7 @@ class HandoverApiTestCase(unittest.TestCase):
         os.unlink(self.database_file)
 
 
-class HandoverResourceTestCase(HandoverApiTestCase):
+class HandoverResourceTestCase(ApiTestCase):
 
     def testEmptyList(self):
         rv = self.client.get('/handovers/')
@@ -77,7 +77,7 @@ class HandoverResourceTestCase(HandoverApiTestCase):
         self.assertEqual(rv.status_code, 404)
 
 
-class HandoverSchemaTestCase(HandoverApiTestCase):
+class HandoverSchemaTestCase(ApiTestCase):
 
     def testDeserialize(self):
         handover_dict = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
@@ -87,6 +87,63 @@ class HandoverSchemaTestCase(HandoverApiTestCase):
         self.assertEqual(handover.project_id, 'project-id-2')
         self.assertEqual(handover.from_user_id, 'user1')
         self.assertEqual(handover.to_user_id, 'user2')
+
+class UserResourceTestCase(ApiTestCase):
+
+    def testEmptyList(self):
+        rv = self.client.get('/users/')
+        payload = json.loads(rv.data)
+        self.assertEqual(len(payload['results']), 0)
+
+    def testNotFound(self):
+        rv = self.client.get('/users/131')
+        self.assertEqual(rv.status_code, 404)
+
+    def createUser(self, dds_id, api_key):
+        u = models.UserModel(dds_id, api_key)
+        self.session.add(u)
+        self.session.commit()
+
+    def countUsers(self):
+        return len(models.UserModel.query.all())
+
+    def testGetUser(self):
+        self.createUser('abcd1234','bbbbcvd')
+        rv = self.client.get('/users/1')
+        self.assertEqual(rv.status_code, 200)
+
+    def testPostUser(self):
+        user = {'dds_id': 'abaca22d2d', 'api_key': 'bzrwski124141' }
+        rv = self.client.post('/users/', headers=self.headers, data=json.dumps(user))
+        self.assertEqual(rv.status_code, 201) # CREATED
+
+    def testPostUserDuplicate(self):
+        user = {'dds_id': 'abaca22d2d', 'api_key': 'bzrwski124141' }
+        rv = self.client.post('/users/', headers=self.headers, data=json.dumps(user))
+        self.assertEqual(rv.status_code, 201) # CREATED
+        rv = self.client.post('/users/', headers=self.headers, data=json.dumps(user))
+        self.assertEqual(rv.status_code, 400) # Bad request
+
+    def testPutUser(self):
+        user = {'dds_id': 'abaca22d2d', 'api_key': 'api_key_value_1' }
+        rv = self.client.post('/users/', headers=self.headers, data=json.dumps(user))
+        self.assertNotIn('api_key_value_2', rv.data)
+        user['api_key'] = 'api_key_value_2'
+        rv = self.client.put('/users/1', headers=self.headers, data=json.dumps(user))
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('api_key_value_2',rv.data)
+
+    def testDeleteUser(self):
+        self.createUser('abcd1234','bbbbcvd')
+        self.assertEqual(self.countUsers(), 1)
+        rv = self.client.delete('/users/1', headers=self.headers)
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(self.countUsers(), 0)
+
+    def testFailDeleteUser(self):
+        rv = self.client.delete('/users/1', headers=self.headers)
+        self.assertEqual(rv.status_code, 404)
+
 
 if __name__ == '__main__':
     unittest.main()
