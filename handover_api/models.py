@@ -29,3 +29,7 @@ class HandoverModel(db.Model):
         self.from_user_id = from_user_id
         self.to_user_id = to_user_id
         self.state = self.states[0]
+
+class DraftModel(HandoverModel):
+    states = ['Notified']
+    pass

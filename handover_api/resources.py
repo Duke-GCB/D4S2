@@ -1,6 +1,6 @@
 from flask_restful import Resource, abort
-from models import HandoverModel, UserModel, db
-from schemas import HandoverSchema, UserSchema
+from models import HandoverModel, UserModel, DraftModel, db
+from schemas import HandoverSchema, UserSchema, DraftSchema
 
 from flask import jsonify, request
 
@@ -96,7 +96,18 @@ class User(UserBase, SingleResource):
         super(User, self).__init__(False)
 
 
-class Draft(Resource):
-    def get(self):
-        return [{'draft' : 1024}]
+class DraftBase(object):
+    def __init__(self, many):
+        self.schema = DraftSchema(many=many)
+        self.name = 'draft'
+        self.model = DraftModel
 
+
+class Draft(DraftBase, SingleResource):
+    def __init__(self):
+        super(Draft, self).__init__(False)
+
+
+class DraftList(DraftBase, ListResource):
+    def __init__(self):
+        super(DraftList, self).__init__(True)
