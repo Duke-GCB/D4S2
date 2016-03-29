@@ -1,6 +1,6 @@
-from handover_api.models import User, Handover, Draft
 from rest_framework import viewsets
-from serializers import UserSerializer, HandoverSerializer, DraftSerializer
+from handover_api.models import User, Handover, Draft
+from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
