@@ -1,10 +1,6 @@
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
+db = SQLAlchemy()
 
 class UserModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -33,3 +29,6 @@ class HandoverModel(db.Model):
         self.from_user_id = from_user_id
         self.to_user_id = to_user_id
         self.state = self.states[0]
+
+class DraftModel(HandoverModel):
+    states = ['Notified']

@@ -1,18 +1,29 @@
 from flask import Flask
 from flask_restful import Api
-from resources import Handover, HandoverList, Draft
+from resources import Handover, HandoverList, User, UserList, Draft, DraftList
 from models import db
 
-app = Flask(__name__)
-api = Api(app)
 
-api.add_resource(HandoverList, '/handovers/')
-api.add_resource(Handover, '/handovers/<string:id>')
+def create_app(database_uri):
+    app = Flask(__name__)
+    api = Api(app)
 
-api.add_resource(Draft, '/drafts', '/drafts/<string:id>')
+    api.add_resource(HandoverList, '/handovers/')
+    api.add_resource(Handover, '/handovers/<string:id>')
+    api.add_resource(UserList, '/users/')
+    api.add_resource(User, '/users/<string:id>')
+    api.add_resource(DraftList, '/drafts/')
+    api.add_resource(Draft, '/drafts/<string:id>')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+    db.init_app(app)
+    db.app = app
+    return app
+
+
 
 def main(debug=True):
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+    app = create_app('sqlite:////tmp/test.db')
     db.create_all()
     app.run(debug=debug)
 
