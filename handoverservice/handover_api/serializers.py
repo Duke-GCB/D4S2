@@ -1,4 +1,4 @@
-from models import Handover, Draft, User
+from handover_api.models import Handover, Draft, User
 from rest_framework import serializers
 
 
