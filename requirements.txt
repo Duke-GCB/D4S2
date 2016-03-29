@@ -1,2 +1,6 @@
 Django==1.9.4
 djangorestframework==3.3.3
+DukeDSClient==0.2.2
+passlib==1.6.5
+PyYAML==3.11
+requests==2.9.1
