@@ -2,9 +2,9 @@ from django.db import IntegrityError
 from django.test import TestCase
 from handover_api.models import User, Handover, Draft, State
 
-# Test the Models
 
 class HandoverTestCase(TestCase):
+
     def setUp(self):
         Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
 
@@ -20,7 +20,9 @@ class HandoverTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
 
+
 class DraftTestCase(TestCase):
+
     def setUp(self):
         Draft.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
 
@@ -35,6 +37,7 @@ class DraftTestCase(TestCase):
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
             Draft.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+
 
 class UserTestCase(TestCase):
 
@@ -53,5 +56,3 @@ class UserTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             User.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
 
-
-# Test the views
