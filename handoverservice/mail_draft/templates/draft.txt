@@ -1,0 +1,14 @@
+Order: {{ order_number }}
+Description: {{ project_name }}
+Status: {{ status }}
+Contents: {{ contents }}
+
+Hello {{ recipient_name }},
+
+{{ sender_name }} has sent you a data set, which can be previewed at {{ data_url }}.
+
+After you have reviewed the draft, please contact {{ sender_email }} or reply to this message so that the data can be finalized and handed over.
+
+Regards,
+
+{{ signature }}

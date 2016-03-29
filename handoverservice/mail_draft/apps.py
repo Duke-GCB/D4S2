@@ -4,4 +4,4 @@ from django.apps import AppConfig
 
 
 class MailerConfig(AppConfig):
-    name = 'mailer'
+    name = 'mail_draft'
