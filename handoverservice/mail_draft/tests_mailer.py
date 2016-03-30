@@ -12,8 +12,6 @@ class MailerTestCase(TestCase):
         context = {
             'order_number': 12345,
             'project_name': 'Project ABC',
-            'status' : 'Draft',
-            'contents' : '12 folders, 3 files',
             'recipient_name': 'Receiver Name',
             'sender_name': 'Sender Name',
             'sender_email': sender_email,
@@ -22,7 +20,6 @@ class MailerTestCase(TestCase):
         }
         message = generate_message(sender_email, rcpt_email, subject, template_name, context)
         self.assertIn('Sender Name has sent you a data set, which can be previewed at http://domain.com/data.', message.body)
-        self.assertIn('Contents: 12 folders, 3 files', message.body)
         self.assertIn('please contact sender@domain.com', message.body)
         self.assertEqual(sender_email, message.from_email)
         self.assertIn(rcpt_email, message.to)

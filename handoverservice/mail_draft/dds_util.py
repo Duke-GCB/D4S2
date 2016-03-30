@@ -21,3 +21,9 @@ class DDSUtil(object):
     def get_remote_user(self, user_id):
         return self.remote_store.fetch_user(user_id)
 
+    def get_remote_project(self, project_id):
+        return self.remote_store.fetch_remote_project_by_id(project_id)
+
+    def get_project_url(self, project_id):
+        return 'https://{}/portal/#/project/{}'.format(self.remote_store.config.get_url_base(), project_id)
+

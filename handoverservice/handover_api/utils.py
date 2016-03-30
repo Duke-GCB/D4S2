@@ -7,20 +7,20 @@ def send_draft(draft):
         ddsutil = DDSUtil(draft.from_user_id)
         sender = ddsutil.get_remote_user(draft.from_user_id)
         receiver = ddsutil.get_remote_user(draft.to_user_id)
+        project = ddsutil.get_remote_project(draft.project_id)
+        data_url = ddsutil.get_project_url(draft.project_id)
     except ValueError as e:
-        raise ValueError(e, message='Unable to retrieve email addresses from DukeDS')
+        raise ValueError(e, message='Unable to retrieve information from DukeDS')
     template_name = 'draft.txt'
-    subject = "You've got data!"
+    subject = 'Data ready for Project {}'.format(project.name)
     context = {
-        'order_number': 12345,
-        'project_name': 'Project ABC',
+        'project_name': project.name,
         'status': 'Draft',
-        'contents': '12 folders, 3 files',
         'recipient_name': receiver.full_name,
         'sender_name': sender.full_name,
         'sender_email': sender.email,
-        'data_url': 'http://domain.com/data',
-        'signature': 'Sender Co\n123Fake St\nAnytown WA 90909',
+        'data_url': data_url,
+        'signature': 'Duke Center for Genomic and Computational Biology\nInformatics\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions'
     }
     message = generate_message(sender.email, receiver.email, subject, template_name, context)
     message.send()
