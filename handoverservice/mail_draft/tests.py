@@ -1,6 +1,7 @@
 from django.test import TestCase
 from mail_draft.mailer import generate_message
-from mail_draft.dds_util import DDSUtil
+from handover_api.models import User
+import mock
 
 class MailerTestCase(TestCase):
 
@@ -27,17 +28,20 @@ class MailerTestCase(TestCase):
         self.assertEqual(sender_email, message.from_email)
         self.assertIn(rcpt_email, message.to)
 
+
 class DDSUtilTestCase(TestCase):
-
-    def testGetEmail(self):
-        from handover_api.models import User
-
-        # Requires user with an API key
-        dds_id = 'abcd-1234-efgh-9696'
-        User.objects.create(dds_id=dds_id, api_key='uhn3wk7h24ighg8i2')
+    @mock.patch('ddsc.core.remotestore.RemoteStore')
+    def testGetEmail(self, mockRemoteStore):
+        user_id = 'abcd-1234-efgh-8876'
+        email = 'example@domain.com'
+        # Mock a remote user object, and bind it to fetch_user
+        remote_user = mock.Mock()
+        remote_user.email = email
+        instance = mockRemoteStore.return_value
+        instance.fetch_user.return_value = remote_user
+        # Only import DDSUtil once we've patched RemoteStore
+        from dds_util import DDSUtil
+        User.objects.create(dds_id=user_id, api_key='uhn3wk7h24ighg8i2')
         with self.settings(DDSCLIENT_PROPERTIES={}):
-            dds_util = DDSUtil(dds_id)
-            email_address = dds_util.get_email_address(dds_id)
-            self.assertEqual(email_address, 'sender@domain.com')
-
-
+            dds_util = DDSUtil(user_id)
+            self.assertEqual(email, dds_util.get_email_address(user_id))
