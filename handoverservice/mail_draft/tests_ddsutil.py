@@ -1,5 +1,6 @@
 from django.test import TestCase
 from handover_api.models import User
+from django.core.exceptions import ObjectDoesNotExist
 import mock
 import mail_draft
 from mail_draft.dds_util import DDSUtil
@@ -28,3 +29,11 @@ class DDSUtilTestCase(TestCase):
             ddsutil = DDSUtil(user_id)
             self.assertEqual(email, ddsutil.get_email_address(user_id))
             self.assertTrue(instance.fetch_user.called)
+
+    def testFailsWithoutAPIKeyUser(self):
+        with self.settings(DDSCLIENT_PROPERTIES={}):
+            self.assertEqual(len(User.objects.all()), 0)
+            with self.assertRaises(ObjectDoesNotExist):
+                ddsutil = DDSUtil('abcd-efgh-1234-5678')
+                ddsutil.remote_store
+
