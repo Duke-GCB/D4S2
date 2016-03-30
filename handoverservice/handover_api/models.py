@@ -50,6 +50,13 @@ class Draft(models.Model):
     to_user_id = models.CharField(max_length=36, null=False)
     state = models.IntegerField(choices=State.DRAFT_CHOICES, default=State.INITIATED, null=False)
 
+    def is_notified(self):
+        return self.state == State.NOTIFIED
+
+    def mark_notified(self, save=True):
+        self.state = State.NOTIFIED
+        if save: self.save()
+
     def __str__(self):
         return 'Draft <Project: {}, From: {}, To: {}, State: {}>'.format(
             self.project_id, self.from_user_id, self.to_user_id, State.HANDOVER_CHOICES[self.state][1]
