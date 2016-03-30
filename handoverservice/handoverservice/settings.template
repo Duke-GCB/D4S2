@@ -125,6 +125,6 @@ STATIC_URL = '/static/'
 
 # DDSCLIENT config
 DDSCLIENT_CONFIG = {
-  'url': ''
-  'agent_key': ''
+  'url': '',
+  'agent_key': '',
 }
