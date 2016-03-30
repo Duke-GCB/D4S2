@@ -18,5 +18,6 @@ class DDSUtil(object):
             self._remote_store = RemoteStore(config)
         return self._remote_store
 
-    def get_email_address(self, user_id):
-        return self.remote_store.fetch_user(user_id).email
+    def get_remote_user(self, user_id):
+        return self.remote_store.fetch_user(user_id)
+

@@ -27,7 +27,7 @@ class DDSUtilTestCase(TestCase):
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
             ddsutil = DDSUtil(user_id)
-            self.assertEqual(email, ddsutil.get_email_address(user_id))
+            self.assertEqual(email, ddsutil.get_remote_user(user_id).email)
             self.assertTrue(instance.fetch_user.called)
 
     def testFailsWithoutAPIKeyUser(self):
