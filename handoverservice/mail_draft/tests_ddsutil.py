@@ -14,7 +14,7 @@ class DDSUtilTestCase(TestCase):
         instance = mockRemoteStore.return_value
         instance.fetch_user.return_value = remote_user
         # Only import DDSUtil once we've patched RemoteStore
-        from dds_util import DDSUtil
+        from mail_draft.dds_util import DDSUtil
         User.objects.create(dds_id=user_id, api_key='uhn3wk7h24ighg8i2')
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
