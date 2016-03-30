@@ -123,6 +123,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Email
+# For development we'll just use the console backend.
+# It writes emails to the console and does not send them
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 # DukeDSClient configuration
 DDSCLIENT_PROPERTIES = {
   'url': '',
