@@ -123,8 +123,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# DDSCLIENT config
-DDSCLIENT_CONFIG = {
+# DukeDSClient configuration
+DDSCLIENT_PROPERTIES = {
   'url': '',
   'agent_key': '',
 }
