@@ -15,6 +15,7 @@ class State(object):
     NOTIFIED = 1
     ACCEPTED = 2
     REJECTED = 3
+    FAILED = 4
     STATES = (
         (INITIATED, 'Initiated'),
         (NOTIFIED, 'Notified'),
@@ -23,7 +24,9 @@ class State(object):
     )
     HANDOVER_CHOICES = STATES
     DRAFT_CHOICES = (
+        (INITIATED, 'Initiated'),
         (NOTIFIED, 'Notified'),
+        (FAILED, 'Failed'),
     )
 
 
@@ -45,7 +48,7 @@ class Draft(models.Model):
     project_id = models.CharField(max_length=36, null=False)
     from_user_id = models.CharField(max_length=36, null=False)
     to_user_id = models.CharField(max_length=36, null=False)
-    state = models.IntegerField(choices=State.DRAFT_CHOICES, default=State.NOTIFIED, null=False)
+    state = models.IntegerField(choices=State.DRAFT_CHOICES, default=State.INITIATED, null=False)
 
     def __str__(self):
         return 'Draft <Project: {}, From: {}, To: {}, State: {}>'.format(
