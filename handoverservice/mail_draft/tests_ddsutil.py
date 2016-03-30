@@ -1,6 +1,8 @@
 from django.test import TestCase
 from handover_api.models import User
 import mock
+import mail_draft
+from mail_draft.dds_util import DDSUtil
 
 
 class DDSUtilTestCase(TestCase):
@@ -14,10 +16,10 @@ class DDSUtilTestCase(TestCase):
         instance = mockRemoteStore.return_value
         instance.fetch_user.return_value = remote_user
         # Only import DDSUtil once we've patched RemoteStore
-        from mail_draft.dds_util import DDSUtil
+        reload(mail_draft.dds_util)
         User.objects.create(dds_id=user_id, api_key='uhn3wk7h24ighg8i2')
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
-            dds_util = DDSUtil(user_id)
-            self.assertEqual(email, dds_util.get_email_address(user_id))
+            ddsutil = DDSUtil(user_id)
+            self.assertEqual(email, ddsutil.get_email_address(user_id))
             self.assertTrue(instance.fetch_user.called)
