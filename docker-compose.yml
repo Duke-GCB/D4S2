@@ -1,0 +1,12 @@
+version: '2'
+services:
+  db:
+    image: postgres
+  web:
+    build: .
+    image: dukegcb/handoverservice
+    env_file: handoverservice.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
