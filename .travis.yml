@@ -5,6 +5,6 @@ python:
 # command to install dependencies
 install:
   - pip install -r requirements.txt
-  - cp handoverservice/handoverservice/settings.template handoverservice/handoverservice/settings.py
+  - cp handoverservice/settings.template handoverservice/settings.py
 # command to run tests
-script: cd handoverservice && python manage.py test
+script: python manage.py test
