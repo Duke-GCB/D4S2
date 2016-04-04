@@ -28,7 +28,7 @@ class DraftTestCase(TestCase):
 
     def test_initial_state(self):
         draft = Draft.objects.first()
-        self.assertEqual(draft.state, State.NOTIFIED, 'New drafts should be in notified state')
+        self.assertEqual(draft.state, State.INITIATED, 'New drafts should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(IntegrityError):

@@ -1,7 +1,9 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.exceptions import APIException
+from rest_framework.decorators import detail_route
 from handover_api.models import User, Handover, Draft
 from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
-
+from handover_api.utils import send_draft
 
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -19,9 +21,23 @@ class HandoverViewSet(viewsets.ModelViewSet):
     serializer_class = HandoverSerializer
 
 
+class AlreadyNotifiedException(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = 'Already notified'
+
+
 class DraftViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows drafts to be viewed or edited.
     """
     queryset = Draft.objects.all()
     serializer_class = DraftSerializer
+
+    @detail_route(methods=['POST'])
+    def send(self, request, pk=None):
+        draft = self.get_object()
+        if draft.is_notified():
+            raise AlreadyNotifiedException()
+        send_draft(draft)
+        draft.mark_notified(True)
+        return self.retrieve(request)

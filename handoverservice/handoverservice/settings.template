@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'handover_api'
+    'handover_api',
+    'mail_draft',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -121,3 +122,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Email
+# For development we'll just use the console backend.
+# It writes emails to the console and does not send them
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# DukeDSClient configuration
+DDSCLIENT_PROPERTIES = {
+  'url': '',
+  'agent_key': '',
+}
