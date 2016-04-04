@@ -9,7 +9,7 @@ Installation
 1. Clone the repository
 2. Install dependencies
 
-        pip install requirements.txt
+        pip install -r requirements.txt
 
 3. Create a settings.py file:
 
@@ -43,7 +43,7 @@ The Handover Service communicates with the Duke Data Service API as a software a
         $ curl -X POST \
           -H "Content-Type: application/json" \
           -d '{"dds_id":"your-uuid","api_key":"your-user-key"}' \
-          http://127.0.0.1:8000/api/v1/users
+          http://127.0.0.1:8000/api/v1/users/
           {"id":1,"url":"http://127.0.0.1:8000/api/v1/users/1/","dds_id":"xxxx","api_key":"xxxx"}
 
 ## Sending a Draft
