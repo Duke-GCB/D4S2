@@ -10,7 +10,7 @@ def send_draft(draft):
         project = ddsutil.get_remote_project(draft.project_id)
         data_url = ddsutil.get_project_url(draft.project_id)
     except ValueError as e:
-        raise ValueError(e, message='Unable to retrieve information from DukeDS')
+        raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
     template_name = 'draft.txt'
     subject = 'Data ready for Project {}'.format(project.name)
     context = {
