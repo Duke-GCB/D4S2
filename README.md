@@ -13,7 +13,7 @@ Installation
 
 3. Create a settings.py file:
 
-        cp handoverservice/handoverservice/settings.template handoverservice/handoverservice/settings.py
+        cp handoverservice/settings.template handoverservice/settings.py
 
 4. Edit the `settings.py` file to populate the `DDSCLIENT_PROPERTIES` with a the DukeDS API URL and a software agent key, e.g.
 
@@ -24,7 +24,6 @@ Installation
 
 5. Create the database schema:
 
-        $ cd handoverservice
         $ python manage.py migrate
 
 6. Start the app:
