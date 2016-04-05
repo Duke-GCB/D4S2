@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'handover_api',
     'mail_draft',
+    'crispy_forms',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -127,6 +128,10 @@ STATIC_URL = '/static/'
 # For development we'll just use the console backend.
 # It writes emails to the console and does not send them
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+}
+
 
 # DukeDSClient configuration
 DDSCLIENT_PROPERTIES = {
