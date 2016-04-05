@@ -2,6 +2,7 @@ version: '2'
 services:
   db:
     image: postgres
+    env_file: handoverservice.env
   web:
     build: .
     image: dukegcb/handoverservice
