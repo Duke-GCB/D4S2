@@ -1,0 +1,17 @@
+version: '2'
+services:
+  db:
+    image: postgres
+    env_file: handoverservice.env
+  web:
+    build: .
+    image: dukegcb/handoverservice
+    env_file: handoverservice.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    entrypoint:
+      - /usr/src/app/handoverservice/wait-for-postgres.sh
+      - db
+    command: python manage.py runserver 0.0.0.0:8000

@@ -3,17 +3,17 @@ DukeDS Handover Service
 
 Web service to facilitate notification and transfer of projects in DukeDS
 
-Installation
-============
+Installation - Local
+====================
 
 1. Clone the repository
 2. Install dependencies
 
         pip install -r requirements.txt
 
-3. Create a settings.py file:
+3. Create a `settings.py` file:
 
-        cp handoverservice/handoverservice/settings.template handoverservice/handoverservice/settings.py
+        cp handoverservice/settings.template handoverservice/settings.py
 
 4. Edit the `settings.py` file to populate the `DDSCLIENT_PROPERTIES` with a the DukeDS API URL and a software agent key, e.g.
 
@@ -24,7 +24,6 @@ Installation
 
 5. Create the database schema:
 
-        $ cd handoverservice
         $ python manage.py migrate
 
 6. Start the app:
@@ -32,6 +31,35 @@ Installation
         $ python manage.py runserver
 
 7. The server is running and the API can be explored at [http://127.0.0.1:8000/api/v1/](http://127.0.0.1:8000/api/v1/)
+
+
+Installation - Docker Compose
+=============================
+
+1. Clone the repository
+2. Create a `handoverservice.env` file
+
+        cp handoverservice.env.sample handoverservice.env
+
+3. Edit the `handoverservice.env` file to populate the your DukeDS API details, a django key, and a database username/password to use:
+
+        HANDOVERSERVICE_SECRET_KEY=some-random-string
+        HANDOVERSERVICE_DDSCLIENT_URL=https://dataservice-host/api/v1
+        HANDOVERSERVICE_DDSCLIENT_AGENT_KEY=your-agent-key
+        POSTGRES_USER=handover_user
+        POSTGRES_PASSWORD=some-random-password
+        POSTGRES_DB=handover
+
+4. Create the database schema:
+
+        $ docker-compose run web python manage.py migrate
+
+5. Start the app:
+
+        $ docker-compose up
+
+6. The server is running and the API can be explored at  [http://your-docker-host:8000/api/v1/](http://your-docker-host:8000/api/v1/)
+
 
 Usage
 =====
