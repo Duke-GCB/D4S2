@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
 from handover_api.models import User, Handover, Draft
@@ -11,6 +11,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    filter_fields = ('dds_id',)
 
 
 class HandoverViewSet(viewsets.ModelViewSet):
@@ -19,6 +20,7 @@ class HandoverViewSet(viewsets.ModelViewSet):
     """
     queryset = Handover.objects.all()
     serializer_class = HandoverSerializer
+    filter_fields = ('project_id', 'from_user_id', 'to_user_id',)
 
 
 class AlreadyNotifiedException(APIException):
@@ -32,6 +34,7 @@ class DraftViewSet(viewsets.ModelViewSet):
     """
     queryset = Draft.objects.all()
     serializer_class = DraftSerializer
+    filter_fields = ('project_id', 'from_user_id', 'to_user_id',)
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
