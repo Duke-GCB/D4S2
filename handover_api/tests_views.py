@@ -110,6 +110,26 @@ class DraftViewTestCase(APITestCase):
         self.assertTrue(d.is_notified())
         self.assertTrue(mock_draft.called)
 
+    @patch('handover_api.views.send_draft')
+    def test_send_draft_fails(self, mock_draft):
+        d =  Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        self.assertFalse(d.is_notified())
+        d.mark_notified()
+        url = reverse('draft-send', args=(d.pk,))
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(mock_draft.called)
+
+    @patch('handover_api.views.send_draft')
+    def test_force_send_draft(self, mock_draft):
+        d =  Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        self.assertFalse(d.is_notified())
+        d.mark_notified()
+        url = reverse('draft-send', args=(d.pk,))
+        response = self.client.post(url, data={'force': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(mock_draft.called)
+
     def test_filter_drafts(self):
         Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
         url = reverse('draft-list')
