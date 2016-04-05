@@ -3,6 +3,12 @@ from __future__ import unicode_literals
 from django.db import models
 
 class User(models.Model):
+    """
+    Represents a DukeDS user. Keeps track of their API key. The API key
+    is used when the corresponding user invokes an action that requires
+    communication with DukeDS (e.g. mailing a draft or performing handover)
+
+    """
     dds_id = models.CharField(max_length=36, null=False, unique=True)
     api_key = models.CharField(max_length=36, null=False)
 
@@ -11,6 +17,9 @@ class User(models.Model):
 
 
 class State(object):
+    """
+    States for handover and draft objects
+    """
     INITIATED = 0
     NOTIFIED = 1
     ACCEPTED = 2
@@ -31,6 +40,15 @@ class State(object):
 
 
 class Handover(models.Model):
+    """
+    Represents a handover of a project from one user to another
+    Handovers keep track of the project, sender, and recipient by their DukeDS IDs.
+    When a handover is notified, an email is sent to the recipient with an acceptance
+    link. The recipient can accept or reject the handover. On acceptance, the DukeDS
+    API is contacted to transfer ownership from the sender to the receiver.
+    The state indicates the current progress of the handover, and are enumerated
+    above.
+    """
     project_id = models.CharField(max_length=36, null=False)
     from_user_id = models.CharField(max_length=36, null=False)
     to_user_id = models.CharField(max_length=36, null=False)
@@ -45,6 +63,13 @@ class Handover(models.Model):
         unique_together = ('project_id', 'from_user_id', 'to_user_id')
 
 class Draft(models.Model):
+    """
+    Represents a non-destructive preview of a project from one user to another.
+    Drafts keep track of the project, sender, and recipient by their DukeDS IDs.
+    Drafts can be sent, which looks up user/project details and sends an email to the
+    recipient with a preview link. States are enumerated above.
+
+    """
     project_id = models.CharField(max_length=36, null=False)
     from_user_id = models.CharField(max_length=36, null=False)
     to_user_id = models.CharField(max_length=36, null=False)
