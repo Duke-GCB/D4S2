@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-
+from mock import patch
 from handover_api.views import *
 from handover_api.models import *
 
@@ -88,6 +88,18 @@ class DraftViewTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d =  Draft.objects.get(pk=d.pk)
         self.assertEqual(d.project_id, 'project3')
+
+    @patch('handover_api.views.send_draft')
+    def test_send_draft(self, mock_draft):
+        d =  Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        self.assertFalse(d.is_notified())
+        url = reverse('draft-send', args=(d.pk,))
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        d = Draft.objects.get(pk=d.pk)
+        self.assertTrue(d.is_notified())
+        self.assertTrue(mock_draft.called)
+
 
 class UserViewTestCase(APITestCase):
 
