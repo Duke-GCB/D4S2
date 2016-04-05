@@ -1,5 +1,5 @@
-from mail_draft.mailer import generate_message
-from mail_draft.dds_util import DDSUtil
+from switchboard.mailer import generate_message
+from switchboard.dds_util import DDSUtil
 
 def send_draft(draft):
     """
