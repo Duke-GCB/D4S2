@@ -47,6 +47,16 @@ class HandoverViewTestCase(APITestCase):
         h = Handover.objects.get(pk=h.pk)
         self.assertEqual(h.project_id, 'project3')
 
+    def test_filter_handovers(self):
+        Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        url = reverse('handover-list')
+        response=self.client.get(url, {'project_id': 'project2'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        response=self.client.get(url, {'project_id': 'project23'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
 
 class DraftViewTestCase(APITestCase):
 
@@ -100,6 +110,16 @@ class DraftViewTestCase(APITestCase):
         self.assertTrue(d.is_notified())
         self.assertTrue(mock_draft.called)
 
+    def test_filter_drafts(self):
+        Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        url = reverse('draft-list')
+        response=self.client.get(url, {'to_user_id': 'touser1'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        response=self.client.get(url, {'project_id': 'project23'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
 
 class UserViewTestCase(APITestCase):
 
@@ -142,6 +162,20 @@ class UserViewTestCase(APITestCase):
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(User.objects.count(), 0)
+
+    def test_filter_users(self):
+        User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('user-list')
+        response = self.client.get(url, {'dds_id': 'abcd-1234-efgh-5678'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        response = self.client.get(url, {'dds_id': 'abcd-1234-efgh-5673'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+        # Can't filter on API key,  so this should be ignored
+        response = self.client.get(url, {'api_key': 'invalid'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
 
 
 
