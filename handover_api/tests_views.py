@@ -163,7 +163,6 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
 
 
 class UserViewTestCase(AuthenticatedResourceTestCase):
-
     def test_fails_unauthenticated(self):
         self.client.logout()
         url = reverse('dukedsuser-list')
@@ -171,7 +170,11 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_user(self):
-        data = {'dds_id': 'abcd-1234-efgh-5678', 'api_key': 'zxdel8h4g3lvnkqenlf/z'}
+        user_id = django_user.objects.all()[0].pk
+        data = {'dds_id': 'abcd-1234-efgh-5678',
+                'api_key': 'zxdel8h4g3lvnkqenlf/z',
+                'user_id': user_id,
+                }
         url = reverse('dukedsuser-list')
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -195,9 +198,13 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.data['dds_id'],'abcd-1234-efgh-5678')
 
     def test_update_user(self):
+        user_id = django_user.objects.all()[0].pk
         u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
         url = reverse('dukedsuser-detail', args=(u.pk,))
-        data = {'dds_id':'abcd-5555-0000-ffff', 'api_key':'zxdel8h4g3lvnkqenlf'}
+        data = {'dds_id':'abcd-5555-0000-ffff',
+                'api_key':'zxdel8h4g3lvnkqenlf',
+                'user_id': user_id
+                }
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         u = DukeDSUser.objects.get(pk=u.pk)
