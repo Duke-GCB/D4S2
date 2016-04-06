@@ -1,8 +1,13 @@
-from mail_draft.mailer import generate_message
-from mail_draft.dds_util import DDSUtil
+from switchboard.mailer import generate_message
+from switchboard.dds_util import DDSUtil
 
 def send_draft(draft):
-    # Create a DDSUtil object with the sender's API key
+    """
+    Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
+    in a models.Draft object. Then calls generate_message with email addresses, subject, and the details to
+    generate an EmailMessage object, which can be .send()ed.
+    """
+
     try:
         ddsutil = DDSUtil(draft.from_user_id)
         sender = ddsutil.get_remote_user(draft.from_user_id)
@@ -20,7 +25,8 @@ def send_draft(draft):
         'sender_name': sender.full_name,
         'sender_email': sender.email,
         'data_url': data_url,
-        'signature': 'Duke Center for Genomic and Computational Biology\nInformatics\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions'
+        'signature': 'Duke Center for Genomic and Computational Biology\n'
+                     'http://www.genome.duke.edu/cores-and-services/computational-solutions'
     }
     message = generate_message(sender.email, receiver.email, subject, template_name, context)
     message.send()

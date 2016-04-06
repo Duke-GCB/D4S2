@@ -39,7 +39,11 @@ class DraftViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         draft = self.get_object()
-        if draft.is_notified():
+        if 'force' in request.data:
+            force = request.data['force']
+        else:
+            force = False
+        if draft.is_notified() and not force:
             raise AlreadyNotifiedException()
         send_draft(draft)
         draft.mark_notified(True)

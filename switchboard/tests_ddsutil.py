@@ -2,14 +2,14 @@ from django.test import TestCase
 from handover_api.models import User
 from django.core.exceptions import ObjectDoesNotExist
 import mock
-from mail_draft.dds_util import DDSUtil
+from switchboard.dds_util import DDSUtil
 
 
 class DDSUtilTestCase(TestCase):
     def setUp(self):
         self.user_id = 'abcd-1234-efgh-8876'
 
-    @mock.patch('mail_draft.dds_util.RemoteStore')
+    @mock.patch('switchboard.dds_util.RemoteStore')
     def testGetEmail(self, mockRemoteStore):
         email = 'example@domain.com'
         # Mock a remote user object, and bind it to fetch_user
@@ -24,7 +24,7 @@ class DDSUtilTestCase(TestCase):
             self.assertEqual(email, ddsutil.get_remote_user(self.user_id).email)
             self.assertTrue(instance.fetch_user.called)
 
-    @mock.patch('mail_draft.dds_util.RemoteStore')
+    @mock.patch('switchboard.dds_util.RemoteStore')
     def testGetProject(self, mockRemoteStore):
         project_id = '8677-11231-44414-4442'
         project_name = 'Project ABC'

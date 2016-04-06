@@ -1,5 +1,5 @@
 from django.test import TestCase
-from mail_draft.mailer import generate_message
+from switchboard.mailer import generate_message
 from handover_api.models import User
 
 class MailerTestCase(TestCase):

@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'handover_api',
-    'mail_draft',
+    'switchboard',
     'crispy_forms',
 ]
 

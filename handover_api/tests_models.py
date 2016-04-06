@@ -10,7 +10,7 @@ class HandoverTestCase(TestCase):
 
     def test_initial_state(self):
         handover = Handover.objects.first()
-        self.assertEqual(handover.state, State.INITIATED, 'New handovers should be in initiated state')
+        self.assertEqual(handover.state, State.NEW, 'New handovers should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(IntegrityError):
@@ -28,7 +28,7 @@ class DraftTestCase(TestCase):
 
     def test_initial_state(self):
         draft = Draft.objects.first()
-        self.assertEqual(draft.state, State.INITIATED, 'New drafts should be in initiated state')
+        self.assertEqual(draft.state, State.NEW, 'New drafts should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(IntegrityError):
