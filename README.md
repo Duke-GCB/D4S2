@@ -26,6 +26,10 @@ Installation - Local
 
         $ python manage.py migrate
 
+6. Create a superuser (A user account is required for making authenticated API requests)
+
+        $ python manage.py createsuperuser
+
 6. Start the app:
 
         $ python manage.py runserver
@@ -54,11 +58,15 @@ Installation - Docker Compose
 
         $ docker-compose run web python manage.py migrate
 
-5. Start the app:
+5. Create a superuser (A user account is required for making authenticated API requests)
+
+        $ docker-compose run web python manage.py createsuperuser
+
+6. Start the app:
 
         $ docker-compose up
 
-6. The server is running and the API can be explored at  [http://your-docker-host:8000/api/v1/](http://your-docker-host:8000/api/v1/)
+7. The server is running and the API can be explored at  [http://your-docker-host:8000/api/v1/](http://your-docker-host:8000/api/v1/)
 
 
 Usage
@@ -66,7 +74,7 @@ Usage
 
 The Handover Service communicates with the Duke Data Service API as a software agent. For this to work, users must register their UDID and User Key with the Handover service, so that it may act on their behalf.
 
-## Registering a user
+## Registering a DukeDS user
 
         $ curl -X POST \
           -H "Content-Type: application/json" \

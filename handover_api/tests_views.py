@@ -4,9 +4,24 @@ from rest_framework.test import APITestCase
 from mock import patch
 from handover_api.views import *
 from handover_api.models import *
+from django.contrib.auth.models import User as django_user
 
 
-class HandoverViewTestCase(APITestCase):
+class AuthenticatedResourceTestCase(APITestCase):
+    def setUp(self):
+        username = 'api_user'
+        password = 'secret'
+        django_user.objects.create_user(username, password=password)
+        self.client.login(username=username, password=password)
+
+
+class HandoverViewTestCase(AuthenticatedResourceTestCase):
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('handover-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_handover(self):
         url = reverse('handover-list')
@@ -58,7 +73,13 @@ class HandoverViewTestCase(APITestCase):
         self.assertEqual(len(response.data), 0)
 
 
-class DraftViewTestCase(APITestCase):
+class DraftViewTestCase(AuthenticatedResourceTestCase):
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('draft-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_draft(self):
         url = reverse('draft-list')
@@ -141,7 +162,13 @@ class DraftViewTestCase(APITestCase):
         self.assertEqual(len(response.data), 0)
 
 
-class UserViewTestCase(APITestCase):
+class UserViewTestCase(AuthenticatedResourceTestCase):
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('user-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_user(self):
         data = {'dds_id': 'abcd-1234-efgh-5678', 'api_key': 'zxdel8h4g3lvnkqenlf/z'}
