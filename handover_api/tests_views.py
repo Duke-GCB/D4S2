@@ -4,9 +4,24 @@ from rest_framework.test import APITestCase
 from mock import patch
 from handover_api.views import *
 from handover_api.models import *
+from django.contrib.auth.models import User as django_user
 
 
-class HandoverViewTestCase(APITestCase):
+class AuthenticatedResourceTestCase(APITestCase):
+    def setUp(self):
+        username = 'api_user'
+        password = 'secret'
+        django_user.objects.create_user(username, password=password)
+        self.client.login(username=username, password=password)
+
+
+class HandoverViewTestCase(AuthenticatedResourceTestCase):
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('handover-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_handover(self):
         url = reverse('handover-list')
@@ -58,7 +73,13 @@ class HandoverViewTestCase(APITestCase):
         self.assertEqual(len(response.data), 0)
 
 
-class DraftViewTestCase(APITestCase):
+class DraftViewTestCase(AuthenticatedResourceTestCase):
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('draft-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_draft(self):
         url = reverse('draft-list')
@@ -141,51 +162,64 @@ class DraftViewTestCase(APITestCase):
         self.assertEqual(len(response.data), 0)
 
 
-class UserViewTestCase(APITestCase):
+class UserViewTestCase(AuthenticatedResourceTestCase):
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('dukedsuser-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_user(self):
-        data = {'dds_id': 'abcd-1234-efgh-5678', 'api_key': 'zxdel8h4g3lvnkqenlf/z'}
-        url = reverse('user-list')
+        user_id = django_user.objects.all()[0].pk
+        data = {'dds_id': 'abcd-1234-efgh-5678',
+                'api_key': 'zxdel8h4g3lvnkqenlf/z',
+                'user_id': user_id,
+                }
+        url = reverse('dukedsuser-list')
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(User.objects.get().dds_id, 'abcd-1234-efgh-5678')
+        self.assertEqual(DukeDSUser.objects.count(), 1)
+        self.assertEqual(DukeDSUser.objects.get().dds_id, 'abcd-1234-efgh-5678')
 
     def test_get_users(self):
-        User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        User.objects.create(dds_id='abcd-1234-efgh-5679', api_key='zxdel8h4g3lvnkqenl7')
-        url = reverse('user-list')
+        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5679', api_key='zxdel8h4g3lvnkqenl7')
+        url = reverse('dukedsuser-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
     def test_get_user(self):
-        u = User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-detail', args=(u.pk,))
+        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-detail', args=(u.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['dds_id'],'abcd-1234-efgh-5678')
 
     def test_update_user(self):
-        u = User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-detail', args=(u.pk,))
-        data = {'dds_id':'abcd-5555-0000-ffff', 'api_key':'zxdel8h4g3lvnkqenlf'}
+        user_id = django_user.objects.all()[0].pk
+        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-detail', args=(u.pk,))
+        data = {'dds_id':'abcd-5555-0000-ffff',
+                'api_key':'zxdel8h4g3lvnkqenlf',
+                'user_id': user_id
+                }
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        u = User.objects.get(pk=u.pk)
+        u = DukeDSUser.objects.get(pk=u.pk)
         self.assertEqual(u.dds_id,'abcd-5555-0000-ffff')
 
     def test_delete_user(self):
-        u = User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-detail', args=(u.pk,))
+        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-detail', args=(u.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(DukeDSUser.objects.count(), 0)
 
     def test_filter_users(self):
-        User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-list')
+        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-list')
         response = self.client.get(url, {'dds_id': 'abcd-1234-efgh-5678'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)

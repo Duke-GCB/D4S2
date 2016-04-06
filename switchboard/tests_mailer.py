@@ -1,6 +1,6 @@
 from django.test import TestCase
 from switchboard.mailer import generate_message
-from handover_api.models import User
+from handover_api.models import DukeDSUser
 
 class MailerTestCase(TestCase):
 

@@ -26,6 +26,10 @@ Installation - Local
 
         $ python manage.py migrate
 
+6. Create a superuser (A user account is required for making authenticated API requests)
+
+        $ python manage.py createsuperuser
+
 6. Start the app:
 
         $ python manage.py runserver
@@ -54,25 +58,39 @@ Installation - Docker Compose
 
         $ docker-compose run web python manage.py migrate
 
-5. Start the app:
+5. Create a superuser (A user account is required for making authenticated API requests)
+
+        $ docker-compose run web python manage.py createsuperuser
+
+6. Start the app:
 
         $ docker-compose up
 
-6. The server is running and the API can be explored at  [http://your-docker-host:8000/api/v1/](http://your-docker-host:8000/api/v1/)
+7. The server is running and the API can be explored at  [http://your-docker-host:8000/api/v1/](http://your-docker-host:8000/api/v1/)
 
 
 Usage
 =====
 
-The Handover Service communicates with the Duke Data Service API as a software agent. For this to work, users must register their UDID and User Key with the Handover service, so that it may act on their behalf.
+## Register a DukeDS user
 
-## Registering a user
+The Handover Service communicates with the Duke Data Service API as a software agent. For this to work, DukeDS users must register their UDID and user key in the handover service. This can be done from the admin interface:
 
-        $ curl -X POST \
-          -H "Content-Type: application/json" \
-          -d '{"dds_id":"your-uuid","api_key":"your-user-key"}' \
-          http://127.0.0.1:8000/api/v1/users/
-          {"id":1,"url":"http://127.0.0.1:8000/api/v1/users/1/","dds_id":"xxxx","api_key":"xxxx"}
+1. Visit http://127.0.0.1:8000/admin/handover_api/dukedsuser/
+2. Login with your superuser account
+3. Click **Add Duke DS User**
+  1. Select or add a User (e.g. the superuser you created)
+  2. Enter the DukeDS UDID of the user and the user's API key
+  3. Click **Save**
+
+## Get a token for authentication
+
+The API requires authentication. To avoid sending username and password in every request, you generate a token for API authentication.
+
+1. Visit http://127.0.0.1:8000/admin/authtoken/token/
+2. Click **Add Token**
+4. Select your the user account and click **Save**
+5. Note the token (e.g. `4a9a367a161d3b2315da17f3f44eaaaf5146b5a2`)
 
 ## Sending a Draft
 
@@ -82,8 +100,9 @@ The term draft is used to refer to a project that is about to be handed over fro
 1. Create a Draft:
 
         $ curl -X POST \
+          -H "Authorization: Token <your-token>"
           -H "Content-Type: application/json" \
-          -d '{"project_id": "project-dds-uuid", "from_user_id": "from-user-uuid", "to_user_id": "5dd78297-1604-457c-87c1-e3a792be16b9"}' \
+          -d '{"project_id": "project-dds-uuid", "from_user_id": "from-user-uuid", "to_user_id": "to-user-uuid"}' \
           http://127.0.0.1:8000/api/v1/drafts/
           {"id":1,"url":"http://127.0.0.1:8000/api/v1/drafts/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":0}
 

@@ -1,4 +1,5 @@
-from handover_api.models import Handover, Draft, User
+from handover_api.models import Handover, Draft, DukeDSUser
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
 
@@ -15,6 +16,7 @@ class DraftSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(source='user', queryset=User.objects.all())
     class Meta:
-        model = User
-        fields = ('id','url','dds_id', 'api_key')
+        model = DukeDSUser
+        fields = ('id', 'user_id','url','dds_id', 'api_key')

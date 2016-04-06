@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import User, Handover, Draft, State
+from handover_api.models import DukeDSUser, Handover, Draft, State
 
 
 class HandoverTestCase(TestCase):
@@ -42,17 +42,17 @@ class DraftTestCase(TestCase):
 class UserTestCase(TestCase):
 
     def setUp(self):
-        User.objects.create(dds_id='abcd-1234-fghi-5678', api_key='zxxsdvasv//aga')
+        DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='zxxsdvasv//aga')
 
     def test_required_fields_dds_id(self):
         with self.assertRaises(IntegrityError):
-            User.objects.create(dds_id=None, api_key='gwegwg')
+            DukeDSUser.objects.create(dds_id=None, api_key='gwegwg')
 
     def test_required_fields_api_key(self):
         with self.assertRaises(IntegrityError):
-            User.objects.create(dds_id='fefwef', api_key=None)
+            DukeDSUser.objects.create(dds_id='fefwef', api_key=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            User.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
+            DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
 

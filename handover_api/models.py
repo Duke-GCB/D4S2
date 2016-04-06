@@ -1,19 +1,21 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from django.contrib.auth.models import User
 
-class User(models.Model):
+class DukeDSUser(models.Model):
     """
     Represents a DukeDS user. Keeps track of their API key. The API key
     is used when the corresponding user invokes an action that requires
     communication with DukeDS (e.g. mailing a draft or performing handover)
 
     """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     dds_id = models.CharField(max_length=36, null=False, unique=True)
     api_key = models.CharField(max_length=36, null=False)
 
     def __str__(self):
-        return 'User <{}>'.format(self.dds_id)
+        return 'DukeDSUser <{}>'.format(self.dds_id)
 
 
 class State(object):

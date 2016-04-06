@@ -1,7 +1,7 @@
 from ddsc.config import Config
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from handover_api.models import User
+from handover_api.models import DukeDSUser
 
 class DDSUtil(object):
     def __init__(self, user_id):
@@ -11,7 +11,7 @@ class DDSUtil(object):
     @property
     def remote_store(self):
         if self._remote_store is None:
-            user = User.objects.get(dds_id=self.sender_user_id)
+            user = DukeDSUser.objects.get(dds_id=self.sender_user_id)
             config = Config()
             config.update_properties(settings.DDSCLIENT_PROPERTIES)
             config.update_properties({'user_key': user.api_key})
