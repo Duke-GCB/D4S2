@@ -5,7 +5,7 @@ services:
     env_file: handoverservice.env
   web:
     build: .
-    image: dukegcb/handoverservice
+    image: dukegcb/dukedshandoverservice
     env_file: handoverservice.env
     ports:
       - "8000:8000"
