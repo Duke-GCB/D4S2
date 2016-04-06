@@ -1,4 +1,4 @@
-from handover_api.models import Handover, Draft, User
+from handover_api.models import Handover, Draft, DukeDSUser
 from rest_framework import serializers
 
 
@@ -16,5 +16,5 @@ class DraftSerializer(serializers.HyperlinkedModelSerializer):
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = User
+        model = DukeDSUser
         fields = ('id','url','dds_id', 'api_key')

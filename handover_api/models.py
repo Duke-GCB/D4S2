@@ -2,7 +2,8 @@ from __future__ import unicode_literals
 
 from django.db import models
 
-class User(models.Model):
+
+class DukeDSUser(models.Model):
     """
     Represents a DukeDS user. Keeps track of their API key. The API key
     is used when the corresponding user invokes an action that requires

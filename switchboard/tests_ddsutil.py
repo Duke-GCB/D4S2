@@ -1,5 +1,5 @@
 from django.test import TestCase
-from handover_api.models import User
+from handover_api.models import DukeDSUser
 from django.core.exceptions import ObjectDoesNotExist
 import mock
 from switchboard.dds_util import DDSUtil
@@ -17,7 +17,7 @@ class DDSUtilTestCase(TestCase):
         remote_user.email = email
         instance = mockRemoteStore.return_value
         instance.fetch_user.return_value = remote_user
-        User.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
             ddsutil = DDSUtil(self.user_id)
@@ -32,7 +32,7 @@ class DDSUtilTestCase(TestCase):
         remote_project.name = project_name
         instance = mockRemoteStore.return_value
         instance.fetch_remote_project_by_id.return_value = remote_project
-        User.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
             ddsutil = DDSUtil(self.user_id)
@@ -41,7 +41,7 @@ class DDSUtilTestCase(TestCase):
 
     def testFailsWithoutAPIKeyUser(self):
         with self.settings(DDSCLIENT_PROPERTIES={}):
-            self.assertEqual(len(User.objects.all()), 0)
+            self.assertEqual(len(DukeDSUser.objects.all()), 0)
             with self.assertRaises(ObjectDoesNotExist):
                 ddsutil = DDSUtil('abcd-efgh-1234-5678')
                 ddsutil.remote_store

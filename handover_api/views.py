@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
-from handover_api.models import User, Handover, Draft
+from handover_api.models import DukeDSUser, Handover, Draft
 from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
 from handover_api.utils import send_draft
 
@@ -15,7 +15,7 @@ class UserViewSet(AuthenticatedModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
-    queryset = User.objects.all()
+    queryset = DukeDSUser.objects.all()
     serializer_class = UserSerializer
     filter_fields = ('dds_id',)
 

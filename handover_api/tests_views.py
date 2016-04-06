@@ -166,53 +166,53 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
         self.client.logout()
-        url = reverse('user-list')
+        url = reverse('dukedsuser-list')
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_user(self):
         data = {'dds_id': 'abcd-1234-efgh-5678', 'api_key': 'zxdel8h4g3lvnkqenlf/z'}
-        url = reverse('user-list')
+        url = reverse('dukedsuser-list')
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(User.objects.get().dds_id, 'abcd-1234-efgh-5678')
+        self.assertEqual(DukeDSUser.objects.count(), 1)
+        self.assertEqual(DukeDSUser.objects.get().dds_id, 'abcd-1234-efgh-5678')
 
     def test_get_users(self):
-        User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        User.objects.create(dds_id='abcd-1234-efgh-5679', api_key='zxdel8h4g3lvnkqenl7')
-        url = reverse('user-list')
+        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5679', api_key='zxdel8h4g3lvnkqenl7')
+        url = reverse('dukedsuser-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
     def test_get_user(self):
-        u = User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-detail', args=(u.pk,))
+        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-detail', args=(u.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['dds_id'],'abcd-1234-efgh-5678')
 
     def test_update_user(self):
-        u = User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-detail', args=(u.pk,))
+        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-detail', args=(u.pk,))
         data = {'dds_id':'abcd-5555-0000-ffff', 'api_key':'zxdel8h4g3lvnkqenlf'}
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        u = User.objects.get(pk=u.pk)
+        u = DukeDSUser.objects.get(pk=u.pk)
         self.assertEqual(u.dds_id,'abcd-5555-0000-ffff')
 
     def test_delete_user(self):
-        u = User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-detail', args=(u.pk,))
+        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-detail', args=(u.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(DukeDSUser.objects.count(), 0)
 
     def test_filter_users(self):
-        User.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
-        url = reverse('user-list')
+        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        url = reverse('dukedsuser-list')
         response = self.client.get(url, {'dds_id': 'abcd-1234-efgh-5678'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
