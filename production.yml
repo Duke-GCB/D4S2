@@ -1,0 +1,17 @@
+version: '2'
+services:
+  db:
+    extends:
+      file: docker-compose.yml
+      service: db
+  web:
+    extends:
+      file: docker-compose.yml
+      service: web
+    build: ./production
+    image: dukegcb/dukedshandoverservice:production
+    ports:
+      - "80:80"
+   entrypoint:
+     - /usr/src/app/handoverservice/wait-for-postgres.sh
+     - db
