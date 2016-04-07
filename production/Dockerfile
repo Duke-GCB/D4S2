@@ -18,6 +18,12 @@ RUN python manage.py collectstatic --noinput
 # Reset the variable to an empty string, requiring it to be provided at runtime
 ENV HANDOVERSERVICE_SECRET_KEY=''
 
+# Volume for SSL certificates
+
+VOLUME /etc/ssl/external/
+
 EXPOSE 80
+EXPOSE 443
+
 CMD supervisord -c /etc/supervisord.conf -n
 
