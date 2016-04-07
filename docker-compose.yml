@@ -14,4 +14,6 @@ services:
     entrypoint:
       - /usr/src/app/handoverservice/wait-for-postgres.sh
       - db
+    # docker-compose doesn't allow specifying the entrypoint while preserving
+    # the Dockerfile's command
     command: python manage.py runserver 0.0.0.0:8000

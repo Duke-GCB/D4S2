@@ -38,3 +38,5 @@ DDSCLIENT_PROPERTIES = {
   'url': os.getenv('HANDOVERSERVICE_DDSCLIENT_URL'),
   'agent_key': os.getenv('HANDOVERSERVICE_DDSCLIENT_AGENT_KEY'),
 }
+
+STATIC_ROOT='/usr/src/app/static'
