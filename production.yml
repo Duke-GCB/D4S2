@@ -1,17 +1,11 @@
 version: '2'
 services:
-  db:
-    extends:
-      file: docker-compose.yml
-      service: db
   web:
-    extends:
-      file: docker-compose.yml
-      service: web
     build: ./production
     image: dukegcb/dukedshandoverservice:production
     ports:
       - "80:80"
-   entrypoint:
-     - /usr/src/app/handoverservice/wait-for-postgres.sh
-     - db
+    # docker-compose doesn't allow specifying the entrypoint while preserving the
+    # Dockerfile's command. Since the base docker-compose file specifies an entrypoint
+    # we must provide the command here.
+    command: supervisord -c /etc/supervisord.conf -n
