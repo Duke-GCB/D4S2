@@ -3,6 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from handover_api.models import Handover
 from handover_api.utils import perform_handover
 from switchboard.dds_util import HandoverDetails
+from ddsc.core.ddsapi import DataServiceError
 
 MISSING_TOKEN_MSG = 'Missing authorization token.'
 INVALID_TOKEN_MSG = 'Invalid authorization token.'
@@ -61,6 +62,8 @@ def response_with_handover(request, func):
             return general_error(request, msg=INVALID_TOKEN_MSG, status=400)
         except ObjectDoesNotExist:
             return general_error(request, msg=TOKEN_NOT_FOUND_MSG, status=404)
+        except DataServiceError as err:
+            return general_error(request, msg=(err), status=500)
     else:
         return general_error(request, msg=MISSING_TOKEN_MSG, status=400)
 
