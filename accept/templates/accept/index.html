@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Accept Handover</title>
+</head>
+<body>
+    <h3>Acknowledge Receipt of Final Results</h3>
+    <p>Click agree to make the final results available to you. This will transfer ownership of the data to you.</p>
+    <form action="{% url 'process' %}" method="post" >
+        {% csrf_token %}
+        <input type="hidden" name="token" value="{{  token }}" >
+        <input type="submit" value="Accept">
+    </form>
+</body>
+</html>

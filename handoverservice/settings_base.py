@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'switchboard',
     'crispy_forms',
     'rest_framework.authtoken',
+    'accept'
 ]
 
 MIDDLEWARE_CLASSES = [
