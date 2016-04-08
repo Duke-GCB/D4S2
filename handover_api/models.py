@@ -65,6 +65,14 @@ class Handover(models.Model):
         self.state = State.NOTIFIED
         if save: self.save()
 
+    def mark_accepted(self, save=True):
+        self.state = State.ACCEPTED
+        if save: self.save()
+
+    def mark_rejected(self, save=True):
+        self.state = State.REJECTED
+        if save: self.save()
+
     def __str__(self):
         return 'Handover <Project: {}, From: {}, To: {}, State: {}>'.format(
             self.project_id, self.from_user_id, self.to_user_id, State.HANDOVER_CHOICES[self.state][1]

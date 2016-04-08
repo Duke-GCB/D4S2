@@ -76,7 +76,8 @@ class ProcessTestCase(TestCase):
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
 
     @patch('accept.views.HandoverDetails')
-    def test_normal_with_token_is_redirect(self, MockHandoverDetails):
+    @patch('accept.views.perform_handover')
+    def test_normal_with_token_is_redirect(self, MockHandoverDetails, mock_perform_handover):
         setup_mock_handover_details(MockHandoverDetails)
         token = create_handover_get_token()
         url = url_with_token('process', token)

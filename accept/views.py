@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.exceptions import ObjectDoesNotExist
 from handover_api.models import Handover
+from handover_api.utils import perform_handover
 from switchboard.dds_util import HandoverDetails
 
 MISSING_TOKEN_MSG = 'Missing authorization token.'
@@ -32,8 +33,12 @@ def process(request):
     Completes handover and redirects user to the project.
     """
     def redirect_view_project(handover):
+        try:
+            perform_handover(handover)
+        except Exception as e:
+            return general_error(request, msg=str(e), status=500)
+        handover.mark_accepted()
         handover_details = HandoverDetails(handover)
-        handover_details.transfer_project()
         url = handover_details.get_project_url()
         return redirect(url)
     return response_with_handover(request, redirect_view_project)
