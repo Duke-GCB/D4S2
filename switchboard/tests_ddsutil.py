@@ -39,6 +39,26 @@ class DDSUtilTestCase(TestCase):
             self.assertEqual(ddsutil.get_remote_project(project_id).name, project_name)
             self.assertTrue(instance.fetch_remote_project_by_id.called)
 
+    @mock.patch('switchboard.dds_util.RemoteStore')
+    def testAddUser(self, mockRemoteStore):
+        instance = mockRemoteStore.return_value
+        instance.set_user_project_permission = mock.Mock()
+        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        with self.settings(DDSCLIENT_PROPERTIES={}):
+            ddsutil = DDSUtil(self.user_id)
+            ddsutil.add_user('userid','projectid','auth_role')
+            self.assertTrue(instance.set_user_project_permission.called)
+
+    @mock.patch('switchboard.dds_util.RemoteStore')
+    def testRemoveUser(self, mockRemoteStore):
+        instance = mockRemoteStore.return_value
+        instance.set_user_project_permission = mock.Mock()
+        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        with self.settings(DDSCLIENT_PROPERTIES={}):
+            ddsutil = DDSUtil(self.user_id)
+            ddsutil.remove_user('userid','projectid')
+            self.assertTrue(instance.revoke_user_project_permission.called)
+
     def testFailsWithoutAPIKeyUser(self):
         with self.settings(DDSCLIENT_PROPERTIES={}):
             self.assertEqual(len(DukeDSUser.objects.all()), 0)

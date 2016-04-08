@@ -33,7 +33,7 @@ def send_draft(draft):
 
 def get_accept_url(handover):
     # TODO: lookup the accept url
-    return 'https://itlab-1.gcb.duke.edu/accept?token=' + handover.token
+    return 'https://itlab-1.gcb.duke.edu/accept?token=' + str(handover.token)
 
 def send_handover(handover):
     """
@@ -65,3 +65,21 @@ def send_handover(handover):
     }
     message = generate_message(sender.email, receiver.email, subject, template_name, context)
     message.send()
+
+def perform_handover(handover):
+    """
+    Communicates with DukeDS via DDSUtil to add the to_user to a project, and remove the from_user.
+    :param handover: A Handover object
+    :return:
+    """
+    auth_role = 'project_admin'
+    try:
+        # Add the to_user to the project, acting as the from_user
+        ddsutil_from = DDSUtil(handover.from_user_id)
+        ddsutil_from.add_user(handover.to_user_id, handover.project_id, auth_role)
+
+        # Now remove the from_user from the project, acting as the to_user
+        ddsutil_to = DDSUtil(handover.to_user_id)
+        ddsutil_to.remove_user(handover.from_user_id, handover.project_id)
+    except ValueError as e:
+        raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
