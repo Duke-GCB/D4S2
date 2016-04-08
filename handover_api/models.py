@@ -58,6 +58,13 @@ class Handover(models.Model):
     state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
 
+    def is_new(self):
+        return self.state == State.NEW
+
+    def mark_notified(self, save=True):
+        self.state = State.NOTIFIED
+        if save: self.save()
+
     def __str__(self):
         return 'Handover <Project: {}, From: {}, To: {}, State: {}>'.format(
             self.project_id, self.from_user_id, self.to_user_id, State.HANDOVER_CHOICES[self.state][1]

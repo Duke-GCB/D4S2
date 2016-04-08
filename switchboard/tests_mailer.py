@@ -15,12 +15,14 @@ class MailerTestCase(TestCase):
             'recipient_name': 'Receiver Name',
             'sender_name': 'Sender Name',
             'sender_email': sender_email,
-            'data_url': 'http://domain.com/data',
+            'url': 'http://domain.com/data',
             'signature': 'Sender Co\n123Fake St\nAnytown WA 90909',
         }
         message = generate_message(sender_email, rcpt_email, subject, template_name, context)
-        self.assertIn('Sender Name has sent you a data set, which can be previewed at http://domain.com/data.', message.body)
-        self.assertIn('please contact sender@domain.com', message.body)
+        self.assertIn('Sender Name has sent you a data set via the Duke Data Service', message.body)
+        self.assertIn('contact sender@domain.com', message.body)
+        self.assertIn('Preview URL: http://domain.com/data', message.body)
         self.assertEqual(sender_email, message.from_email)
+        self.assertEqual(subject, message.subject)
         self.assertIn(rcpt_email, message.to)
 
