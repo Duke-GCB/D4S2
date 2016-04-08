@@ -18,7 +18,7 @@ def index(request):
     def render_accept(handover):
         handover_details = HandoverDetails(handover)
         from_user = handover_details.get_from_user()
-        project = handover_details.get_project()
+        project = handover_details.get_project_and_children()
         folders, files = count_project_children(project)
         context = {
             'token': handover.token,
@@ -39,7 +39,7 @@ def count_project_children(project):
             files += 1
         else:
             child_folders, child_files = count_project_children(child)
-            folders += child_folders
+            folders += child_folders + 1
             files += child_files
     return folders, files
 

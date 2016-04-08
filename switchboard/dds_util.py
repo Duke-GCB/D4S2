@@ -25,6 +25,10 @@ class DDSUtil(object):
     def get_remote_project(self, project_id):
         return self.remote_store.fetch_remote_project_by_id(project_id)
 
+    def get_remote_project_with_children(self, project_id):
+        project = self.get_remote_project(project_id)
+        return self.remote_store.fetch_remote_project(project.name, must_exist=True)
+
     def get_project_url(self, project_id):
         return 'https://{}/portal/#/project/{}'.format(self.remote_store.config.get_url_base(), project_id)
 
@@ -51,6 +55,9 @@ class HandoverDetails(object):
 
     def get_project(self):
         return self.ddsutil.get_remote_project(self.handover.project_id)
+
+    def get_project_and_children(self):
+        return self.ddsutil.get_remote_project_with_children(self.handover.project_id)
 
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.handover.project_id)
