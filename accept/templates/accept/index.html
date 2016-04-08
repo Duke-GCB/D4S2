@@ -1,27 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Accept Handover</title>
-</head>
-<body>
-    <h3>Acknowledge Receipt of Final Results</h3>
-    <div>
-        <span>Project:</span> <span>{{ project_title }}</span>
-    </div>
-    <div>
-        <span>From:</span> <span>{{ from_name }}</span> <span>{{ from_email }}</span>
-    </div>
+{% extends "accept/base.html" %}
+
+{%  block content %}
+<h4>Acknowledge Receipt of Final Results</h4>
+<hr/>
+<table>
+    <tr>
+        <td>
+            <span class="details_label">Project:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ project_title }}</span>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <span class="details_label">Contents:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ project_summary }}</span>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <span class="details_label">From:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ from_name }} </span>
+            <a href="mailto:{{ from_email }}">
+                <span class="details_data">{{ from_email }}</span>
+            </a>
+        </td>
+    </tr>
+</table>
+<div class="blurb">
     <div>
         <span>Click agree to make the final results available to you.</span>
     </div>
     <div>
         <span>This will transfer ownership of the data to you.</span>
     </div>
-    <form action="{% url 'process' %}" method="post" >
-        {% csrf_token %}
-        <input type="hidden" name="token" value="{{  token }}" >
-        <input type="submit" value="Accept">
-    </form>
-</body>
-</html>
+</div>
+<br/>
+<form action="{% url 'process' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="submit" value="Accept"
+           class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+</form>
+
+{% endblock %}

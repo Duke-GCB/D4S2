@@ -27,6 +27,7 @@ class MockDDSUser(object):
 class MockDDSProject(object):
     def __init__(self, name):
         self.name = name
+        self.children = []
 
 
 def setup_mock_handover_details(MockHandoverDetails):
