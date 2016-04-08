@@ -20,6 +20,10 @@ class HandoverTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
 
+    def test_token_autopopulate(self):
+        handover = Handover.objects.first()
+        self.assertIsNotNone(handover.token, 'token should default to a uuid')
+
 
 class DraftTestCase(TestCase):
 
