@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -55,6 +56,7 @@ class Handover(models.Model):
     from_user_id = models.CharField(max_length=36, null=False)
     to_user_id = models.CharField(max_length=36, null=False)
     state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
+    token = models.UUIDField(default=uuid.uuid4, editable=False)
 
     def __str__(self):
         return 'Handover <Project: {}, From: {}, To: {}, State: {}>'.format(
