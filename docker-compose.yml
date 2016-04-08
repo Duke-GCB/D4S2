@@ -3,6 +3,8 @@ services:
   db:
     image: postgres
     env_file: handoverservice.env
+    volumes:
+      - /var/lib/postgresql/data:/var/lib/postgresql/data
   web:
     build: .
     image: dukegcb/dukedshandoverservice
