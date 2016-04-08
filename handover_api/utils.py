@@ -1,5 +1,6 @@
 from switchboard.mailer import generate_message
-from switchboard.dds_util import HandoverDetails
+from switchboard.dds_util import HandoverDetails, DDSUtil
+
 
 def send_draft(draft):
     """
@@ -31,9 +32,11 @@ def send_draft(draft):
     message = generate_message(sender.email, receiver.email, subject, template_name, context)
     message.send()
 
+
 def get_accept_url(handover):
     # TODO: lookup the accept url
     return 'https://itlab-1.gcb.duke.edu/accept?token=' + str(handover.token)
+
 
 def send_handover(handover):
     """
@@ -43,10 +46,10 @@ def send_handover(handover):
     """
 
     try:
-        ddsutil = DDSUtil(handover.from_user_id)
-        sender = ddsutil.get_remote_user(handover.from_user_id)
-        receiver = ddsutil.get_remote_user(handover.to_user_id)
-        project = ddsutil.get_remote_project(handover.project_id)
+        handover_details = HandoverDetails(handover)
+        sender = handover_details.get_from_user()
+        receiver = handover_details.get_to_user()
+        project = handover_details.get_project()
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
 
@@ -65,6 +68,7 @@ def send_handover(handover):
     }
     message = generate_message(sender.email, receiver.email, subject, template_name, context)
     message.send()
+
 
 def perform_handover(handover):
     """
