@@ -72,6 +72,27 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
+    @patch('handover_api.views.send_handover')
+    def test_send_handover(self, mock_send_handover):
+        h = Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        self.assertTrue(h.is_new())
+        url = reverse('handover-send', args=(h.pk,))
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        h = Handover.objects.get(pk=h.pk)
+        self.assertFalse(h.is_new())
+        self.assertTrue(mock_send_handover.called)
+
+    @patch('handover_api.views.send_handover')
+    def test_send_handover_fails(self, mock_send_handover):
+        h = Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        self.assertTrue(h.is_new())
+        h.mark_notified()
+        url = reverse('handover-send', args=(h.pk,))
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(mock_send_handover.called)
+
 
 class DraftViewTestCase(AuthenticatedResourceTestCase):
 

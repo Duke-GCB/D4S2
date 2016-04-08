@@ -28,6 +28,15 @@ class DDSUtil(object):
     def get_project_url(self, project_id):
         return 'https://{}/portal/#/project/{}'.format(self.remote_store.config.get_url_base(), project_id)
 
+    def add_user(self, user_id, project_id, auth_role):
+        project = self.remote_store.fetch_remote_project_by_id(project_id)
+        user = self.remote_store.fetch_user(user_id)
+        self.remote_store.set_user_project_permission(project, user, auth_role)
+
+    def remove_user(self, user_id, project_id):
+        project = self.remote_store.fetch_remote_project_by_id(project_id)
+        user = self.remote_store.fetch_user(user_id)
+        self.remote_store.revoke_user_project_permission(project, user)
 
 class HandoverDetails(object):
     def __init__(self, handover_or_draft):
