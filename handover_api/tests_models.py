@@ -2,7 +2,6 @@ from django.db import IntegrityError
 from django.test import TestCase
 from handover_api.models import DukeDSUser, Handover, Draft, State
 
-
 class HandoverTestCase(TestCase):
 
     def setUp(self):

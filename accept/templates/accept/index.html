@@ -6,7 +6,18 @@
 </head>
 <body>
     <h3>Acknowledge Receipt of Final Results</h3>
-    <p>Click agree to make the final results available to you. This will transfer ownership of the data to you.</p>
+    <div>
+        <span>Project:</span> <span>{{ project_title }}</span>
+    </div>
+    <div>
+        <span>From:</span> <span>{{ from_name }}</span> <span>{{ from_email }}</span>
+    </div>
+    <div>
+        <span>Click agree to make the final results available to you.</span>
+    </div>
+    <div>
+        <span>This will transfer ownership of the data to you.</span>
+    </div>
     <form action="{% url 'process' %}" method="post" >
         {% csrf_token %}
         <input type="hidden" name="token" value="{{  token }}" >

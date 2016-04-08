@@ -1,5 +1,5 @@
 from switchboard.mailer import generate_message
-from switchboard.dds_util import DDSUtil
+from switchboard.dds_util import HandoverDetails
 
 def send_draft(draft):
     """
@@ -9,11 +9,11 @@ def send_draft(draft):
     """
 
     try:
-        ddsutil = DDSUtil(draft.from_user_id)
-        sender = ddsutil.get_remote_user(draft.from_user_id)
-        receiver = ddsutil.get_remote_user(draft.to_user_id)
-        project = ddsutil.get_remote_project(draft.project_id)
-        data_url = ddsutil.get_project_url(draft.project_id)
+        handover_details = HandoverDetails(draft)
+        sender = handover_details.get_from_user()
+        receiver = handover_details.get_to_user()
+        project = handover_details.get_project()
+        data_url = handover_details.get_project_url()
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
     template_name = 'draft.txt'

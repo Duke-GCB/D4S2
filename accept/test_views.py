@@ -1,10 +1,10 @@
 import uuid
 from django.core.urlresolvers import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from django.test.testcases import TestCase
 from accept.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG
 from handover_api.models import Handover
-
+from mock import patch
 
 def url_with_token(name, token=None):
     url = reverse(name)
@@ -18,14 +18,34 @@ def create_handover_get_token():
     return str(handover.token)
 
 
-class AcceptTestCase(APITestCase):
+class MockDDSUser(object):
+    def __init__(self, full_name, email):
+        self.full_name = full_name
+        self.email = email
+
+
+class MockDDSProject(object):
+    def __init__(self, name):
+        self.name = name
+
+
+def setup_mock_handover_details(MockHandoverDetails):
+    x = MockHandoverDetails()
+    x.get_from_user.return_value = MockDDSUser('joe', 'joe@joe.com')
+    x.get_to_user.return_value = MockDDSUser('bob', 'bob@joe.com')
+    x.get_project.return_value = MockDDSProject('project')
+
+
+class AcceptTestCase(TestCase):
     def test_error_when_no_token(self):
         url = url_with_token('index')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
 
-    def test_normal_with_valid_token(self):
+    @patch('accept.views.HandoverDetails')
+    def test_normal_with_valid_token(self, MockHandoverDetails):
+        setup_mock_handover_details(MockHandoverDetails)
         token = create_handover_get_token()
         url = url_with_token('index', token)
         response = self.client.get(url)
@@ -48,14 +68,16 @@ class AcceptTestCase(APITestCase):
         self.assertIn(TOKEN_NOT_FOUND_MSG, str(response.content))
 
 
-class ProcessTestCase(APITestCase):
+class ProcessTestCase(TestCase):
     def test_error_when_no_token(self):
         url = url_with_token('process')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
 
-    def test_normal_with_token_is_redirect(self):
+    @patch('accept.views.HandoverDetails')
+    def test_normal_with_token_is_redirect(self, MockHandoverDetails):
+        setup_mock_handover_details(MockHandoverDetails)
         token = create_handover_get_token()
         url = url_with_token('process', token)
         response = self.client.get(url)
