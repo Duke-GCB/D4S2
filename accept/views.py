@@ -4,7 +4,6 @@ from handover_api.models import Handover
 from handover_api.utils import perform_handover
 from switchboard.dds_util import HandoverDetails
 from ddsc.core.ddsapi import DataServiceError
-from ddsc.core.util import KindType
 
 MISSING_TOKEN_MSG = 'Missing authorization token.'
 INVALID_TOKEN_MSG = 'Invalid authorization token.'
@@ -18,30 +17,17 @@ def index(request):
     def render_accept(handover):
         handover_details = HandoverDetails(handover)
         from_user = handover_details.get_from_user()
-        project = handover_details.get_project_and_children()
-        folders, files = count_project_children(project)
+        to_user = handover_details.get_to_user()
+        project = handover_details.get_project()
         context = {
             'token': handover.token,
             'from_name': from_user.full_name,
             'from_email': from_user.email,
+            'to_name': to_user.full_name,
             'project_title': project.name,
-            'project_summary': "Contains {} folders and {} files.".format(folders, files)
         }
         return render(request, 'accept/index.html', context)
     return response_with_handover(request, render_accept)
-
-
-def count_project_children(project):
-    folders = 0
-    files = 0
-    for child in project.children:
-        if KindType.is_file(child):
-            files += 1
-        else:
-            child_folders, child_files = count_project_children(child)
-            folders += child_folders + 1
-            files += child_files
-    return folders, files
 
 
 def process(request):

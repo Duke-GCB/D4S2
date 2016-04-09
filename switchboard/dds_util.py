@@ -1,6 +1,7 @@
 from ddsc.config import Config
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
+from ddsc.core.util import KindType
 from handover_api.models import DukeDSUser
 
 
@@ -42,6 +43,7 @@ class DDSUtil(object):
         user = self.remote_store.fetch_user(user_id)
         self.remote_store.revoke_user_project_permission(project, user)
 
+
 class HandoverDetails(object):
     def __init__(self, handover_or_draft):
         self.handover = handover_or_draft
@@ -55,9 +57,6 @@ class HandoverDetails(object):
 
     def get_project(self):
         return self.ddsutil.get_remote_project(self.handover.project_id)
-
-    def get_project_and_children(self):
-        return self.ddsutil.get_remote_project_with_children(self.handover.project_id)
 
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.handover.project_id)

@@ -14,14 +14,6 @@
     </tr>
     <tr>
         <td>
-            <span class="details_label">Contents:</span>
-        </td>
-        <td>
-            <span class="details_data">{{ project_summary }}</span>
-        </td>
-    </tr>
-    <tr>
-        <td>
             <span class="details_label">From:</span>
         </td>
         <td>
@@ -31,10 +23,18 @@
             </a>
         </td>
     </tr>
+    <tr>
+        <td>
+            <span class="details_label">To:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ to_name }} </span>
+        </td>
+    </tr>
 </table>
 <div class="blurb">
     <div>
-        <span>Click agree to make the final results available to you.</span>
+        <span>Click accept to make the final results available to you.</span>
     </div>
     <div>
         <span>This will transfer ownership of the data to you.</span>
@@ -45,7 +45,7 @@
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="submit" value="Accept"
-           class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+           class="mdl-button mdl-js-button mdl-button--raised">
 </form>
 
 {% endblock %}
