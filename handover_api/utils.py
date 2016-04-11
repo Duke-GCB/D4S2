@@ -33,11 +33,12 @@ def send_draft(draft):
     message.send()
 
 
-def get_accept_url(handover):
-    return reverse('accept-process') + "?token=" + str(handover.token)
+def get_accept_url(handover, host):
+    relative_path = reverse('accept-index') + "?token=" + str(handover.token)
+    return "{}{}".format(host, relative_path)
 
 
-def send_handover(handover):
+def send_handover(handover, host):
     """
     Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
     in a models.Handover object. Then calls generate_message with email addresses, subject, and the details to
@@ -54,7 +55,7 @@ def send_handover(handover):
 
     template_name = 'handover.txt'
     subject = 'Data finalized for Project {}'.format(project.name)
-    url = get_accept_url(handover)
+    url = get_accept_url(handover, host)
     context = {
         'project_name': project.name,
         'status': 'Final',

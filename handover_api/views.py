@@ -33,7 +33,10 @@ class HandoverViewSet(AuthenticatedModelViewSet):
         handover = self.get_object()
         if not handover.is_new():
             raise AlreadyNotifiedException(detail='Handover already in progress')
-        send_handover()
+        protocol = 'http://'
+        if request.is_secure():
+            protocol = 'https://'
+        send_handover(handover, protocol + request.get_host())
         handover.mark_notified()
         return self.retrieve(request)
 

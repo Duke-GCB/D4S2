@@ -20,7 +20,7 @@ class UtilsTestCaseHandover(TestCase):
         mock_ddsutil.remove_user.assert_called_with(h.from_user_id, h.project_id)
 
     def test_get_accept_url(self):
-        url = get_accept_url(self.h)
+        url = get_accept_url(self.h, "http://localhost")
         self.assertIn(str(self.h.token), url)
 
 

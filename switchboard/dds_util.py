@@ -1,7 +1,6 @@
 from ddsc.config import Config
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from ddsc.core.util import KindType
 from handover_api.models import DukeDSUser
 
 
