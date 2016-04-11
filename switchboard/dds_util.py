@@ -60,7 +60,3 @@ class HandoverDetails(object):
 
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.handover.project_id)
-
-    def transfer_project(self):
-        # Pretend I transfer the project
-        pass

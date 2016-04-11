@@ -10,7 +10,7 @@ INVALID_TOKEN_MSG = 'Invalid authorization token.'
 TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
 
 
-def index(request):
+def accept(request):
     """
     Main accept screen where user accepts or rejects a project.
     """
@@ -20,7 +20,7 @@ def index(request):
         to_user = handover_details.get_to_user()
         project = handover_details.get_project()
         context = {
-            'token': handover.token,
+            'token': str(handover.token),
             'from_name': from_user.full_name,
             'from_email': from_user.email,
             'to_name': to_user.full_name,
@@ -30,7 +30,7 @@ def index(request):
     return response_with_handover(request, render_accept)
 
 
-def process(request):
+def accept_process(request):
     """
     Completes handover and redirects user to the project.
     """

@@ -1,6 +1,6 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import HandoverDetails, DDSUtil
-
+from django.core.urlresolvers import reverse
 
 def send_draft(draft):
     """
@@ -34,8 +34,7 @@ def send_draft(draft):
 
 
 def get_accept_url(handover):
-    # TODO: lookup the accept url
-    return 'https://itlab-1.gcb.duke.edu/accept?token=' + str(handover.token)
+    return reverse('accept-process') + "?token=" + str(handover.token)
 
 
 def send_handover(handover):

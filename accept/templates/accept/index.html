@@ -41,7 +41,7 @@
     </div>
 </div>
 <br/>
-<form action="{% url 'process' %}" method="post">
+<form action="{% url 'accept-process' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
     <input type="submit" value="Accept"
@@ -49,3 +49,4 @@
 </form>
 
 {% endblock %}
+
