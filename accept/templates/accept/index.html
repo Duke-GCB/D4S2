@@ -1,0 +1,52 @@
+{% extends "accept/base.html" %}
+
+{%  block content %}
+<h4>Acknowledge Receipt of Final Results</h4>
+<hr/>
+<table>
+    <tr>
+        <td>
+            <span class="details_label">Project:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ project_title }}</span>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <span class="details_label">From:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ from_name }} </span>
+            <a href="mailto:{{ from_email }}">
+                <span class="details_data">{{ from_email }}</span>
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <span class="details_label">To:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ to_name }} </span>
+        </td>
+    </tr>
+</table>
+<div class="blurb">
+    <div>
+        <span>Click accept to make the final results available to you.</span>
+    </div>
+    <div>
+        <span>This will transfer ownership of the data to you.</span>
+    </div>
+</div>
+<br/>
+<form action="{% url 'accept-process' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="submit" value="Accept"
+           class="mdl-button mdl-js-button mdl-button--raised">
+</form>
+
+{% endblock %}
+

@@ -3,6 +3,7 @@ from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
 from handover_api.models import DukeDSUser
 
+
 class DDSUtil(object):
     def __init__(self, user_id):
         self.sender_user_id = user_id
@@ -24,6 +25,10 @@ class DDSUtil(object):
     def get_remote_project(self, project_id):
         return self.remote_store.fetch_remote_project_by_id(project_id)
 
+    def get_remote_project_with_children(self, project_id):
+        project = self.get_remote_project(project_id)
+        return self.remote_store.fetch_remote_project(project.name, must_exist=True)
+
     def get_project_url(self, project_id):
         return 'https://{}/portal/#/project/{}'.format(self.remote_store.config.get_url_base(), project_id)
 
@@ -37,3 +42,20 @@ class DDSUtil(object):
         user = self.remote_store.fetch_user(user_id)
         self.remote_store.revoke_user_project_permission(project, user)
 
+
+class HandoverDetails(object):
+    def __init__(self, handover_or_draft):
+        self.handover = handover_or_draft
+        self.ddsutil = DDSUtil(self.handover.from_user_id)
+
+    def get_from_user(self):
+        return self.ddsutil.get_remote_user(self.handover.from_user_id)
+
+    def get_to_user(self):
+        return self.ddsutil.get_remote_user(self.handover.to_user_id)
+
+    def get_project(self):
+        return self.ddsutil.get_remote_project(self.handover.project_id)
+
+    def get_project_url(self):
+        return self.ddsutil.get_project_url(self.handover.project_id)

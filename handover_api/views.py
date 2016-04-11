@@ -4,6 +4,7 @@ from rest_framework.decorators import detail_route
 from handover_api.models import DukeDSUser, Handover, Draft
 from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
 from handover_api.utils import send_draft, send_handover
+from django.core.urlresolvers import reverse
 
 class AuthenticatedModelViewSet(viewsets.ModelViewSet):
     """
@@ -33,7 +34,9 @@ class HandoverViewSet(AuthenticatedModelViewSet):
         handover = self.get_object()
         if not handover.is_new():
             raise AlreadyNotifiedException(detail='Handover already in progress')
-        send_handover()
+        accept_path = reverse('accept-index') + "?token=" + str(handover.token)
+        accept_url = request.build_absolute_uri(accept_path)
+        send_handover(handover, accept_url)
         handover.mark_notified()
         return self.retrieve(request)
 

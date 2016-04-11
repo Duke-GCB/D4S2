@@ -24,6 +24,24 @@ class HandoverTestCase(TestCase):
         handover = Handover.objects.first()
         self.assertIsNotNone(handover.token, 'token should default to a uuid')
 
+    def test_mark_notified(self):
+        handover = Handover.objects.first()
+        self.assertEqual(handover.state, State.NEW)
+        handover.mark_notified()
+        self.assertEqual(handover.state, State.NOTIFIED)
+
+    def test_mark_accepted(self):
+        handover = Handover.objects.first()
+        self.assertEqual(handover.state, State.NEW)
+        handover.mark_accepted()
+        self.assertEqual(handover.state, State.ACCEPTED)
+
+    def test_mark_rejected(self):
+        handover = Handover.objects.first()
+        self.assertEqual(handover.state, State.NEW)
+        handover.mark_rejected()
+        self.assertEqual(handover.state, State.REJECTED)
+
 
 class DraftTestCase(TestCase):
 

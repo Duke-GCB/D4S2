@@ -1,6 +1,6 @@
 from mock import patch, Mock
 from django.test import TestCase
-from handover_api.utils import perform_handover, get_accept_url
+from handover_api.utils import perform_handover
 from handover_api.models import Handover
 
 class UtilsTestCaseHandover(TestCase):
@@ -18,9 +18,5 @@ class UtilsTestCaseHandover(TestCase):
         mock_ddsutil.add_user.assert_called_with(h.to_user_id, h.project_id, 'project_admin')
         MockDDSUtil.assert_any_call(h.to_user_id)
         mock_ddsutil.remove_user.assert_called_with(h.from_user_id, h.project_id)
-
-    def test_get_accept_url(self):
-        url = get_accept_url(self.h)
-        self.assertIn(str(self.h.token), url)
 
 
