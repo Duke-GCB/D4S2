@@ -1,6 +1,5 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import HandoverDetails, DDSUtil
-from django.core.urlresolvers import reverse
 
 def send_draft(draft):
     """
@@ -33,12 +32,7 @@ def send_draft(draft):
     message.send()
 
 
-def get_accept_url(handover, host):
-    relative_path = reverse('accept-index') + "?token=" + str(handover.token)
-    return "{}{}".format(host, relative_path)
-
-
-def send_handover(handover, host):
+def send_handover(handover, accept_url):
     """
     Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
     in a models.Handover object. Then calls generate_message with email addresses, subject, and the details to
@@ -55,14 +49,13 @@ def send_handover(handover, host):
 
     template_name = 'handover.txt'
     subject = 'Data finalized for Project {}'.format(project.name)
-    url = get_accept_url(handover, host)
     context = {
         'project_name': project.name,
         'status': 'Final',
         'recipient_name': receiver.full_name,
         'sender_name': sender.full_name,
         'sender_email': sender.email,
-        'url': url,
+        'url': accept_url,
         'signature': 'Duke Center for Genomic and Computational Biology\n'
                      'http://www.genome.duke.edu/cores-and-services/computational-solutions'
     }
