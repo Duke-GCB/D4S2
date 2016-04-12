@@ -83,15 +83,6 @@ The Handover Service communicates with the Duke Data Service API as a software a
   2. Enter the DukeDS UDID of the user and the user's API key
   3. Click **Save**
 
-## Get a token for authentication
-
-The API requires authentication. To avoid sending username and password in every request, you generate a token for API authentication.
-
-1. Visit http://127.0.0.1:8000/admin/authtoken/token/
-2. Click **Add Token**
-4. Select your the user account and click **Save**
-5. Note the token (e.g. `4a9a367a161d3b2315da17f3f44eaaaf5146b5a2`)
-
 ## Sending a Draft
 
 The term draft is used to refer to a project that is about to be handed over from a sender to a receiver. The sender is expected to use the [DukeDSClient](https://github.com/Duke-GCB/DukeDSClient) to create and upload a project. Prior to review/acceptance by the receiver, it is in a "draft" state. The Handover service can send an email to the receiver, notifying them the data in the project is ready for their review.
@@ -100,7 +91,7 @@ The term draft is used to refer to a project that is about to be handed over fro
 1. Create a Draft:
 
         $ curl -X POST \
-          -H "Authorization: Token <your-token>"
+          -H "Authorization: Token <your-api-key>"
           -H "Content-Type: application/json" \
           -d '{"project_id": "project-dds-uuid", "from_user_id": "from-user-uuid", "to_user_id": "to-user-uuid"}' \
           http://127.0.0.1:8000/api/v1/drafts/
