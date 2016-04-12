@@ -16,7 +16,3 @@ class UtilsTestCaseHandover(TestCase):
         perform_handover(h)
         MockDDSUtil.assert_any_call(h.from_user_id)
         mock_ddsutil.add_user.assert_called_with(h.to_user_id, h.project_id, 'project_admin')
-        MockDDSUtil.assert_any_call(h.to_user_id)
-        mock_ddsutil.remove_user.assert_called_with(h.from_user_id, h.project_id)
-
-
