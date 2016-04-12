@@ -13,7 +13,7 @@ class DukeDSUser(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    api_key = models.CharField(max_length=36, null=False)
+    api_key = models.CharField(max_length=36, null=False, unique=True)
 
     def __str__(self):
         return 'DukeDSUser <{}>'.format(self.dds_id)
