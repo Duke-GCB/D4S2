@@ -32,5 +32,6 @@ DATABASES = {
 # DukeDSClient configuration
 DDSCLIENT_PROPERTIES = {
   'url': '',
+  'portal_root': '',
   'agent_key': '',
 }

@@ -30,7 +30,8 @@ class DDSUtil(object):
         return self.remote_store.fetch_remote_project(project.name, must_exist=True)
 
     def get_project_url(self, project_id):
-        return 'https://{}/portal/#/project/{}'.format(self.remote_store.config.get_url_base(), project_id)
+        portal_root = settings.DDSCLIENT_PROPERTIES['portal_root']
+        return '{}/portal/#/project/{}'.format(portal_root, project_id)
 
     def add_user(self, user_id, project_id, auth_role):
         project = self.remote_store.fetch_remote_project_by_id(project_id)
