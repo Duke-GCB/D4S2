@@ -36,6 +36,7 @@ EMAIL_HOST = os.getenv('HANDOVERSERVICE_SMTP_HOST')
 # DukeDSClient configuration
 DDSCLIENT_PROPERTIES = {
   'url': os.getenv('HANDOVERSERVICE_DDSCLIENT_URL'),
+  'portal_root': os.getenv('HANDOVERSERVICE_DDSCLIENT_PORTAL_ROOT'),
   'agent_key': os.getenv('HANDOVERSERVICE_DDSCLIENT_AGENT_KEY'),
 }
 
