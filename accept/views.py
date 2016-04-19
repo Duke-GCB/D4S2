@@ -12,7 +12,7 @@ INVALID_TOKEN_MSG = 'Invalid authorization token.'
 TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
 
 
-@never_cache
+#@never_cache
 def accept(request):
     """
     Main accept screen where user accepts or rejects a project.
@@ -34,7 +34,7 @@ def render_accept(request, handover):
     }
     return render(request, 'accept/index.html', context)
 
-@never_cache
+#@never_cache
 def accept_process(request):
     """
     Completes handover and redirects user to the project.
@@ -93,7 +93,7 @@ def reject_project(request, handover):
     handover.mark_rejected(request.POST.get('reject_reason'))
     return render(request, 'accept/reject_done.html', context)
 
-@never_cache
+#@never_cache
 def handover_reject(request):
     if request.POST.get('cancel', None):
         url = url_with_token('accept-index', request.POST.get('token'))
@@ -119,7 +119,7 @@ def response_with_handover(request, param_dict, func):
                 return render_already_complete(request, handover)
             return func(request, handover)
         except ValueError as err:
-            return general_error(request, msg=str(err), status=400)
+            return general_error(request, msg=INVALID_TOKEN_MSG, status=400)
         except ObjectDoesNotExist:
             return general_error(request, msg=TOKEN_NOT_FOUND_MSG, status=404)
         except DataServiceError as err:
