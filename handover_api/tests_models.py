@@ -43,6 +43,16 @@ class HandoverTestCase(TestCase):
         self.assertEqual(handover.state, State.REJECTED)
         self.assertEqual(handover.reject_reason, 'Wrong person.')
 
+    def test_is_complete(self):
+        handover = Handover.objects.first()
+        self.assertEqual(handover.is_complete(), False)
+        handover.mark_notified()
+        self.assertEqual(handover.is_complete(), False)
+        handover.mark_accepted()
+        self.assertEqual(handover.is_complete(), True)
+        handover.mark_rejected('')
+        self.assertEqual(handover.is_complete(), True)
+
 
 class DraftTestCase(TestCase):
 

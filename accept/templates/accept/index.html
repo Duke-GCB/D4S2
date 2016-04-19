@@ -41,7 +41,7 @@
     </div>
 </div>
 <br/>
-<form action="{% url 'accept-process' %}" method="post">
+<form action="{% url 'handover-accept' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
 

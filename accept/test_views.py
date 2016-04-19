@@ -6,6 +6,7 @@ from accept.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_M
 from handover_api.models import Handover
 from mock import patch
 
+
 def url_with_token(name, token=None):
     url = reverse(name)
     if token:
@@ -71,7 +72,7 @@ class AcceptTestCase(TestCase):
 
 class ProcessTestCase(TestCase):
     def test_error_when_no_token(self):
-        url = url_with_token('accept-process')
+        url = url_with_token('handover-accept')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
@@ -81,21 +82,21 @@ class ProcessTestCase(TestCase):
     def test_normal_with_token_is_redirect(self, MockHandoverDetails, mock_perform_handover):
         setup_mock_handover_details(MockHandoverDetails)
         token = create_handover_get_token()
-        url = reverse('accept-process')
+        url = reverse('handover-accept')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertNotIn(MISSING_TOKEN_MSG, str(response.content))
 
     def test_with_bad_token(self):
         token = create_handover_get_token() + "a"
-        url = reverse('accept-process')
+        url = reverse('handover-accept')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(INVALID_TOKEN_MSG, str(response.content))
 
     def test_with_token_not_found(self):
         token = str(uuid.uuid4())
-        url = reverse('accept-process')
+        url = reverse('handover-accept')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn(TOKEN_NOT_FOUND_MSG, str(response.content))
