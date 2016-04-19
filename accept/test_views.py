@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from accept.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG
-from handover_api.models import Handover
+from handover_api.models import Handover, State
 from mock import patch
 
 
@@ -14,8 +14,12 @@ def url_with_token(name, token=None):
     return url
 
 
+def create_handover():
+    return Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+
+
 def create_handover_get_token():
-    handover = Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+    handover = create_handover()
     return str(handover.token)
 
 
@@ -39,6 +43,7 @@ def setup_mock_handover_details(MockHandoverDetails):
 
 
 class AcceptTestCase(TestCase):
+
     def test_error_when_no_token(self):
         url = url_with_token('accept-index')
         response = self.client.get(url)
@@ -71,6 +76,7 @@ class AcceptTestCase(TestCase):
 
 
 class ProcessTestCase(TestCase):
+
     def test_error_when_no_token(self):
         url = url_with_token('handover-accept')
         response = self.client.post(url)
@@ -101,3 +107,54 @@ class ProcessTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn(TOKEN_NOT_FOUND_MSG, str(response.content))
 
+    def test_with_already_rejected(self):
+        handover = create_handover()
+        handover.mark_rejected('Done')
+        token = handover.token
+        url = reverse('handover-accept')
+        response = self.client.post(url, {'token': token})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(State.HANDOVER_CHOICES[State.REJECTED][1], str(response.content))
+
+    def test_with_already_accepted(self):
+        handover = create_handover()
+        handover.mark_accepted()
+        token = handover.token
+        url = reverse('handover-accept')
+        response = self.client.post(url, {'token': token})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(State.HANDOVER_CHOICES[State.ACCEPTED][1], str(response.content))
+
+    @patch('accept.views.HandoverDetails')
+    @patch('accept.views.perform_handover')
+    def test_normal_with_reject(self, MockHandoverDetails, mock_perform_handover):
+        setup_mock_handover_details(MockHandoverDetails)
+        token = create_handover_get_token()
+        url = reverse('handover-accept')
+        response = self.client.post(url, {'token': token, 'reject':'reject'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('reason for rejecting project', str(response.content))
+
+
+class RejectReasonTestCase(TestCase):
+
+    @patch('accept.views.HandoverDetails')
+    @patch('accept.views.perform_handover')
+    def test_cancel_reject(self, MockHandoverDetails, mock_perform_handover):
+        setup_mock_handover_details(MockHandoverDetails)
+        token = create_handover_get_token()
+        url = reverse('handover-reject')
+        response = self.client.post(url, {'token': token, 'cancel': 'cancel'})
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        expected_url = reverse('accept-index')
+        self.assertIn(expected_url, response.url)
+
+    @patch('accept.views.HandoverDetails')
+    @patch('accept.views.perform_handover')
+    def test_confirm_reject(self, MockHandoverDetails, mock_perform_handover):
+        setup_mock_handover_details(MockHandoverDetails)
+        token = create_handover_get_token()
+        url = reverse('handover-reject')
+        response = self.client.post(url, {'token': token, 'reject_reason':'Wrong person.'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('has been rejected', str(response.content))
