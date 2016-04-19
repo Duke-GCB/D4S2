@@ -1,0 +1,23 @@
+{%  extends "accept/base.html" %}
+
+{% block content %}
+<h4>Handover Service</h4>
+<p>
+    Enter reason for rejecting project {{ project_title }}.
+</p>
+<form action="{% url 'handover-reject' %}" method="post">
+  <div>
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+
+    <textarea autofocus class="rejection_textarea" type="text" rows= "10" name="reject_reason" ></textarea>
+    <input type="submit" value="Reject"
+           name="reject"
+           class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent standard_button mdl-js-ripple-effect">
+
+    <input type="submit" value="Cancel"
+           name="cancel"
+           class="mdl-button mdl-js-button mdl-button--raised standard_button mdl-js-ripple-effect">
+  </div>
+</form>
+{% endblock %}

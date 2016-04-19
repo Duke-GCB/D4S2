@@ -12,3 +12,12 @@
     font-size: 12pt;
 }
 
+.standard_button {
+    margin: 5px;
+}
+
+.rejection_textarea {
+    width: 100%;
+    padding: 2px;
+    font-size: 12pt;
+}

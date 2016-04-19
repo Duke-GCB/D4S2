@@ -39,8 +39,9 @@ class HandoverTestCase(TestCase):
     def test_mark_rejected(self):
         handover = Handover.objects.first()
         self.assertEqual(handover.state, State.NEW)
-        handover.mark_rejected()
+        handover.mark_rejected('Wrong person.')
         self.assertEqual(handover.state, State.REJECTED)
+        self.assertEqual(handover.reject_reason, 'Wrong person.')
 
 
 class DraftTestCase(TestCase):
