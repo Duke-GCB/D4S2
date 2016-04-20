@@ -4,7 +4,7 @@ from rest_framework import status
 from django.test.testcases import TestCase
 from accept.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG
 from handover_api.models import Handover, State
-from mock import patch
+from mock import patch, Mock
 
 
 def url_with_token(name, token=None):
@@ -76,17 +76,26 @@ class AcceptTestCase(TestCase):
 
 
 class ProcessTestCase(TestCase):
-
-    def test_error_when_no_token(self):
+    @patch('handover_api.utils.DDSUtil')
+    def test_error_when_no_token(self, MockDDSUtil):
+        mock_ddsutil = MockDDSUtil()
+        mock_ddsutil.add_user = Mock()
+        mock_ddsutil.remove_user = Mock()
+        token = create_handover_get_token()
         url = url_with_token('handover-accept')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
 
     @patch('accept.views.HandoverDetails')
-    @patch('accept.views.perform_handover')
-    def test_normal_with_token_is_redirect(self, MockHandoverDetails, mock_perform_handover):
+    @patch('handover_api.utils.HandoverDetails')
+    @patch('handover_api.utils.DDSUtil')
+    def test_normal_with_token_is_redirect(self, MockHandoverDetails, MockHandoverDetails2, MockDDSUtil):
         setup_mock_handover_details(MockHandoverDetails)
+        setup_mock_handover_details(MockHandoverDetails2)
+        mock_ddsutil = MockDDSUtil()
+        mock_ddsutil.add_user = Mock()
+        mock_ddsutil.remove_user = Mock()
         token = create_handover_get_token()
         url = reverse('handover-accept')
         response = self.client.post(url, {'token': token})
@@ -150,9 +159,11 @@ class RejectReasonTestCase(TestCase):
         self.assertIn(expected_url, response.url)
 
     @patch('accept.views.HandoverDetails')
+    @patch('handover_api.utils.HandoverDetails')
     @patch('accept.views.perform_handover')
-    def test_confirm_reject(self, MockHandoverDetails, mock_perform_handover):
+    def test_confirm_reject(self, MockHandoverDetails, MockHandoverDetails2, mock_perform_handover):
         setup_mock_handover_details(MockHandoverDetails)
+        setup_mock_handover_details(MockHandoverDetails2)
         token = create_handover_get_token()
         url = reverse('handover-reject')
         response = self.client.post(url, {'token': token, 'reject_reason':'Wrong person.'})

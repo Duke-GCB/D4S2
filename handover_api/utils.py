@@ -74,7 +74,6 @@ def perform_handover(handover):
         # Add the to_user to the project, acting as the from_user
         ddsutil_from = DDSUtil(handover.from_user_id)
         ddsutil_from.add_user(handover.to_user_id, handover.project_id, auth_role)
-
         # At this point, We'd like to remove the from_user from the project, changing ownership
         # However, we cannot remove the from_user if we are authenticated as that user
         # We experimented with authenticating as the to_user, but this was not practical
@@ -87,3 +86,26 @@ def perform_handover(handover):
 
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+
+
+def send_processed_mail(handover, type, reason=''):
+    """
+    Send email back to handover sender with what the handover receiver chose (either accept or reject with a reason).
+    """
+    handover_details = HandoverDetails(handover)
+    sender = handover_details.get_from_user()
+    receiver = handover_details.get_to_user()
+    project = handover_details.get_project()
+    template_name = 'processed.txt'
+    subject = 'Project {} has been {}'.format(project.name, type)
+    context = {
+        'project_name': project.name,
+        'recipient_name': receiver.full_name,
+        'sender_name': sender.full_name,
+        'type': type,
+        'message': reason,
+        'signature': 'Duke Center for Genomic and Computational Biology\n'
+                     'http://www.genome.duke.edu/cores-and-services/computational-solutions'
+    }
+    message = generate_message(receiver.email, sender.email, subject, template_name, context)
+    message.send()

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from handover_api.models import Handover, State
-from handover_api.utils import perform_handover
+from handover_api.utils import perform_handover, send_processed_mail
 from switchboard.dds_util import HandoverDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
@@ -61,9 +61,10 @@ def accept_project_redirect(request, handover):
     """
     try:
         perform_handover(handover)
+        handover.mark_accepted()
+        send_processed_mail(handover, "accepted")
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
-    handover.mark_accepted()
     handover_details = HandoverDetails(handover)
     url = handover_details.get_project_url()
     return redirect(url)
@@ -80,7 +81,10 @@ def reject_project(request, handover):
     """
     Marks handover rejected.
     """
-    handover.mark_rejected(request.POST.get('reject_reason'))
+    reason = request.POST.get('reject_reason')
+    handover.mark_rejected(reason)
+    send_processed_mail(handover, "rejected", "Reason: {}".format(reason))
+
     return render(request, 'accept/reject_done.html', build_handover_context(handover))
 
 
