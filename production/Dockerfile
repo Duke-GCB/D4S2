@@ -1,14 +1,18 @@
 FROM dukegcb/dukedshandoverservice
 MAINTAINER dan.leehr@duke.edu
 
-# nginx / supervisor
-RUN apt-get update && apt-get install -y nginx
+# apache2 / supervisor
+RUN apt-get update \
+  && apt-get install -y apache2 libapache2-mod-shib2 libapache2-mod-wsgi\
+  && apt-get clean
 RUN pip install supervisor supervisor-stdout
 
 ADD supervisord.conf /etc/supervisord.conf
-ADD nginx.conf /etc/nginx/nginx.conf
+ADD handoverservice.conf /etc/apache2/sites-available/handoverservice.conf
+RUN a2ensite handoverservice
 
-RUN service nginx stop
+RUN service apache2 stop
+RUN service shibd stop
 
 # Place static files using manage.py
 # Running any manage.py commands require a secret key to be present
