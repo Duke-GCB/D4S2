@@ -7,9 +7,15 @@ RUN apt-get update \
   && apt-get clean
 RUN pip install supervisor supervisor-stdout
 
+# Configure supervisor
 ADD supervisord.conf /etc/supervisord.conf
+
+# Configure Apache
 ADD handoverservice.conf /etc/apache2/sites-available/handoverservice.conf
 RUN a2ensite handoverservice
+
+# Configure Shibboleth
+RUN mkdir -p /var/run/shibboleth
 
 RUN service apache2 stop
 RUN service shibd stop
