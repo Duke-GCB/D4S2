@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from simple_history.models import HistoricalRecords
 
 class DukeDSUser(models.Model):
     """
@@ -52,6 +53,7 @@ class Handover(models.Model):
     The state indicates the current progress of the handover, and are enumerated
     above.
     """
+    history = HistoricalRecords()
     project_id = models.CharField(max_length=36, null=False)
     from_user_id = models.CharField(max_length=36, null=False)
     to_user_id = models.CharField(max_length=36, null=False)
@@ -80,8 +82,8 @@ class Handover(models.Model):
 
 
     def __str__(self):
-        return 'Handover <Project: {}, From: {}, To: {}, State: {}>'.format(
-            self.project_id, self.from_user_id, self.to_user_id, State.HANDOVER_CHOICES[self.state][1]
+        return 'Handover Project: {} State: {}'.format(
+            self.project_id, State.HANDOVER_CHOICES[self.state][1]
         )
 
     class Meta:
@@ -95,6 +97,7 @@ class Draft(models.Model):
     recipient with a preview link. States are enumerated above.
 
     """
+    history = HistoricalRecords()
     project_id = models.CharField(max_length=36, null=False)
     from_user_id = models.CharField(max_length=36, null=False)
     to_user_id = models.CharField(max_length=36, null=False)
@@ -108,8 +111,8 @@ class Draft(models.Model):
         if save: self.save()
 
     def __str__(self):
-        return 'Draft <Project: {}, From: {}, To: {}, State: {}>'.format(
-            self.project_id, self.from_user_id, self.to_user_id, State.HANDOVER_CHOICES[self.state][1]
+        return 'Draft Project: {} State: {}'.format(
+            self.project_id, State.HANDOVER_CHOICES[self.state][1]
         )
 
     class Meta:
