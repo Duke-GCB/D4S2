@@ -57,9 +57,13 @@ class Handover(models.Model):
     to_user_id = models.CharField(max_length=36, null=False)
     state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
+    reject_reason = models.TextField(null=False, blank=True)
 
     def is_new(self):
         return self.state == State.NEW
+
+    def is_complete(self):
+        return self.state == State.ACCEPTED or self.state == State.REJECTED
 
     def mark_notified(self, save=True):
         self.state = State.NOTIFIED
@@ -69,9 +73,11 @@ class Handover(models.Model):
         self.state = State.ACCEPTED
         if save: self.save()
 
-    def mark_rejected(self, save=True):
+    def mark_rejected(self, reason, save=True):
         self.state = State.REJECTED
+        self.reject_reason = reason
         if save: self.save()
+
 
     def __str__(self):
         return 'Handover <Project: {}, From: {}, To: {}, State: {}>'.format(

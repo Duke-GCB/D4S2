@@ -34,7 +34,7 @@ INSTALLED_APPS = [
     'handover_api',
     'switchboard',
     'crispy_forms',
-    'accept'
+    'ownership'
 ]
 
 MIDDLEWARE_CLASSES = [

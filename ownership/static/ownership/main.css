@@ -1,0 +1,28 @@
+.details_label {
+    font-weight: bold;
+    font-size: 12pt;
+}
+
+.details_data {
+    font-size: 12pt;
+}
+
+.blurb {
+    margin: 10px;
+    font-size: 12pt;
+}
+
+.standard_button {
+    margin: 5px;
+}
+
+.rejection_textarea {
+    width: 100%;
+    padding: 2px;
+    font-size: 12pt;
+}
+
+.error_message {
+    color: red;
+    font-weight: bold;
+}
