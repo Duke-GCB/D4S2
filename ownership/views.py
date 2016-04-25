@@ -10,10 +10,11 @@ from django.views.decorators.cache import never_cache
 MISSING_TOKEN_MSG = 'Missing authorization token.'
 INVALID_TOKEN_MSG = 'Invalid authorization token.'
 TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
+REASON_REQUIRED_MSG = 'You must specify a reason for rejecting this project.'
 
 
 @never_cache
-def accept(request):
+def ownership_prompt(request):
     """
     Main accept screen where user accepts or rejects a project.
     """
@@ -41,11 +42,11 @@ def render_accept_handover_page(request, handover):
     """
     Renders page with handover details and ACCEPT/REJECT buttons.
     """
-    return render(request, 'accept/index.html', build_handover_context(handover))
+    return render(request, 'ownership/index.html', build_handover_context(handover))
 
 
 @never_cache
-def handover_process(request):
+def ownership_process(request):
     """
     Handles response to either accept or reject a project..
     """
@@ -74,7 +75,7 @@ def render_reject_reason_prompt(request, handover):
     """
     Prompts for a reason for rejecting the project.
     """
-    return render(request, 'accept/reject_reason.html', build_handover_context(handover))
+    return render(request, 'ownership/reject_reason.html', build_handover_context(handover))
 
 
 def reject_project(request, handover):
@@ -82,25 +83,30 @@ def reject_project(request, handover):
     Marks handover rejected.
     """
     reason = request.POST.get('reject_reason')
+    if not reason:
+        context = build_handover_context(handover)
+        context['error_message'] = REASON_REQUIRED_MSG
+        return render(request, 'ownership/reject_reason.html', context, status=400)
+
     handover.mark_rejected(reason)
     send_processed_mail(handover, "rejected", "Reason: {}".format(reason))
 
-    return render(request, 'accept/reject_done.html', build_handover_context(handover))
+    return render(request, 'ownership/reject_done.html', build_handover_context(handover))
 
 
 @never_cache
-def handover_reject(request):
+def ownership_reject(request):
     """
     Handle response from reject reason prompt.
     """
     if request.POST.get('cancel', None):
-        url = url_with_token('accept-index', request.POST.get('token'))
+        url = url_with_token('ownership-prompt', request.POST.get('token'))
         return redirect(url)
     params = request.GET
     func = render_reject_reason_prompt
     if request.method == 'POST':
-        func = reject_project
         params = request.POST
+        func = reject_project
     return response_with_handover(request, params, func)
 
 
@@ -152,5 +158,5 @@ def general_error(request, msg, status):
     """
     message = msg
     context = {'message': message}
-    return render(request, 'accept/error.html', context, status=status)
+    return render(request, 'ownership/error.html', context, status=status)
 

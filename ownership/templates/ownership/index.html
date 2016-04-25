@@ -1,4 +1,4 @@
-{% extends "accept/base.html" %}
+{% extends "ownership/base.html" %}
 
 {%  block content %}
 <h4>Acknowledge Receipt of Final Results</h4>
@@ -41,7 +41,7 @@
     </div>
 </div>
 <br/>
-<form action="{% url 'handover-accept' %}" method="post">
+<form action="{% url 'ownership-process' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="token" value="{{ token }}">
 

@@ -34,7 +34,7 @@ class HandoverViewSet(AuthenticatedModelViewSet):
         handover = self.get_object()
         if not handover.is_new():
             raise AlreadyNotifiedException(detail='Handover already in progress')
-        accept_path = reverse('accept-index') + "?token=" + str(handover.token)
+        accept_path = reverse('ownership-prompt') + "?token=" + str(handover.token)
         accept_url = request.build_absolute_uri(accept_path)
         send_handover(handover, accept_url)
         handover.mark_notified()
