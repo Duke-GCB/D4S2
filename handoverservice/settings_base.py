@@ -51,6 +51,11 @@ MIDDLEWARE_CLASSES = [
     'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.RemoteUserBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 ROOT_URLCONF = 'handoverservice.urls'
 
 TEMPLATES = [
