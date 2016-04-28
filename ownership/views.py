@@ -62,7 +62,7 @@ def accept_project_redirect(request, handover):
     """
     try:
         perform_handover(handover)
-        handover.mark_accepted(request.user)
+        handover.mark_accepted(request.user.get_username())
         send_processed_mail(handover, "accepted")
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
@@ -88,7 +88,7 @@ def reject_project(request, handover):
         context['error_message'] = REASON_REQUIRED_MSG
         return render(request, 'ownership/reject_reason.html', context, status=400)
 
-    handover.mark_rejected(request.user, reason)
+    handover.mark_rejected(request.user.get_username(), reason)
     send_processed_mail(handover, "rejected", "Reason: {}".format(reason))
 
     return render(request, 'ownership/reject_done.html', build_handover_context(handover))
