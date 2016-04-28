@@ -60,6 +60,7 @@ class Handover(models.Model):
     state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     reject_reason = models.TextField(null=False, blank=True)
+    performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or rejected the handover
 
     def is_new(self):
         return self.state == State.NEW
@@ -71,19 +72,21 @@ class Handover(models.Model):
         self.state = State.NOTIFIED
         if save: self.save()
 
-    def mark_accepted(self, save=True):
+    def mark_accepted(self, performed_by, save=True):
         self.state = State.ACCEPTED
+        self.performed_by = performed_by
         if save: self.save()
 
-    def mark_rejected(self, reason, save=True):
+    def mark_rejected(self, performed_by, reason, save=True):
         self.state = State.REJECTED
         self.reject_reason = reason
+        self.performed_by = performed_by
         if save: self.save()
 
 
     def __str__(self):
-        return 'Handover Project: {} State: {}'.format(
-            self.project_id, State.HANDOVER_CHOICES[self.state][1]
+        return 'Handover Project: {} State: {} Performed by: {}'.format(
+            self.project_id, State.HANDOVER_CHOICES[self.state][1], self.performed_by
         )
 
     class Meta:
