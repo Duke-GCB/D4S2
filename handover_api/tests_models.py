@@ -31,26 +31,30 @@ class HandoverTestCase(TestCase):
         self.assertEqual(handover.state, State.NOTIFIED)
 
     def test_mark_accepted(self):
+        performed_by = 'performer'
         handover = Handover.objects.first()
         self.assertEqual(handover.state, State.NEW)
-        handover.mark_accepted()
+        handover.mark_accepted(performed_by)
         self.assertEqual(handover.state, State.ACCEPTED)
+        self.assertEqual(handover.performed_by, performed_by)
 
     def test_mark_rejected(self):
+        performed_by = 'performer'
         handover = Handover.objects.first()
         self.assertEqual(handover.state, State.NEW)
-        handover.mark_rejected('Wrong person.')
+        handover.mark_rejected(performed_by, 'Wrong person.')
         self.assertEqual(handover.state, State.REJECTED)
         self.assertEqual(handover.reject_reason, 'Wrong person.')
+        self.assertEqual(handover.performed_by, performed_by)
 
     def test_is_complete(self):
         handover = Handover.objects.first()
         self.assertEqual(handover.is_complete(), False)
         handover.mark_notified()
         self.assertEqual(handover.is_complete(), False)
-        handover.mark_accepted()
+        handover.mark_accepted('')
         self.assertEqual(handover.is_complete(), True)
-        handover.mark_rejected('')
+        handover.mark_rejected('','')
         self.assertEqual(handover.is_complete(), True)
 
 

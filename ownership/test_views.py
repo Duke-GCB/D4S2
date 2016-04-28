@@ -118,7 +118,7 @@ class ProcessTestCase(TestCase):
 
     def test_with_already_rejected(self):
         handover = create_handover()
-        handover.mark_rejected('Done')
+        handover.mark_rejected('user', 'Done')
         token = handover.token
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
@@ -127,7 +127,7 @@ class ProcessTestCase(TestCase):
 
     def test_with_already_accepted(self):
         handover = create_handover()
-        handover.mark_accepted()
+        handover.mark_accepted('user')
         token = handover.token
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
