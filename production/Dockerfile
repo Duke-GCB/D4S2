@@ -17,8 +17,9 @@ RUN a2ensite handoverservice
 # Configure Shibboleth
 RUN mkdir -p /var/run/shibboleth
 
-# Place shibboleth config and duke cert
+# Place shibboleth config, duke cert, and customized attribute map
 ADD shibboleth2.xml /etc/shibboleth/shibboleth2.xml
+ADD attribute-map.xml /etc/shibboleth/attribute-map.xml
 ADD https://shib.oit.duke.edu/idp_signing.crt /etc/shibboleth/idp_signing.crt
 
 # Ensure services are stopped so that supervisor can run them
