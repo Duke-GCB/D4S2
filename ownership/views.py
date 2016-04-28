@@ -6,6 +6,7 @@ from handover_api.utils import perform_handover, send_processed_mail
 from switchboard.dds_util import HandoverDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
+from django.contrib.auth.decorators import login_required
 
 MISSING_TOKEN_MSG = 'Missing authorization token.'
 INVALID_TOKEN_MSG = 'Invalid authorization token.'
@@ -13,6 +14,7 @@ TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for rejecting this project.'
 
 
+@login_required
 @never_cache
 def ownership_prompt(request):
     """
@@ -45,6 +47,7 @@ def render_accept_handover_page(request, handover):
     return render(request, 'ownership/index.html', build_handover_context(handover))
 
 
+@login_required
 @never_cache
 def ownership_process(request):
     """
@@ -94,6 +97,7 @@ def reject_project(request, handover):
     return render(request, 'ownership/reject_done.html', build_handover_context(handover))
 
 
+@login_required
 @never_cache
 def ownership_reject(request):
     """
