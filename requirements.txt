@@ -1,6 +1,8 @@
 Django==1.9.4
 django-crispy-forms==1.6.0
 django-filter==0.13.0
+-e git+https://github.com/Duke-GCB/django-shibboleth-adapter@3de247a9a9f726a3f8cf054d58b8cdb6295eb700#egg=django_shibboleth_adapter
+django-simple-history==1.8.1
 djangorestframework==3.3.3
 DukeDSClient==0.2.3
 funcsigs==0.4
@@ -12,4 +14,3 @@ psycopg2==2.6.1
 PyYAML==3.11
 requests==2.9.1
 six==1.10.0
-django-simple-history==1.8.1
