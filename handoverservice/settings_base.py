@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     'crispy_forms',
     'ownership',
     'simple_history',
-    'shibboleth',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -45,20 +44,10 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'shibboleth.middleware.ShibbolethRemoteUserMiddleware',
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
-]
-
-# Authentication backend order is important and both are required
-# If REMOTE_USER is set, then the shib backend will use this variable
-# to find/create/authenticate a user. Otherwise, we fall back to ModelBackend
-
-AUTHENTICATION_BACKENDS = [
-    'shibboleth.backends.ShibbolethRemoteUserBackend',
-    'django.contrib.auth.backends.ModelBackend',
 ]
 
 ROOT_URLCONF = 'handoverservice.urls'
@@ -138,29 +127,3 @@ REST_FRAMEWORK = {
 }
 
 DDSCLIENT_PROPERTIES = {}
-
-# Shibboleth configuration
-
-# Login and Logout URL are required, but only used by the shibboleth views
-SHIBBOLETH_LOGIN_URL = 'http://localhost/Shibboleth.sso/Login'
-SHIBBOLETH_LOGOUT_URL = 'http://localhost/Shibboleth.sso/Logout'
-SHIBBOLETH_USER_KEY='eppn' # eduPersonPrincipalName
-
-# Maps shibboleth attributes into User Models
-SHIBBOLETH_ATTRIBUTE_LIST = [
-    {
-        'shibboleth_key': 'givenName',
-        'user_attribute': 'first_name',
-        'required': True
-    },
-    {
-        'shibboleth_key': 'sn',
-        'user_attribute': 'last_name',
-        'required': True
-    },
-        {
-        'shibboleth_key': 'mail',
-        'user_attribute': 'email',
-        'required': True
-    },
-]
