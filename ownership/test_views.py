@@ -49,7 +49,15 @@ class AuthenticatedTestCase(TestCase):
         django_user.objects.create_user(username, password=password)
         self.client.login(username=username, password=password)
 
+
 class AcceptTestCase(AuthenticatedTestCase):
+
+    def test_redirects_for_login(self):
+        self.client.logout()
+        url = url_with_token('ownership-prompt', 'token-data')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('login', response['Location'])
 
     def test_error_when_no_token(self):
         url = url_with_token('ownership-prompt')
@@ -83,13 +91,21 @@ class AcceptTestCase(AuthenticatedTestCase):
 
 
 class ProcessTestCase(AuthenticatedTestCase):
+
+    def test_redirects_for_login(self):
+        self.client.logout()
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'token': 'token-data'})
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('login', response['Location'])
+
     @patch('handover_api.utils.DDSUtil')
     def test_error_when_no_token(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
         token = create_handover_get_token()
-        url = url_with_token('ownership-process')
+        url = url_with_token('ownership-process', token)
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
@@ -153,6 +169,13 @@ class ProcessTestCase(AuthenticatedTestCase):
 
 
 class RejectReasonTestCase(AuthenticatedTestCase):
+
+    def test_redirects_for_login(self):
+        self.client.logout()
+        url = reverse('ownership-reject')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('login', response['Location'])
 
     @patch('ownership.views.HandoverDetails')
     @patch('ownership.views.perform_handover')
