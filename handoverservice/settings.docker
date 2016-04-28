@@ -41,3 +41,6 @@ DDSCLIENT_PROPERTIES = {
 }
 
 STATIC_ROOT='/usr/src/app/static'
+
+SHIBBOLETH_LOGIN_URL = '{}/Shibboleth.sso/Login'.format(os.getenv('HANDOVERSERVICE_ROOT'))
+SHIBBOLETH_LOGOUT_URL = '{}/Shibboleth.sso/Logout'.format(os.getenv('HANDOVERSERVICE_ROOT'))

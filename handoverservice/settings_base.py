@@ -140,6 +140,10 @@ REST_FRAMEWORK = {
 DDSCLIENT_PROPERTIES = {}
 
 # Shibboleth configuration
+
+# Login and Logout URL are required, but only used by the shibboleth views
+SHIBBOLETH_LOGIN_URL = 'http://localhost/Shibboleth.sso/Login'
+SHIBBOLETH_LOGOUT_URL = 'http://localhost/Shibboleth.sso/Logout'
 SHIBBOLETH_USER_KEY='eppn' # eduPersonPrincipalName
 
 # Maps shibboleth attributes into User Models
