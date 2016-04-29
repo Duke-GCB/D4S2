@@ -1,6 +1,13 @@
 FROM dukegcb/dukedshandoverservice
 MAINTAINER dan.leehr@duke.edu
 
+# Additional requirements for production instance
+COPY requirements-production.txt /usr/src/app/
+RUN pip install --no-cache-dir -r requirements-production.txt
+
+# Replace settings with production-specific
+COPY settings.docker-production /usr/src/app/handoverservice/settings.py
+
 # apache2 / supervisor
 RUN apt-get update \
   && apt-get install -y apache2 libapache2-mod-shib2 libapache2-mod-wsgi\
