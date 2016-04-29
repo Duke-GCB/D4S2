@@ -26,7 +26,7 @@ class APIKeyTokenClientTestCase(TestCase):
         response = client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_fails_notstaff(self):
+    def test_fails_not_staff(self):
         user = django_user.objects.create_user('user2', is_staff=False)
         dsuser = DukeDSUser.objects.create(user=user,dds_id='abcd-1234-5678-0000',api_key='secret-api-key2')
         client = APIClient()
