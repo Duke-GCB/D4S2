@@ -11,7 +11,7 @@ class AuthenticatedResourceTestCase(APITestCase):
     def setUp(self):
         username = 'api_user'
         password = 'secret'
-        django_user.objects.create_user(username, password=password)
+        self.user = django_user.objects.create_user(username, password=password, is_staff=True)
         self.client.login(username=username, password=password)
 
 
@@ -22,6 +22,13 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         url = reverse('handover-list')
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_fails_not_staff(self):
+        self.user.is_staff = False
+        self.user.save()
+        url = reverse('handover-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_handover(self):
         url = reverse('handover-list')
@@ -101,6 +108,13 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         url = reverse('draft-list')
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_fails_not_staff(self):
+        self.user.is_staff = False
+        self.user.save()
+        url = reverse('draft-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_draft(self):
         url = reverse('draft-list')
@@ -184,11 +198,19 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
 
 
 class UserViewTestCase(AuthenticatedResourceTestCase):
+
     def test_fails_unauthenticated(self):
         self.client.logout()
         url = reverse('dukedsuser-list')
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_fails_not_staff(self):
+        self.user.is_staff = False
+        self.user.save()
+        url = reverse('dukedsuser-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_user(self):
         user_id = django_user.objects.all()[0].pk
@@ -251,6 +273,3 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, {'api_key': 'invalid'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-
-
-

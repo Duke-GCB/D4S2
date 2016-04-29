@@ -9,7 +9,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 class APIKeyTokenClientTestCase(TestCase):
 
     def setUp(self):
-        user = django_user.objects.create_user('user1')
+        user = django_user.objects.create_user('user1', is_staff=True)
         self.dsuser = DukeDSUser.objects.create(user=user,dds_id='abcd-1234-5678-efgh',api_key='secret-api-key')
 
     def test_header_auth(self):
@@ -25,6 +25,16 @@ class APIKeyTokenClientTestCase(TestCase):
         url = reverse('handover-list')
         response = client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_fails_notstaff(self):
+        user = django_user.objects.create_user('user2', is_staff=False)
+        dsuser = DukeDSUser.objects.create(user=user,dds_id='abcd-1234-5678-0000',api_key='secret-api-key2')
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Token ' + dsuser.api_key)
+        url = reverse('handover-list')
+        response = client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
 
 class APIKeyTokenAuthenticationTestCase(TestCase):
 
