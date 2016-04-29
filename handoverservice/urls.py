@@ -9,6 +9,8 @@ urlpatterns = [
     url(r'^api/v1/', include('handover_api.urls')),
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
+    # login view is only used with local authentication. With production shibboleth config,
+    # Apache will redirect to the shibboleth login page before django redirects to login.
     url(r'^accounts/login/$', auth_views.login, {'template_name': 'ownership/login.html' }),
     url(r'^accounts/logout/$', auth_views.logout, {'template_name': 'ownership/logged_out.html' }),
     url(r'^$', RedirectView.as_view(url='/api/v1/'))
