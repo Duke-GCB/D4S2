@@ -6,6 +6,7 @@ from handover_api.utils import perform_handover, send_processed_mail
 from switchboard.dds_util import HandoverDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
+from django.contrib.auth.decorators import login_required
 
 MISSING_TOKEN_MSG = 'Missing authorization token.'
 INVALID_TOKEN_MSG = 'Invalid authorization token.'
@@ -13,6 +14,7 @@ TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for rejecting this project.'
 
 
+@login_required
 @never_cache
 def ownership_prompt(request):
     """
@@ -45,6 +47,7 @@ def render_accept_handover_page(request, handover):
     return render(request, 'ownership/index.html', build_handover_context(handover))
 
 
+@login_required
 @never_cache
 def ownership_process(request):
     """
@@ -62,7 +65,7 @@ def accept_project_redirect(request, handover):
     """
     try:
         perform_handover(handover)
-        handover.mark_accepted()
+        handover.mark_accepted(request.user.get_username())
         send_processed_mail(handover, "accepted")
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
@@ -88,12 +91,13 @@ def reject_project(request, handover):
         context['error_message'] = REASON_REQUIRED_MSG
         return render(request, 'ownership/reject_reason.html', context, status=400)
 
-    handover.mark_rejected(reason)
+    handover.mark_rejected(request.user.get_username(), reason)
     send_processed_mail(handover, "rejected", "Reason: {}".format(reason))
 
     return render(request, 'ownership/reject_done.html', build_handover_context(handover))
 
 
+@login_required
 @never_cache
 def ownership_reject(request):
     """

@@ -4,6 +4,7 @@ from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG, REASON_REQUIRED_MSG
 from handover_api.models import Handover, State
+from django.contrib.auth.models import User as django_user
 from mock import patch, Mock
 
 
@@ -41,8 +42,22 @@ def setup_mock_handover_details(MockHandoverDetails):
     x.get_to_user.return_value = MockDDSUser('bob', 'bob@joe.com')
     x.get_project.return_value = MockDDSProject('project')
 
+class AuthenticatedTestCase(TestCase):
+    def setUp(self):
+        username = 'ownership_user'
+        password = 'secret'
+        django_user.objects.create_user(username, password=password)
+        self.client.login(username=username, password=password)
 
-class AcceptTestCase(TestCase):
+
+class AcceptTestCase(AuthenticatedTestCase):
+
+    def test_redirects_for_login(self):
+        self.client.logout()
+        url = url_with_token('ownership-prompt', 'token-data')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('login', response['Location'])
 
     def test_error_when_no_token(self):
         url = url_with_token('ownership-prompt')
@@ -75,14 +90,22 @@ class AcceptTestCase(TestCase):
         self.assertIn(TOKEN_NOT_FOUND_MSG, str(response.content))
 
 
-class ProcessTestCase(TestCase):
+class ProcessTestCase(AuthenticatedTestCase):
+
+    def test_redirects_for_login(self):
+        self.client.logout()
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'token': 'token-data'})
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('login', response['Location'])
+
     @patch('handover_api.utils.DDSUtil')
     def test_error_when_no_token(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
         token = create_handover_get_token()
-        url = url_with_token('ownership-process')
+        url = url_with_token('ownership-process', token)
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
@@ -118,7 +141,7 @@ class ProcessTestCase(TestCase):
 
     def test_with_already_rejected(self):
         handover = create_handover()
-        handover.mark_rejected('Done')
+        handover.mark_rejected('user', 'Done')
         token = handover.token
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
@@ -127,7 +150,7 @@ class ProcessTestCase(TestCase):
 
     def test_with_already_accepted(self):
         handover = create_handover()
-        handover.mark_accepted()
+        handover.mark_accepted('user')
         token = handover.token
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
@@ -145,7 +168,14 @@ class ProcessTestCase(TestCase):
         self.assertIn('reason for rejecting project', str(response.content))
 
 
-class RejectReasonTestCase(TestCase):
+class RejectReasonTestCase(AuthenticatedTestCase):
+
+    def test_redirects_for_login(self):
+        self.client.logout()
+        url = reverse('ownership-reject')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('login', response['Location'])
 
     @patch('ownership.views.HandoverDetails')
     @patch('ownership.views.perform_handover')

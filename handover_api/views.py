@@ -10,7 +10,7 @@ class AuthenticatedModelViewSet(viewsets.ModelViewSet):
     """
     Base class for requiring authentication for access
     """
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAdminUser,)
 
 class UserViewSet(AuthenticatedModelViewSet):
     """
@@ -52,7 +52,6 @@ class DraftViewSet(AuthenticatedModelViewSet):
     queryset = Draft.objects.all()
     serializer_class = DraftSerializer
     filter_fields = ('project_id', 'from_user_id', 'to_user_id',)
-    permission_classes = (permissions.IsAuthenticated,)
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):

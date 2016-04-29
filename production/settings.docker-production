@@ -42,3 +42,45 @@ DDSCLIENT_PROPERTIES = {
 }
 
 STATIC_ROOT='/usr/src/app/static'
+
+# Shibboleth configuration
+INSTALLED_APPS += [
+    'shibboleth',
+]
+
+MIDDLEWARE_CLASSES += [
+    'shibboleth.middleware.ShibbolethRemoteUserMiddleware',
+]
+
+# Authentication backend order is important and both are required
+# If REMOTE_USER is set, then the shib backend will use this variable
+# to find/create/authenticate a user. Otherwise, we fall back to ModelBackend
+
+AUTHENTICATION_BACKENDS = [
+    'shibboleth.backends.ShibbolethRemoteUserBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# Login and Logout URL are required, but only used by the shibboleth views
+SHIBBOLETH_LOGIN_URL = '{}/Shibboleth.sso/Login'.format(os.getenv('HANDOVERSERVICE_ROOT'))
+SHIBBOLETH_LOGOUT_URL = '{}/Shibboleth.sso/Logout'.format(os.getenv('HANDOVERSERVICE_ROOT'))
+SHIBBOLETH_USER_KEY='eppn' # eduPersonPrincipalName
+
+# Maps shibboleth attributes into User Models
+SHIBBOLETH_ATTRIBUTE_LIST = [
+    {
+        'shibboleth_key': 'givenName',
+        'user_attribute': 'first_name',
+        'required': True
+    },
+    {
+        'shibboleth_key': 'sn',
+        'user_attribute': 'last_name',
+        'required': True
+    },
+        {
+        'shibboleth_key': 'mail',
+        'user_attribute': 'email',
+        'required': True
+    },
+]
