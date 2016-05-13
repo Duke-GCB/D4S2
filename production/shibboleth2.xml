@@ -105,7 +105,8 @@
             handlerURL="/Shibboleth.sso" handlerSSL="true"
             redirectLimit="host+whitelist" redirectWhitelist="https://shib.oit.duke.edu/"
             exportLocation="https://localhost/Shibboleth.sso/GetAssertion" exportACL="127.0.0.1"
-            idpHistory="false" idpHistoryDays="7">
+            idpHistory="false" idpHistoryDays="7"
+            cookieProps="https" >
             
             <!--
             SessionInitiators handle session requests and relay them to a Discovery page,
