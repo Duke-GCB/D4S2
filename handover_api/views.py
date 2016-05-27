@@ -3,7 +3,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
 from handover_api.models import DukeDSUser, Handover, Draft
 from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
-from handover_api.utils import send_draft, send_handover
+from handover_api.utils import DraftMessage, HandoverMessage
 from django.core.urlresolvers import reverse
 
 class AuthenticatedModelViewSet(viewsets.ModelViewSet):
@@ -36,8 +36,9 @@ class HandoverViewSet(AuthenticatedModelViewSet):
             raise AlreadyNotifiedException(detail='Handover already in progress')
         accept_path = reverse('ownership-prompt') + "?token=" + str(handover.token)
         accept_url = request.build_absolute_uri(accept_path)
-        send_handover(handover, accept_url)
-        handover.mark_notified()
+        message = HandoverMessage(handover, accept_url)
+        message.send()
+        handover.mark_notified(message.email_text)
         return self.retrieve(request)
 
 class AlreadyNotifiedException(APIException):
@@ -62,6 +63,7 @@ class DraftViewSet(AuthenticatedModelViewSet):
             force = False
         if draft.is_notified() and not force:
             raise AlreadyNotifiedException()
-        send_draft(draft)
-        draft.mark_notified(True)
+        message = DraftMessage(draft)
+        message.send()
+        draft.mark_notified(message.email_text)
         return self.retrieve(request)

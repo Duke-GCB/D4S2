@@ -61,6 +61,8 @@ class Handover(models.Model):
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     reject_reason = models.TextField(null=False, blank=True)
     performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or rejected the handover
+    handover_email_text = models.TextField(null=False, blank=True)
+    completion_email_text = models.TextField(null=False, blank=True)
 
     def is_new(self):
         return self.state == State.NEW
@@ -68,19 +70,22 @@ class Handover(models.Model):
     def is_complete(self):
         return self.state == State.ACCEPTED or self.state == State.REJECTED
 
-    def mark_notified(self, save=True):
+    def mark_notified(self, email_text, save=True):
         self.state = State.NOTIFIED
+        self.handover_email_text = email_text
         if save: self.save()
 
-    def mark_accepted(self, performed_by, save=True):
+    def mark_accepted(self, performed_by, accept_email_text, save=True):
         self.state = State.ACCEPTED
         self.performed_by = performed_by
+        self.completion_email_text = accept_email_text
         if save: self.save()
 
-    def mark_rejected(self, performed_by, reason, save=True):
+    def mark_rejected(self, performed_by, reason, reject_email_text, save=True):
         self.state = State.REJECTED
-        self.reject_reason = reason
         self.performed_by = performed_by
+        self.reject_reason = reason
+        self.completion_email_text = reject_email_text
         if save: self.save()
 
 
@@ -105,12 +110,14 @@ class Draft(models.Model):
     from_user_id = models.CharField(max_length=36, null=False)
     to_user_id = models.CharField(max_length=36, null=False)
     state = models.IntegerField(choices=State.DRAFT_CHOICES, default=State.NEW, null=False)
+    email_text = models.TextField(null=False, blank=True)
 
     def is_notified(self):
         return self.state == State.NOTIFIED
 
-    def mark_notified(self, save=True):
+    def mark_notified(self, email_text, save=True):
         self.state = State.NOTIFIED
+        self.email_text = email_text
         if save: self.save()
 
     def __str__(self):

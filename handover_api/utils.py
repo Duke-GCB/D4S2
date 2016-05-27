@@ -1,66 +1,116 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import HandoverDetails, DDSUtil
 
-def send_draft(draft):
-    """
-    Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
-    in a models.Draft object. Then calls generate_message with email addresses, subject, and the details to
-    generate an EmailMessage object, which can be .send()ed.
-    """
 
-    try:
-        handover_details = HandoverDetails(draft)
-        sender = handover_details.get_from_user()
-        receiver = handover_details.get_to_user()
-        project = handover_details.get_project()
-        url = handover_details.get_project_url()
-    except ValueError as e:
-        raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-    template_name = 'draft.txt'
-    subject = 'Data ready for Project {}'.format(project.name)
-    context = {
-        'project_name': project.name,
-        'status': 'Draft',
-        'recipient_name': receiver.full_name,
-        'sender_name': sender.full_name,
-        'sender_email': sender.email,
-        'url': url,
-        'signature': 'Duke Center for Genomic and Computational Biology\n'
-                     'http://www.genome.duke.edu/cores-and-services/computational-solutions'
-    }
-    message = generate_message(sender.email, receiver.email, subject, template_name, context)
-    message.send()
+class Message(object):
+
+    def __init__(self, message):
+        self._message = message
+
+    @property
+    def email_text(self):
+        """
+        Returns the full text of the underlying email message
+        :return: text of the message
+        """
+        return str(self._message.message())
+
+    def send(self):
+        """
+        Sends underlying message
+        """
+        self._message.send()
 
 
-def send_handover(handover, accept_url):
-    """
-    Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
-    in a models.Handover object. Then calls generate_message with email addresses, subject, and the details to
-    generate an EmailMessage object, which can be .send()ed.
-    """
+class DraftMessage(Message):
 
-    try:
+    def __init__(self, draft):
+        """
+        Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
+        in a models.Draft object. Then calls generate_message with email addresses, subject, and the details to
+        generate an EmailMessage object, which can be .send()ed.
+        """
+
+        try:
+            handover_details = HandoverDetails(draft)
+            sender = handover_details.get_from_user()
+            receiver = handover_details.get_to_user()
+            project = handover_details.get_project()
+            url = handover_details.get_project_url()
+        except ValueError as e:
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+        template_name = 'draft.txt'
+        subject = 'Data ready for Project {}'.format(project.name)
+        context = {
+            'project_name': project.name,
+            'status': 'Draft',
+            'recipient_name': receiver.full_name,
+            'sender_name': sender.full_name,
+            'sender_email': sender.email,
+            'url': url,
+            'signature': 'Duke Center for Genomic and Computational Biology\n'
+                         'http://www.genome.duke.edu/cores-and-services/computational-solutions'
+        }
+        message = generate_message(sender.email, receiver.email, subject, template_name, context)
+        super(DraftMessage, self).__init__(message)
+
+
+class HandoverMessage(Message):
+
+    def __init__(self, handover, accept_url):
+        """
+        Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
+        in a models.Handover object. Then calls generate_message with email addresses, subject, and the details to
+        generate an EmailMessage object, which can be .send()ed.
+        """
+
+        try:
+            handover_details = HandoverDetails(handover)
+            sender = handover_details.get_from_user()
+            receiver = handover_details.get_to_user()
+            project = handover_details.get_project()
+        except ValueError as e:
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+
+        template_name = 'handover.txt'
+        subject = 'Data finalized for Project {}'.format(project.name)
+        context = {
+            'project_name': project.name,
+            'status': 'Final',
+            'recipient_name': receiver.full_name,
+            'sender_name': sender.full_name,
+            'sender_email': sender.email,
+            'url': accept_url,
+            'signature': 'Duke Center for Genomic and Computational Biology\n'
+                         'http://www.genome.duke.edu/cores-and-services/computational-solutions'
+        }
+        message = generate_message(sender.email, receiver.email, subject, template_name, context)
+        super(HandoverMessage, self).__init__(message)
+
+
+class ProcessedMessage(Message):
+
+    def __init__(self, handover, process_type, reason=''):
+        """
+        Generates an EmailMessage reporting whether or not the recipient accepted the handover
+        """
         handover_details = HandoverDetails(handover)
         sender = handover_details.get_from_user()
         receiver = handover_details.get_to_user()
         project = handover_details.get_project()
-    except ValueError as e:
-        raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-
-    template_name = 'handover.txt'
-    subject = 'Data finalized for Project {}'.format(project.name)
-    context = {
-        'project_name': project.name,
-        'status': 'Final',
-        'recipient_name': receiver.full_name,
-        'sender_name': sender.full_name,
-        'sender_email': sender.email,
-        'url': accept_url,
-        'signature': 'Duke Center for Genomic and Computational Biology\n'
-                     'http://www.genome.duke.edu/cores-and-services/computational-solutions'
-    }
-    message = generate_message(sender.email, receiver.email, subject, template_name, context)
-    message.send()
+        template_name = 'processed.txt'
+        subject = 'Project {} has been {}'.format(project.name, type)
+        context = {
+            'project_name': project.name,
+            'recipient_name': receiver.full_name,
+            'sender_name': sender.full_name,
+            'type': process_type,
+            'message': reason,
+            'signature': 'Duke Center for Genomic and Computational Biology\n'
+                         'http://www.genome.duke.edu/cores-and-services/computational-solutions'
+        }
+        message = generate_message(receiver.email, sender.email, subject, template_name, context)
+        super(ProcessedMessage, self).__init__(message)
 
 
 def perform_handover(handover):
@@ -86,26 +136,3 @@ def perform_handover(handover):
 
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-
-
-def send_processed_mail(handover, type, reason=''):
-    """
-    Send email back to handover sender with what the handover receiver chose (either accept or reject with a reason).
-    """
-    handover_details = HandoverDetails(handover)
-    sender = handover_details.get_from_user()
-    receiver = handover_details.get_to_user()
-    project = handover_details.get_project()
-    template_name = 'processed.txt'
-    subject = 'Project {} has been {}'.format(project.name, type)
-    context = {
-        'project_name': project.name,
-        'recipient_name': receiver.full_name,
-        'sender_name': sender.full_name,
-        'type': type,
-        'message': reason,
-        'signature': 'Duke Center for Genomic and Computational Biology\n'
-                     'http://www.genome.duke.edu/cores-and-services/computational-solutions'
-    }
-    message = generate_message(receiver.email, sender.email, subject, template_name, context)
-    message.send()
