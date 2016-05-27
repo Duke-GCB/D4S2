@@ -66,7 +66,7 @@ def accept_project_redirect(request, handover):
     try:
         perform_handover(handover)
         message = make_processed_mail(handover, "accepted")
-        message.send()
+        send(message)
         handover.mark_accepted(request.user.get_username(), get_mime_text(message))
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
