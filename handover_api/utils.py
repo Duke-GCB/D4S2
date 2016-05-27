@@ -1,7 +1,25 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import HandoverDetails, DDSUtil
 
-def send_draft(draft):
+def get_mime_text(message):
+    """
+    Returns the MIME text of an EmailMessage for recording
+    :param message:
+    :return: text of the message
+    """
+    return str(message.message())
+
+
+def send(message):
+    """
+    Sends an EmailMessage
+    :param message:
+    :return: None
+    """
+    message.send()
+
+
+def make_draft_message(draft):
     """
     Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
     in a models.Draft object. Then calls generate_message with email addresses, subject, and the details to
@@ -29,10 +47,10 @@ def send_draft(draft):
                      'http://www.genome.duke.edu/cores-and-services/computational-solutions'
     }
     message = generate_message(sender.email, receiver.email, subject, template_name, context)
-    message.send()
+    return message
 
 
-def send_handover(handover, accept_url):
+def make_handover_message(handover, accept_url):
     """
     Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
     in a models.Handover object. Then calls generate_message with email addresses, subject, and the details to
@@ -60,7 +78,7 @@ def send_handover(handover, accept_url):
                      'http://www.genome.duke.edu/cores-and-services/computational-solutions'
     }
     message = generate_message(sender.email, receiver.email, subject, template_name, context)
-    message.send()
+    return message
 
 
 def perform_handover(handover):
@@ -88,9 +106,9 @@ def perform_handover(handover):
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
 
 
-def send_processed_mail(handover, type, reason=''):
+def make_processed_mail(handover, type, reason=''):
     """
-    Send email back to handover sender with what the handover receiver chose (either accept or reject with a reason).
+    Generates an EmailMessage reporting whether or not the recipient accepted the handover
     """
     handover_details = HandoverDetails(handover)
     sender = handover_details.get_from_user()
@@ -108,4 +126,4 @@ def send_processed_mail(handover, type, reason=''):
                      'http://www.genome.duke.edu/cores-and-services/computational-solutions'
     }
     message = generate_message(receiver.email, sender.email, subject, template_name, context)
-    message.send()
+    return message

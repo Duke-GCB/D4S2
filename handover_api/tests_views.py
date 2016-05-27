@@ -79,8 +79,9 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
-    @patch('handover_api.views.send_handover')
-    def test_send_handover(self, mock_send_handover):
+    @patch('handover_api.views.send')
+    @patch('handover_api.views.make_handover_message')
+    def test_send_handover(self, mock_send, mock_make_handover_message):
         h = Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
         self.assertTrue(h.is_new())
         url = reverse('handover-send', args=(h.pk,))
@@ -88,17 +89,20 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         h = Handover.objects.get(pk=h.pk)
         self.assertFalse(h.is_new())
-        self.assertTrue(mock_send_handover.called)
+        self.assertTrue(mock_make_handover_message.called)
+        self.assertTrue(mock_send.called)
 
-    @patch('handover_api.views.send_handover')
-    def test_send_handover_fails(self, mock_send_handover):
+    @patch('handover_api.views.send')
+    @patch('handover_api.views.make_handover_message')
+    def test_send_handover_fails(self, mock_send, mock_make_handover_message):
         h = Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
         self.assertTrue(h.is_new())
-        h.mark_notified()
+        h.mark_notified('mime text')
         url = reverse('handover-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(mock_send_handover.called)
+        self.assertFalse(mock_send.called)
+        self.assertFalse(mock_make_handover_message.called)
 
 
 class DraftViewTestCase(AuthenticatedResourceTestCase):
@@ -155,8 +159,9 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         d =  Draft.objects.get(pk=d.pk)
         self.assertEqual(d.project_id, 'project3')
 
-    @patch('handover_api.views.send_draft')
-    def test_send_draft(self, mock_draft):
+    @patch('handover_api.views.send')
+    @patch('handover_api.views.make_draft_message')
+    def test_send_draft(self, mock_send, mock_make_draft):
         d =  Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
         self.assertFalse(d.is_notified())
         url = reverse('draft-send', args=(d.pk,))
@@ -164,27 +169,32 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d = Draft.objects.get(pk=d.pk)
         self.assertTrue(d.is_notified())
-        self.assertTrue(mock_draft.called)
+        self.assertTrue(mock_make_draft.called)
+        self.assertTrue(mock_send.called)
 
-    @patch('handover_api.views.send_draft')
-    def test_send_draft_fails(self, mock_draft):
+    @patch('handover_api.views.send')
+    @patch('handover_api.views.make_draft_message')
+    def test_send_draft_fails(self, mock_send, mock_make_draft_message):
         d =  Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
         self.assertFalse(d.is_notified())
-        d.mark_notified()
+        d.mark_notified('mime text')
         url = reverse('draft-send', args=(d.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(mock_draft.called)
+        self.assertFalse(mock_send.called)
+        self.assertFalse(mock_make_draft_message.called)
 
-    @patch('handover_api.views.send_draft')
-    def test_force_send_draft(self, mock_draft):
+    @patch('handover_api.views.send')
+    @patch('handover_api.views.make_draft_message')
+    def test_force_send_draft(self, mock_send, mock_make_draft_message):
         d =  Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
         self.assertFalse(d.is_notified())
-        d.mark_notified()
+        d.mark_notified('mime text')
         url = reverse('draft-send', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(mock_draft.called)
+        self.assertTrue(mock_send.called)
+        self.assertTrue(mock_make_draft_message.called)
 
     def test_filter_drafts(self):
         Draft.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')

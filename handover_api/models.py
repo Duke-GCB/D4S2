@@ -81,10 +81,10 @@ class Handover(models.Model):
         self.completion_email_text = accept_email_text
         if save: self.save()
 
-    def mark_rejected(self, performed_by, reject_email_text, reason, save=True):
+    def mark_rejected(self, performed_by, reason, reject_email_text, save=True):
         self.state = State.REJECTED
-        self.reject_reason = reason
         self.performed_by = performed_by
+        self.reject_reason = reason
         self.completion_email_text = reject_email_text
         if save: self.save()
 
