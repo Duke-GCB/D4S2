@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from handover_api.models import Handover, State
-from handover_api.utils import perform_handover, get_mime_text, make_processed_mail, send
+from handover_api.utils import perform_handover, ProcessedMessage
 from switchboard.dds_util import HandoverDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
@@ -65,9 +65,9 @@ def accept_project_redirect(request, handover):
     """
     try:
         perform_handover(handover)
-        message = make_processed_mail(handover, "accepted")
-        send(message)
-        handover.mark_accepted(request.user.get_username(), get_mime_text(message))
+        message = ProcessedMessage(handover, "accepted")
+        message.send()
+        handover.mark_accepted(request.user.get_username(), message.mime_text)
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
     handover_details = HandoverDetails(handover)
@@ -92,9 +92,9 @@ def reject_project(request, handover):
         context['error_message'] = REASON_REQUIRED_MSG
         return render(request, 'ownership/reject_reason.html', context, status=400)
 
-    message = make_processed_mail(handover, "rejected", "Reason: {}".format(reason))
-    send(message)
-    handover.mark_rejected(request.user.get_username(), reason, get_mime_text(message))
+    message = ProcessedMessage(handover, "rejected", "Reason: {}".format(reason))
+    message.send()
+    handover.mark_rejected(request.user.get_username(), reason, message.mime_text)
     return render(request, 'ownership/reject_done.html', build_handover_context(handover))
 
 
