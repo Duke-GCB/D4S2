@@ -8,9 +8,9 @@ class Message(object):
         self._message = message
 
     @property
-    def mime_text(self):
+    def email_text(self):
         """
-        Returns the MIME text of the underlying email message
+        Returns the full text of the underlying email message
         :return: text of the message
         """
         return str(self._message.message())

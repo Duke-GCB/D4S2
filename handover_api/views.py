@@ -38,7 +38,7 @@ class HandoverViewSet(AuthenticatedModelViewSet):
         accept_url = request.build_absolute_uri(accept_path)
         message = HandoverMessage(handover, accept_url)
         message.send()
-        handover.mark_notified(message.mime_text)
+        handover.mark_notified(message.email_text)
         return self.retrieve(request)
 
 class AlreadyNotifiedException(APIException):
@@ -65,5 +65,5 @@ class DraftViewSet(AuthenticatedModelViewSet):
             raise AlreadyNotifiedException()
         message = DraftMessage(draft)
         message.send()
-        draft.mark_notified(message.mime_text)
+        draft.mark_notified(message.email_text)
         return self.retrieve(request)
