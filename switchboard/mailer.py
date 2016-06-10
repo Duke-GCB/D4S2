@@ -1,5 +1,5 @@
 from django.core.mail import EmailMessage
-from django.template.loader import render_to_string, get_template
+from django.template.loader import render_to_string
 
 
 def generate_message(sender_email, rcpt_email, subject, template_name, context):

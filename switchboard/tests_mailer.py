@@ -26,3 +26,21 @@ class MailerTestCase(TestCase):
         self.assertEqual(subject, message.subject)
         self.assertIn(rcpt_email, message.to)
 
+    def testGenerateMessageNoEscape(self):
+        sender_email = 'sender@domain.com'
+        rcpt_email = 'receiver@school.edu'
+        subject = 'Data is ready'
+        template_name = 'processed.txt'
+        context = {
+            'project_name': 'Project ABC',
+            'recipient_name': 'Receiver Name',
+            'sender_name': 'Sender Name',
+            'type': 'processed',
+            'message': "I don't want this",
+            'signature': 'Sender Co\n123Fake St\nAnytown WA 90909',
+        }
+        message = generate_message(sender_email, rcpt_email, subject, template_name, context)
+        self.assertIn("I don't want this", message.body)
+        self.assertEqual(sender_email, message.from_email)
+        self.assertEqual(subject, message.subject)
+        self.assertIn(rcpt_email, message.to)
