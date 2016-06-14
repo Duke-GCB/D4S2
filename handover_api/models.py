@@ -70,9 +70,9 @@ class Handover(models.Model):
     above.
     """
     history = HistoricalRecords()
-    project_id = models.CharField(max_length=36, null=False)
-    from_user_id = models.CharField(max_length=36, null=False)
-    to_user_id = models.CharField(max_length=36, null=False)
+    ds_project = models.ForeignKey(DukeDSProject)
+    from_ds_user = models.ForeignKey(DukeDSUser, related_name='handovers_from')
+    to_ds_user = models.ForeignKey(DukeDSUser, related_name='handovers_to')
     state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     reject_reason = models.TextField(null=False, blank=True)
@@ -107,11 +107,11 @@ class Handover(models.Model):
 
     def __str__(self):
         return 'Handover Project: {} State: {} Performed by: {}'.format(
-            self.project_id, State.HANDOVER_CHOICES[self.state][1], self.performed_by
+            self.ds_project, State.HANDOVER_CHOICES[self.state][1], self.performed_by
         )
 
     class Meta:
-        unique_together = ('project_id', 'from_user_id', 'to_user_id')
+        unique_together = ('ds_project', 'from_ds_user', 'to_ds_user')
 
 class Draft(models.Model):
     """
@@ -122,9 +122,9 @@ class Draft(models.Model):
 
     """
     history = HistoricalRecords()
-    project_id = models.CharField(max_length=36, null=False)
-    from_user_id = models.CharField(max_length=36, null=False)
-    to_user_id = models.CharField(max_length=36, null=False)
+    ds_project = models.ForeignKey(DukeDSProject)
+    from_ds_user = models.ForeignKey(DukeDSUser, related_name='drafts_from')
+    to_ds_user = models.ForeignKey(DukeDSUser, related_name='drafts_to')
     state = models.IntegerField(choices=State.DRAFT_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
 
@@ -138,8 +138,8 @@ class Draft(models.Model):
 
     def __str__(self):
         return 'Draft Project: {} State: {}'.format(
-            self.project_id, State.HANDOVER_CHOICES[self.state][1]
+            self.ds_project, State.HANDOVER_CHOICES[self.state][1]
         )
 
     class Meta:
-        unique_together = ('project_id', 'from_user_id', 'to_user_id')
+        unique_together = ('ds_project', 'from_ds_user', 'to_ds_user')
