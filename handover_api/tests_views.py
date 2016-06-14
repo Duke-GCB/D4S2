@@ -268,7 +268,9 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['dds_id'],'abcd-1234-efgh-5678')
 
-    def test_update_user(self):
+    @patch('handover_api.views.DDSUtil')
+    def test_update_user(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
         user_id = django_user.objects.all()[0].pk
         u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
         url = reverse('dukedsuser-detail', args=(u.pk,))

@@ -21,9 +21,9 @@ class UserViewSet(AuthenticatedModelViewSet):
     serializer_class = UserSerializer
     filter_fields = ('dds_id',)
 
-    def perform_create(self, serializer):
+    def _save_and_populate(self, serializer):
         """
-        Overrides perform_create to fetch user details from DukeDS if not provided
+        Populates user details from DukeDS if missing
         :param serializer: A serialized representation of the user to create
         """
         # First, save the serializer to create an instance
@@ -35,6 +35,12 @@ class UserViewSet(AuthenticatedModelViewSet):
             dds_user.email = dds_user.email or remote_user.email
             dds_user.full_name = dds_user.full_name or remote_user.full_name
             dds_user.save()
+
+    def perform_create(self, serializer):
+        self._save_and_populate(serializer)
+
+    def perform_update(self, serializer):
+        self._save_and_populate(serializer)
 
 
 class HandoverViewSet(AuthenticatedModelViewSet):
