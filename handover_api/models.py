@@ -14,11 +14,16 @@ class DukeDSUser(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    api_key = models.CharField(max_length=36, null=False, unique=True)
+    api_key = models.CharField(max_length=36, null=True, unique=True)
+    full_name = models.TextField(null=True)
+    email = models.EmailField(null=True)
 
     def __str__(self):
         return 'DukeDSUser <{}>'.format(self.dds_id)
 
+class DukeDSProject(models.Model):
+    project_id = models.CharField(max_length=36, null=False, unique=True)
+    name = models.TextField(null=True)
 
 class State(object):
     """
