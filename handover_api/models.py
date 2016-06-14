@@ -5,6 +5,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from simple_history.models import HistoricalRecords
 
+class APIUserManager(models.Manager):
+    """
+    Manager to return API users - those with API keys
+    """
+    def get_queryset(self):
+        return super(APIUserManager, self).get_queryset().exclude(api_key__isnull=True)
+
+
 class DukeDSUser(models.Model):
     """
     Represents a DukeDS user. Keeps track of their API key. The API key
@@ -17,6 +25,9 @@ class DukeDSUser(models.Model):
     api_key = models.CharField(max_length=36, null=True, unique=True)
     full_name = models.TextField(null=True)
     email = models.EmailField(null=True)
+
+    objects = models.Manager()
+    api_users = APIUserManager()
 
     def __str__(self):
         return 'DukeDSUser <{}>'.format(self.dds_id)

@@ -90,6 +90,11 @@ class UserTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             DukeDSUser.objects.create(dds_id=None, api_key='gwegwg')
 
+    def test_requires_api_key(self):
+        api_user_count = DukeDSUser.api_users.count()
+        DukeDSUser.objects.create(dds_id='fewfwef')
+        self.assertEqual(api_user_count, DukeDSUser.api_users.count())
+
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
             DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
