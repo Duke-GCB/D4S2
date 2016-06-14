@@ -19,4 +19,4 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
     user_id = serializers.PrimaryKeyRelatedField(source='user', queryset=User.objects.all())
     class Meta:
         model = DukeDSUser
-        fields = ('id', 'user_id','url','dds_id', 'api_key')
+        fields = ('id', 'user_id','url','dds_id', 'api_key', 'full_name', 'email')

@@ -4,6 +4,7 @@ from rest_framework.decorators import detail_route
 from handover_api.models import DukeDSUser, Handover, Draft
 from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
 from handover_api.utils import DraftMessage, HandoverMessage
+from switchboard.dds_util import DDSUtil
 from django.core.urlresolvers import reverse
 
 class AuthenticatedModelViewSet(viewsets.ModelViewSet):
@@ -19,6 +20,21 @@ class UserViewSet(AuthenticatedModelViewSet):
     queryset = DukeDSUser.objects.all()
     serializer_class = UserSerializer
     filter_fields = ('dds_id',)
+
+    def perform_create(self, serializer):
+        """
+        Overrides perform_create to fetch user details from DukeDS if not provided
+        :param serializer: A serialized representation of the user to create
+        """
+        # First, save the serializer to create an instance
+        dds_user = serializer.save()
+        if dds_user.full_name is None or dds_user.email is None:
+            request_dds_user = DukeDSUser.objects.get(user=self.request.user)
+            dds_util = DDSUtil(user_id=request_dds_user.dds_id)
+            remote_user = dds_util.get_remote_user(dds_user.dds_id)
+            dds_user.email = dds_user.email or remote_user.email
+            dds_user.full_name = dds_user.full_name or remote_user.full_name
+            dds_user.save()
 
 
 class HandoverViewSet(AuthenticatedModelViewSet):
