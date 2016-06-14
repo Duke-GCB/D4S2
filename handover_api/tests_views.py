@@ -5,6 +5,7 @@ from mock import patch, Mock
 from handover_api.views import *
 from handover_api.models import *
 from django.contrib.auth.models import User as django_user
+from ownership.test_views import MockDDSUser
 
 
 class AuthenticatedResourceTestCase(APITestCase):
@@ -216,6 +217,12 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(len(response.data), 0)
 
 
+def setup_mock_ddsutil(mock_ddsutil):
+    mock_ddsutil.return_value = Mock()
+    mock_ddsutil.return_value.get_remote_user = Mock()
+    mock_ddsutil.return_value.get_remote_user.return_value = MockDDSUser('Test User', 'test@test.com')
+
+
 class UserViewTestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
@@ -231,7 +238,9 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_create_user(self):
+    @patch('handover_api.views.DDSUtil')
+    def test_create_user(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
         user_id = django_user.objects.all()[0].pk
         data = {'dds_id': 'abcd-1234-efgh-5678',
                 'api_key': 'zxdel8h4g3lvnkqenlf/z',
