@@ -12,7 +12,7 @@ class DDSUtil(object):
     @property
     def remote_store(self):
         if self._remote_store is None:
-            user = DukeDSUser.objects.get(dds_id=self.sender_user_id)
+            user = DukeDSUser.api_users.get(dds_id=self.sender_user_id)
             config = Config()
             config.update_properties(settings.DDSCLIENT_PROPERTIES)
             config.update_properties({'user_key': user.api_key})
