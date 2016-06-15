@@ -14,6 +14,10 @@ class AuthenticatedResourceTestCase(APITestCase):
         password = 'secret'
         self.user = django_user.objects.create_user(username, password=password, is_staff=True)
         self.client.login(username=username, password=password)
+        self.ddsuser1 = DukeDSUser.objects.create(user=self.user, dds_id='user1')
+        self.ddsuser2 = DukeDSUser.objects.create(dds_id='user2')
+        self.project1 = DukeDSProject.objects.create(project_id='project1', name='Project 1')
+        self.project2 = DukeDSProject.objects.create(project_id='project2', name='Project 2')
 
 
 class HandoverViewTestCase(AuthenticatedResourceTestCase):
@@ -40,22 +44,22 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Handover.objects.get().from_user_id, 'user1')
 
     def test_list_handovers(self):
-        Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
-        Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        Handover.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('handover-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
     def test_get_handover(self):
-        h = Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+        h = Handover.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('handover-detail', args=(h.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['project_id'], 'project1')
 
     def test_delete_handover(self):
-        h = Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        h = Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('handover-detail', args=(h.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -71,7 +75,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(h.project_id, 'project3')
 
     def test_filter_handovers(self):
-        Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        h = Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('handover-list')
         response=self.client.get(url, {'project_id': 'project2'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -85,7 +89,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_handover_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        h = Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         self.assertTrue(h.is_new())
         url = reverse('handover-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
@@ -100,7 +104,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_handover_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Handover.objects.create(project_id='project2', from_user_id='fromuser1', to_user_id='touser1')
+        h = Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         self.assertTrue(h.is_new())
         h.mark_notified('email text')
         url = reverse('handover-send', args=(h.pk,))

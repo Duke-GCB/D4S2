@@ -47,9 +47,23 @@ class HandoverViewSet(AuthenticatedModelViewSet):
     """
     API endpoint that allows handovers to be viewed or edited.
     """
-    queryset = Handover.objects.all()
     serializer_class = HandoverSerializer
-    filter_fields = ('project_id', 'from_user_id', 'to_user_id',)
+
+    def get_queryset(self):
+        """
+        Optionally filters on project_id, from_user_id, or to_user_id
+        """
+        queryset = Handover.objects.all()
+        project_id = self.request.query_params.get('project_id', None)
+        if project_id is not None:
+            queryset = queryset.filter(project__project_id=project_id)
+        from_user_id = self.request.query_params.get('from_user_id', None)
+        if from_user_id is not None:
+            queryset = queryset.filter(from_user__dds_id=from_user_id)
+        to_user_id = self.request.query_params.get('to_user_id', None)
+        if to_user_id is not None:
+            queryset = queryset.filter(to_user__dds_id=to_user_id)
+        return queryset
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):

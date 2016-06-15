@@ -3,9 +3,9 @@ from rest_framework import routers
 from handover_api import views
 
 router = routers.DefaultRouter()
-router.register(r'handovers', views.HandoverViewSet)
-router.register(r'drafts', views.DraftViewSet)
-router.register(r'users', views.UserViewSet)
+router.register(r'handovers', views.HandoverViewSet, 'handover')
+router.register(r'drafts', views.DraftViewSet, 'draft')
+router.register(r'users', views.UserViewSet, 'user')
 
 urlpatterns = [
     url(r'^', include(router.urls)),
