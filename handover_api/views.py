@@ -52,6 +52,9 @@ class HandoverViewSet(AuthenticatedModelViewSet):
     def get_queryset(self):
         """
         Optionally filters on project_id, from_user_id, or to_user_id
+        Originally we could just specify filter_fields as project_id, from_user_id, and to_user_id
+        but these don't work across relationships (requires project__project_id) despite serializer field project_id
+        So this method implements the filtering manually
         """
         queryset = Handover.objects.all()
         project_id = self.request.query_params.get('project_id', None)
