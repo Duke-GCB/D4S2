@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG, REASON_REQUIRED_MSG
-from handover_api.models import Handover, State
+from handover_api.models import Handover, State, DukeDSProject, DukeDSUser
 from django.contrib.auth.models import User as django_user
 from mock import patch, Mock
 
@@ -16,7 +16,10 @@ def url_with_token(name, token=None):
 
 
 def create_handover():
-    return Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+    project1 = DukeDSProject.objects.create(project_id='project1')
+    fromuser1 = DukeDSUser.objects.create(dds_id='fromuser1')
+    touser1= DukeDSUser.objects.create(dds_id='touser1')
+    return Handover.objects.create(project=project1, from_user=fromuser1, to_user=touser1)
 
 
 def create_handover_get_token():
