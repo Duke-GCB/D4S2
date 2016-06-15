@@ -5,7 +5,13 @@ from mock import patch, Mock
 from handover_api.views import *
 from handover_api.models import *
 from django.contrib.auth.models import User as django_user
-from ownership.test_views import MockDDSUser
+from ownership.test_views import MockDDSUser, MockDDSProject
+
+def setup_mock_ddsutil(mock_ddsutil):
+    mock_ddsutil.return_value = Mock()
+    mock_ddsutil.return_value.get_remote_user = Mock()
+    mock_ddsutil.return_value.get_remote_user.return_value = MockDDSUser('Test User', 'test@test.com')
+    mock_ddsutil.return_value.get_remote_project.return_value = MockDDSProject('My Project')
 
 
 class AuthenticatedResourceTestCase(APITestCase):
@@ -35,13 +41,19 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_create_handover(self):
+    @patch('handover_api.views.DDSUtil')
+    def test_create_handover(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
         url = reverse('handover-list')
         data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Handover.objects.count(), 1)
         self.assertEqual(Handover.objects.get().from_user.dds_id, 'user1')
+        # get_remote_user should be called for both from and to users
+        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
+        # get_remote project should be called once
+        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
     def test_list_handovers(self):
         Handover.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -65,7 +77,9 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Handover.objects.count(), 0)
 
-    def test_update_handover(self):
+    @patch('handover_api.views.DDSUtil')
+    def test_update_handover(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
         h = Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         DukeDSProject.objects.create(project_id='project3')
         updated = {'from_user_id': self.ddsuser1.dds_id, 'to_user_id': self.ddsuser2.dds_id ,'project_id': 'project3'}
@@ -74,6 +88,10 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         h = Handover.objects.get(pk=h.pk)
         self.assertEqual(h.project.project_id, 'project3')
+        # get_remote_user should be called for both from and to users
+        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
+        # get_remote project should be called once
+        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
     def test_filter_handovers(self):
         h = Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -130,13 +148,19 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_create_draft(self):
+    @patch('handover_api.views.DDSUtil')
+    def test_create_draft(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
         url = reverse('draft-list')
         data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Draft.objects.count(), 1)
         self.assertEqual(Draft.objects.get().from_user.dds_id, 'user1')
+        # get_remote_user should be called for both from and to users
+        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
+        # get_remote project should be called once
+        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
     def test_list_drafts(self):
         Draft.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -160,7 +184,9 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Draft.objects.count(), 0)
 
-    def test_update_draft(self):
+    @patch('handover_api.views.DDSUtil')
+    def test_update_draft(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
         d =  Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         updated = {'project_id': 'project3', 'from_user_id': 'fromuser1', 'to_user_id':'touser1'}
         url = reverse('draft-detail', args=(d.pk,))
@@ -168,6 +194,11 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d =  Draft.objects.get(pk=d.pk)
         self.assertEqual(d.project.project_id, 'project3')
+
+        # get_remote_user should be called for both from and to users
+        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
+        # get_remote project should be called once
+        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
     @patch('handover_api.views.DraftMessage')
     def test_send_draft(self, mock_draft_message):
@@ -222,12 +253,6 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(len(response.data), 0)
 
 
-def setup_mock_ddsutil(mock_ddsutil):
-    mock_ddsutil.return_value = Mock()
-    mock_ddsutil.return_value.get_remote_user = Mock()
-    mock_ddsutil.return_value.get_remote_user.return_value = MockDDSUser('Test User', 'test@test.com')
-
-
 class UserViewTestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
@@ -258,6 +283,7 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(DukeDSUser.objects.count(), initial_count + 1)
         self.assertEqual(DukeDSUser.objects.get(user_id=new_django_user.pk).dds_id, 'abcd-1234-efgh-5678')
+        self.assertTrue(mock_ddsutil.return_value.get_remote_user.called)
 
     def test_get_users(self):
         initial_count = DukeDSUser.objects.count()
@@ -290,6 +316,7 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         u = DukeDSUser.objects.get(pk=u.pk)
         self.assertEqual(u.dds_id,'abcd-5555-0000-ffff')
+        self.assertTrue(mock_ddsutil.return_value.get_remote_user.called)
 
     def test_delete_user(self):
         initial_count = DukeDSUser.objects.count()

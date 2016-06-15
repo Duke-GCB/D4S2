@@ -7,13 +7,52 @@ from handover_api.utils import DraftMessage, HandoverMessage
 from switchboard.dds_util import DDSUtil
 from django.core.urlresolvers import reverse
 
-class AuthenticatedModelViewSet(viewsets.ModelViewSet):
+class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
     """
     Base class for requiring authentication for access
     """
     permission_classes = (permissions.IsAdminUser,)
 
-class UserViewSet(AuthenticatedModelViewSet):
+    @property
+    def dds_util(self):
+        request_dds_user = DukeDSUser.objects.get(user=self.request.user)
+        return DDSUtil(user_id=request_dds_user.dds_id)
+
+    def save_and_populate(self, serializer):
+        # Must be overridden by subclass
+        pass
+
+    def perform_create(self, serializer):
+        self.save_and_populate(serializer)
+
+    def perform_update(self, serializer):
+        self.save_and_populate(serializer)
+
+    def populate_user(self, dds_user):
+        """
+        Populates a DukeDSUser calling the DukeDS API if needed
+        :param dds_user: A DukeDSUser model object that has been saved, but may not be populated
+        :return: None
+        """
+        if not dds_user.populated():
+            remote_user = self.dds_util.get_remote_user(dds_user.dds_id)
+            dds_user.email = dds_user.email or remote_user.email
+            dds_user.full_name = dds_user.full_name or remote_user.full_name
+            dds_user.save()
+
+    def populate_project(self, dds_project):
+        """
+        Populates a DukeDSProjectcalling the DukeDS API if needed
+        :param dds_user:
+        :return: None
+        """
+        if not dds_project.populated():
+            remote_project = self.dds_util.get_remote_project(dds_project.project_id)
+            dds_project.name = dds_project.name or remote_project.name
+            dds_project.save()
+
+
+class UserViewSet(PopulatingAuthenticatedModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -21,29 +60,12 @@ class UserViewSet(AuthenticatedModelViewSet):
     serializer_class = UserSerializer
     filter_fields = ('dds_id',)
 
-    def _save_and_populate(self, serializer):
-        """
-        Populates user details from DukeDS if missing
-        :param serializer: A serialized representation of the user to create
-        """
-        # First, save the serializer to create an instance
+    def save_and_populate(self, serializer):
         dds_user = serializer.save()
-        if dds_user.full_name is None or dds_user.email is None:
-            request_dds_user = DukeDSUser.objects.get(user=self.request.user)
-            dds_util = DDSUtil(user_id=request_dds_user.dds_id)
-            remote_user = dds_util.get_remote_user(dds_user.dds_id)
-            dds_user.email = dds_user.email or remote_user.email
-            dds_user.full_name = dds_user.full_name or remote_user.full_name
-            dds_user.save()
-
-    def perform_create(self, serializer):
-        self._save_and_populate(serializer)
-
-    def perform_update(self, serializer):
-        self._save_and_populate(serializer)
+        self.populate_user(dds_user)
 
 
-class TransferViewSet(AuthenticatedModelViewSet):
+class TransferViewSet(PopulatingAuthenticatedModelViewSet):
     """
     Base view set for handovers and drafts, both of which can be filtered by
     project_id, from_user_id, to_user_id
@@ -68,6 +90,12 @@ class TransferViewSet(AuthenticatedModelViewSet):
         if to_user_id is not None:
             queryset = queryset.filter(to_user__dds_id=to_user_id)
         return queryset
+
+    def save_and_populate(self, serializer):
+        transfer = serializer.save()
+        self.populate_project(transfer.project)
+        for dds_user in [transfer.from_user, transfer.to_user]:
+            self.populate_user(dds_user)
 
 
 class HandoverViewSet(TransferViewSet):
