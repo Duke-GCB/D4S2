@@ -29,12 +29,23 @@ class DukeDSUser(models.Model):
     objects = models.Manager()
     api_users = APIUserManager()
 
+    def populated(self):
+        if self.full_name and self.email:
+            return True
+        else:
+            return False
+
     def __str__(self):
         return 'DukeDSUser <{}>'.format(self.dds_id)
 
 class DukeDSProject(models.Model):
     project_id = models.CharField(max_length=36, null=False, unique=True)
     name = models.TextField(null=True)
+
+    def populated(self):
+        # Only field to populate is name
+        return bool(self.name)
+
 
 class State(object):
     """

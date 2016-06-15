@@ -105,6 +105,12 @@ class ProjectTestCase(TestCase):
         p = DukeDSProject.objects.create(project_id='abcd-1234')
         self.assertIsNotNone(p)
 
+    def test_populated(self):
+        p = DukeDSProject.objects.create(project_id='abcd-1234')
+        self.assertFalse(p.populated())
+        p.name = 'A Project'
+        self.assertTrue(p.populated())
+
 class UserTestCase(TestCase):
     def setUp(self):
         DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='zxxsdvasv//aga')
@@ -121,6 +127,14 @@ class UserTestCase(TestCase):
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
             DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
+
+    def test_populated(self):
+        u = DukeDSUser.objects.create(dds_id='1234-abcd-fghi-5678')
+        self.assertFalse(u.populated())
+        u.full_name = 'Test user'
+        self.assertFalse(u.populated())
+        u.email = 'email@domain.com'
+        self.assertTrue(u.populated())
 
 
 class HandoverRelationsTestCase(TransferBaseTestCase):
