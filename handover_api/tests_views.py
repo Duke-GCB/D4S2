@@ -246,25 +246,27 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
     @patch('handover_api.views.DDSUtil')
     def test_create_user(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        user_id = django_user.objects.all()[0].pk
+        initial_count = DukeDSUser.objects.count()
+        new_django_user = django_user.objects.create_user('new_django_user')
         data = {'dds_id': 'abcd-1234-efgh-5678',
                 'api_key': 'zxdel8h4g3lvnkqenlf/z',
-                'user_id': user_id,
+                'user_id': new_django_user.pk,
                 }
         url = reverse('dukedsuser-list')
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(DukeDSUser.objects.count(), 1)
-        self.assertEqual(DukeDSUser.objects.get().dds_id, 'abcd-1234-efgh-5678')
+        self.assertEqual(DukeDSUser.objects.count(), initial_count + 1)
+        self.assertEqual(DukeDSUser.objects.get(user_id=new_django_user.pk).dds_id, 'abcd-1234-efgh-5678')
 
     def test_get_users(self):
+        initial_count = DukeDSUser.objects.count()
         DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
         DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5679', api_key='zxdel8h4g3lvnkqenl7')
         url = reverse('dukedsuser-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data), initial_count + 2)
 
     def test_get_user(self):
         u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
@@ -276,12 +278,13 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
     @patch('handover_api.views.DDSUtil')
     def test_update_user(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        user_id = django_user.objects.all()[0].pk
+        # Initially with no django user attached
         u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
         url = reverse('dukedsuser-detail', args=(u.pk,))
+        new_django_user = django_user.objects.create_user('new_django_user')
         data = {'dds_id':'abcd-5555-0000-ffff',
                 'api_key':'zxdel8h4g3lvnkqenlf',
-                'user_id': user_id
+                'user_id': new_django_user.pk
                 }
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -289,11 +292,13 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(u.dds_id,'abcd-5555-0000-ffff')
 
     def test_delete_user(self):
+        initial_count = DukeDSUser.objects.count()
         u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
+        self.assertEqual(DukeDSUser.objects.count(), initial_count + 1)
         url = reverse('dukedsuser-detail', args=(u.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(DukeDSUser.objects.count(), 0)
+        self.assertEqual(DukeDSUser.objects.count(), initial_count)
 
     def test_filter_users(self):
         DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678', api_key='zxdel8h4g3lvnkqenlf')
@@ -307,4 +312,4 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         # Can't filter on API key,  so this should be ignored
         response = self.client.get(url, {'api_key': 'invalid'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data), DukeDSUser.objects.count())
