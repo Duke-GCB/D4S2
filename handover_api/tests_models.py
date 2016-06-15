@@ -3,15 +3,21 @@ from django.test import TestCase
 from handover_api.models import DukeDSUser, DukeDSProject, Handover, Draft, State
 
 
-class HandoverTestCase(TestCase):
-    HANDOVER_EMAIL_TEXT = 'handover email message'
-    ACCEPT_EMAIL_TEXT = 'handover accepted'
-    REJECT_EMAIL_TEXT = 'handover rejected'
+class TransferBaseTestCase(TestCase):
 
     def setUp(self):
         self.project1 = DukeDSProject.objects.create(project_id='project1')
         self.user1 = DukeDSUser.objects.create(dds_id='user1')
         self.user2 = DukeDSUser.objects.create(dds_id='user2')
+
+
+class HandoverTestCase(TransferBaseTestCase):
+    HANDOVER_EMAIL_TEXT = 'handover email message'
+    ACCEPT_EMAIL_TEXT = 'handover accepted'
+    REJECT_EMAIL_TEXT = 'handover rejected'
+
+    def setUp(self):
+        super(HandoverTestCase, self).setUp()
         Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
@@ -66,12 +72,10 @@ class HandoverTestCase(TestCase):
         self.assertEqual(handover.is_complete(), True)
 
 
-class DraftTestCase(TestCase):
+class DraftTestCase(TransferBaseTestCase):
 
     def setUp(self):
-        self.project1 = DukeDSProject.objects.create(project_id='project1')
-        self.user1 = DukeDSUser.objects.create(dds_id='user1')
-        self.user2 = DukeDSUser.objects.create(dds_id='user2')
+        super(DraftTestCase, self).setUp()
         Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
@@ -119,5 +123,47 @@ class UserTestCase(TestCase):
             DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
 
 
-class RelationsTestCase(TestCase):
-    pass
+class HandoverRelationsTestCase(TransferBaseTestCase):
+    def setUp(self):
+        super(HandoverRelationsTestCase, self).setUp()
+        self.project2 = DukeDSProject.objects.create(project_id='project2')
+        self.project3 = DukeDSProject.objects.create(project_id='project3')
+        self.user3 = DukeDSUser.objects.create(dds_id='user3')
+        self.h1 = Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+        self.h2 = Handover.objects.create(project=self.project2, from_user=self.user1, to_user=self.user3)
+        self.h3 = Handover.objects.create(project=self.project3, from_user=self.user2, to_user=self.user3)
+
+    def test_handovers_from(self):
+        self.assertIn(self.h1, self.user1.handovers_from.all())
+        self.assertIn(self.h2, self.user1.handovers_from.all())
+        self.assertNotIn(self.h3, self.user1.handovers_from.all())
+        self.assertIn(self.h3, self.user2.handovers_from.all())
+
+    def test_handovers_to(self):
+        self.assertIn(self.h1, self.user2.handovers_to.all())
+        self.assertIn(self.h2, self.user3.handovers_to.all())
+        self.assertIn(self.h3, self.user3.handovers_to.all())
+        self.assertNotIn(self.h2, self.user2.handovers_to.all())
+
+
+class DraftRelationsTestCase(TransferBaseTestCase):
+    def setUp(self):
+        super(DraftRelationsTestCase, self).setUp()
+        self.project4 = DukeDSProject.objects.create(project_id='project4')
+        self.project5 = DukeDSProject.objects.create(project_id='project5')
+        self.user4 = DukeDSUser.objects.create(dds_id='user4')
+        self.d1 = Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user4)
+        self.d4 = Draft.objects.create(project=self.project4, from_user=self.user2, to_user=self.user4)
+        self.d5 = Draft.objects.create(project=self.project5, from_user=self.user2, to_user=self.user1)
+
+    def test_drafts_from(self):
+        self.assertIn(self.d1, self.user1.drafts_from.all())
+        self.assertIn(self.d4, self.user2.drafts_from.all())
+        self.assertNotIn(self.d4, self.user1.drafts_from.all())
+        self.assertIn(self.d5, self.user2.drafts_from.all())
+
+    def test_drafts_to(self):
+        self.assertIn(self.d1, self.user4.drafts_to.all())
+        self.assertIn(self.d4, self.user4.drafts_to.all())
+        self.assertIn(self.d5, self.user1.drafts_to.all())
+        self.assertNotIn(self.d5, self.user4.drafts_to.all())
