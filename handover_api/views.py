@@ -13,10 +13,16 @@ class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
     """
     permission_classes = (permissions.IsAdminUser,)
 
+    def __init__(self, **kwargs):
+        super(PopulatingAuthenticatedModelViewSet, self).__init__(**kwargs)
+        self._lazy_dds_util = None
+
     @property
     def dds_util(self):
-        request_dds_user = DukeDSUser.objects.get(user=self.request.user)
-        return DDSUtil(user_id=request_dds_user.dds_id)
+        if self._lazy_dds_util is None:
+            request_dds_user = DukeDSUser.objects.get(user=self.request.user)
+            self._lazy_dds_util = DDSUtil(user_id=request_dds_user.dds_id)
+        return self._lazy_dds_util
 
     def save_and_populate(self, serializer):
         # Must be overridden by subclass
