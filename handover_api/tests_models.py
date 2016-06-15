@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import DukeDSUser, Handover, Draft, State
+from handover_api.models import DukeDSUser, DukeDSProject, Handover, Draft, State
 
 
 class HandoverTestCase(TestCase):
@@ -9,19 +9,22 @@ class HandoverTestCase(TestCase):
     REJECT_EMAIL_TEXT = 'handover rejected'
 
     def setUp(self):
-        Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+        self.project1 = DukeDSProject.objects.create(project_id='project1')
+        self.user1 = DukeDSUser.objects.create(dds_id='user1')
+        self.user2 = DukeDSUser.objects.create(dds_id='user2')
+        Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
         handover = Handover.objects.first()
         self.assertEqual(handover.state, State.NEW, 'New handovers should be in initiated state')
 
     def test_required_fields(self):
-        with self.assertRaises(IntegrityError):
-            Handover.objects.create(project_id=None, from_user_id=None, to_user_id=None)
+        with self.assertRaises(ValueError):
+            Handover.objects.create(project=None, from_user=None, to_user=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+            Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_token_autopopulate(self):
         handover = Handover.objects.first()
@@ -66,23 +69,39 @@ class HandoverTestCase(TestCase):
 class DraftTestCase(TestCase):
 
     def setUp(self):
-        Draft.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+        self.project1 = DukeDSProject.objects.create(project_id='project1')
+        self.user1 = DukeDSUser.objects.create(dds_id='user1')
+        self.user2 = DukeDSUser.objects.create(dds_id='user2')
+        Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
         draft = Draft.objects.first()
         self.assertEqual(draft.state, State.NEW, 'New drafts should be in initiated state')
 
     def test_required_fields(self):
-        with self.assertRaises(IntegrityError):
-            Draft.objects.create(project_id=None, from_user_id=None, to_user_id=None)
+        with self.assertRaises(ValueError):
+            Draft.objects.create(project=None, from_user=None, to_user=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Draft.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+            Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
+    def test_allows_multiple_drafts(self):
+        user3 = DukeDSUser.objects.create(dds_id='user3')
+        d = Draft.objects.create(project=self.project1, from_user=self.user1, to_user=user3)
+        self.assertIsNotNone(d)
+
+
+class ProjectTestCase(TestCase):
+    def test_requires_project_id(self):
+        with self.assertRaises(IntegrityError):
+            DukeDSProject.objects.create(project_id=None)
+
+    def test_create_project(self):
+        p = DukeDSProject.objects.create(project_id='abcd-1234')
+        self.assertIsNotNone(p)
 
 class UserTestCase(TestCase):
-
     def setUp(self):
         DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='zxxsdvasv//aga')
 
@@ -99,3 +118,6 @@ class UserTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
 
+
+class RelationsTestCase(TestCase):
+    pass
