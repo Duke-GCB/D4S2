@@ -25,9 +25,9 @@ class HandoverSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class DraftSerializer(serializers.HyperlinkedModelSerializer):
-    project_id = serializers.StringRelatedField(source='project.project_id', read_only=True)
-    from_user_id = serializers.StringRelatedField(source='from_user.dds_id', read_only=True)
-    to_user_id = serializers.StringRelatedField(source='to_user.dds_id', read_only=True)
+    project_id = CreatableSlugField(source='project', slug_field='project_id', queryset=DukeDSProject.objects.all())
+    from_user_id = CreatableSlugField(source='from_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
+    to_user_id = CreatableSlugField(source='to_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
 
     class Meta:
         model = Draft

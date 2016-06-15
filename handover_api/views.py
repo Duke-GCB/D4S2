@@ -43,12 +43,13 @@ class UserViewSet(AuthenticatedModelViewSet):
         self._save_and_populate(serializer)
 
 
-class HandoverViewSet(AuthenticatedModelViewSet):
+class TransferViewSet(AuthenticatedModelViewSet):
     """
-    API endpoint that allows handovers to be viewed or edited.
-    """
-    serializer_class = HandoverSerializer
+    Base view set for handovers and drafts, both of which can be filtered by
+    project_id, from_user_id, to_user_id
 
+    """
+    model = None
     def get_queryset(self):
         """
         Optionally filters on project_id, from_user_id, or to_user_id
@@ -56,7 +57,7 @@ class HandoverViewSet(AuthenticatedModelViewSet):
         but these don't work across relationships (requires project__project_id) despite serializer field project_id
         So this method implements the filtering manually
         """
-        queryset = Handover.objects.all()
+        queryset = self.model.objects.all()
         project_id = self.request.query_params.get('project_id', None)
         if project_id is not None:
             queryset = queryset.filter(project__project_id=project_id)
@@ -67,6 +68,14 @@ class HandoverViewSet(AuthenticatedModelViewSet):
         if to_user_id is not None:
             queryset = queryset.filter(to_user__dds_id=to_user_id)
         return queryset
+
+
+class HandoverViewSet(TransferViewSet):
+    """
+    API endpoint that allows handovers to be viewed or edited.
+    """
+    serializer_class = HandoverSerializer
+    model = Handover
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
@@ -85,13 +94,12 @@ class AlreadyNotifiedException(APIException):
     default_detail = 'Already notified'
 
 
-class DraftViewSet(AuthenticatedModelViewSet):
+class DraftViewSet(TransferViewSet):
     """
     API endpoint that allows drafts to be viewed or edited.
     """
-    queryset = Draft.objects.all()
     serializer_class = DraftSerializer
-    filter_fields = ('project_id', 'from_user_id', 'to_user_id',)
+    model = Draft
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
