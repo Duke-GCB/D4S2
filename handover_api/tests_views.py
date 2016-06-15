@@ -41,7 +41,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Handover.objects.count(), 1)
-        self.assertEqual(Handover.objects.get().from_user_id, 'user1')
+        self.assertEqual(Handover.objects.get().from_user.dds_id, 'user1')
 
     def test_list_handovers(self):
         Handover.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -68,7 +68,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
     def test_update_handover(self):
         h = Handover.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         DukeDSProject.objects.create(project_id='project3')
-        updated = {'project_id': 'project3'}
+        updated = {'from_user_id': self.ddsuser1.dds_id, 'to_user_id': self.ddsuser2.dds_id ,'project_id': 'project3'}
         url = reverse('handover-detail', args=(h.pk,))
         response = self.client.put(url, data=updated, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
