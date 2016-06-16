@@ -36,7 +36,8 @@ class DukeDSUser(models.Model):
             return False
 
     def __str__(self):
-        return 'DukeDSUser <{}>'.format(self.dds_id)
+        return "{} - {} - {}".format(self.dds_id, self.email, self.full_name,)
+
 
 class DukeDSProject(models.Model):
     project_id = models.CharField(max_length=36, null=False, unique=True)
@@ -45,6 +46,9 @@ class DukeDSProject(models.Model):
     def populated(self):
         # Only field to populate is name
         return bool(self.name)
+
+    def __str__(self):
+        return "{} - {}".format(self.project_id, self.name,)
 
 
 class State(object):
