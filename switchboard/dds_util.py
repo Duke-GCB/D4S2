@@ -78,7 +78,7 @@ class ModelPopulator(object):
 class HandoverDetails(object):
     def __init__(self, handover_or_draft):
         self.handover = handover_or_draft
-        self.ddsutil = DDSUtil(self.handover.from_user_id)
+        self.ddsutil = DDSUtil(self.handover.from_user.dds_id)
         self.model_populator = ModelPopulator(self.ddsutil)
 
     def get_from_user(self):
@@ -94,4 +94,4 @@ class HandoverDetails(object):
         return self.handover.project
 
     def get_project_url(self):
-        return self.ddsutil.get_project_url(self.handover.project_id)
+        return self.ddsutil.get_project_url(self.handover.project.project_id)
