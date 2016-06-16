@@ -170,8 +170,7 @@ class Migration(migrations.Migration):
         # Finally, remove nullability
         migrations.AlterField(model_name='draft',name='ds_project',
                               field=models.ForeignKey(default=None, null=False,
-                                                      on_delete=django.db.models.deletion.CASCADE,
-                                                      related_name='drafts_from', to='handover_api.DukeDSUser'),
+                                                      on_delete=django.db.models.deletion.CASCADE, to='handover_api.DukeDSProject'),
                               ),
         migrations.AlterField(model_name='draft', name='from_ds_user',
                               field=models.ForeignKey(default=None, null=False,
