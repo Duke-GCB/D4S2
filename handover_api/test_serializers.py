@@ -88,10 +88,3 @@ class HandoverSerializerTestCase(TestCase):
         expected_original_project = DukeDSProject.objects.get(project_id=original_project_id)
         self.assertEqual(original_project, expected_original_project)
         self.assertNotEqual(original_project, updated_handover.project)
-
-
-
-
-
-
-
