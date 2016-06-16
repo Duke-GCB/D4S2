@@ -2,7 +2,7 @@ from django.test import TestCase
 from handover_api.models import DukeDSUser
 from django.core.exceptions import ObjectDoesNotExist
 import mock
-from switchboard.dds_util import DDSUtil
+from switchboard.dds_util import DDSUtil, ModelPopulator, HandoverDetails
 
 
 class DDSUtilTestCase(TestCase):

@@ -5,13 +5,7 @@ from mock import patch, Mock
 from handover_api.views import *
 from handover_api.models import *
 from django.contrib.auth.models import User as django_user
-from ownership.test_views import MockDDSUser, MockDDSProject
-
-def setup_mock_ddsutil(mock_ddsutil):
-    mock_ddsutil.return_value = Mock()
-    mock_ddsutil.return_value.get_remote_user = Mock()
-    mock_ddsutil.return_value.get_remote_user.return_value = MockDDSUser('Test User', 'test@test.com')
-    mock_ddsutil.return_value.get_remote_project.return_value = MockDDSProject('My Project')
+from switchboard.mocks_ddsutil import setup_mock_ddsutil
 
 
 class AuthenticatedResourceTestCase(APITestCase):
