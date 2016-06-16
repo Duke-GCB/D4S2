@@ -15,7 +15,7 @@ class CreatableSlugRelatedField(serializers.SlugRelatedField):
     of the serialized Handover.
 
     SlugRelatedField supports reading and writing. Changing a Handover's project_id through the REST API
-    will change the project_id in the related DukeDSProject object.
+    will associate the handover with a different DukeDSProject object.
 
     CreatableSlugRelatedField extends SlugRelatedField with the ability to create new model objects
     with the slug data when they don't already exist.
