@@ -4,7 +4,7 @@ from rest_framework.decorators import detail_route
 from handover_api.models import DukeDSUser, Handover, Draft
 from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
 from handover_api.utils import DraftMessage, HandoverMessage
-from switchboard.dds_util import DDSUtil
+from switchboard.dds_util import DDSUtil, ModelPopulator
 from django.core.urlresolvers import reverse
 
 class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
@@ -15,14 +15,15 @@ class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
 
     def __init__(self, **kwargs):
         super(PopulatingAuthenticatedModelViewSet, self).__init__(**kwargs)
-        self._lazy_dds_util = None
+        self._lazy_model_populator = None
 
     @property
-    def dds_util(self):
-        if self._lazy_dds_util is None:
+    def model_populator(self):
+        if self._lazy_model_populator is None:
             request_dds_user = DukeDSUser.objects.get(user=self.request.user)
-            self._lazy_dds_util = DDSUtil(user_id=request_dds_user.dds_id)
-        return self._lazy_dds_util
+            dds_util = DDSUtil(user_id=request_dds_user.dds_id)
+            self._lazy_model_populator = ModelPopulator(dds_util)
+        return self._lazy_model_populator
 
     def save_and_populate(self, serializer):
         # Must be overridden by subclass
@@ -35,27 +36,10 @@ class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
         self.save_and_populate(serializer)
 
     def populate_user(self, dds_user):
-        """
-        Populates a DukeDSUser calling the DukeDS API if needed
-        :param dds_user: A DukeDSUser model object that has been saved, but may not be populated
-        :return: None
-        """
-        if not dds_user.populated():
-            remote_user = self.dds_util.get_remote_user(dds_user.dds_id)
-            dds_user.email = dds_user.email or remote_user.email
-            dds_user.full_name = dds_user.full_name or remote_user.full_name
-            dds_user.save()
+        self.model_populator.populate_user(dds_user)
 
     def populate_project(self, dds_project):
-        """
-        Populates a DukeDSProjectcalling the DukeDS API if needed
-        :param dds_user:
-        :return: None
-        """
-        if not dds_project.populated():
-            remote_project = self.dds_util.get_remote_project(dds_project.project_id)
-            dds_project.name = dds_project.name or remote_project.name
-            dds_project.save()
+        self.model_populator.populate_project(dds_project)
 
 
 class UserViewSet(PopulatingAuthenticatedModelViewSet):
