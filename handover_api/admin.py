@@ -3,7 +3,7 @@ from handover_api.models import *
 from simple_history.admin import SimpleHistoryAdmin
 
 admin.site.register(DukeDSUser)
-
+admin.site.register(DukeDSProject)
 
 class DraftAdmin(SimpleHistoryAdmin):
     pass

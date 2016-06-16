@@ -15,7 +15,7 @@ class APIKeyTokenAuthentication(authentication.TokenAuthentication):
 
     def authenticate_credentials(self, key):
         try:
-            token = DukeDSUser.objects.select_related('user').get(api_key=key)
+            token = DukeDSUser.api_users.select_related('user').get(api_key=key)
         except DukeDSUser.DoesNotExist:
             raise exceptions.AuthenticationFailed(_('Invalid token.'))
 

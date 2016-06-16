@@ -122,8 +122,8 @@ def perform_handover(handover):
     auth_role = 'project_admin'
     try:
         # Add the to_user to the project, acting as the from_user
-        ddsutil_from = DDSUtil(handover.from_user_id)
-        ddsutil_from.add_user(handover.to_user_id, handover.project_id, auth_role)
+        ddsutil_from = DDSUtil(handover.from_user.dds_id)
+        ddsutil_from.add_user(handover.to_user.dds_id, handover.project.project_id, auth_role)
         # At this point, We'd like to remove the from_user from the project, changing ownership
         # However, we cannot remove the from_user if we are authenticated as that user
         # We experimented with authenticating as the to_user, but this was not practical

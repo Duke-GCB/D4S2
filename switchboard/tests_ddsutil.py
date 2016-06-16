@@ -1,8 +1,9 @@
 from django.test import TestCase
-from handover_api.models import DukeDSUser
+from handover_api.models import DukeDSUser, DukeDSProject
 from django.core.exceptions import ObjectDoesNotExist
 import mock
-from switchboard.dds_util import DDSUtil
+from switchboard.dds_util import DDSUtil, ModelPopulator, HandoverDetails
+from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 
 
 class DDSUtilTestCase(TestCase):
@@ -66,3 +67,66 @@ class DDSUtilTestCase(TestCase):
                 ddsutil = DDSUtil('abcd-efgh-1234-5678')
                 ddsutil.remote_store
 
+class MockDetails(object):
+    full_name='Test User'
+    email='test@example.com'
+    project_name='My Project'
+
+def setup_mock_ddsutil(mock_ddsutil):
+    mock_ddsutil.return_value = mock.Mock()
+    mock_ddsutil.return_value.get_remote_user = mock.Mock()
+    mock_ddsutil.return_value.get_remote_user.return_value = MockDDSUser(MockDetails.full_name, MockDetails.email)
+    mock_ddsutil.return_value.get_remote_project.return_value = MockDDSProject(MockDetails.project_name)
+
+
+# Test model populator
+class TestModelPopulator(TestCase):
+    @mock.patch('switchboard.dds_util.DDSUtil')
+    def test_populate_user(self, mock_dds_util):
+        setup_mock_ddsutil(mock_dds_util)
+        u = DukeDSUser.objects.create(dds_id='abcd-1234')
+        self.assertFalse(u.populated())
+        dds_util = mock_dds_util()
+        m = ModelPopulator(dds_util)
+        m.populate_user(u)
+        self.assertTrue(u.populated())
+        self.assertTrue(dds_util.get_remote_user.called)
+        self.assertTrue(dds_util.get_remote_user.called_with('abcd-1234'))
+        self.assertEqual(u.full_name, MockDetails.full_name)
+        self.assertEqual(u.email, MockDetails.email)
+
+    @mock.patch('switchboard.dds_util.DDSUtil')
+    def test_skips_populated_user(self, mock_dds_util):
+        setup_mock_ddsutil(mock_dds_util)
+        u = DukeDSUser.objects.create(dds_id='abcd-1234', full_name='Test User', email='test@example.com')
+        self.assertTrue(u.populated())
+        dds_util = mock_dds_util()
+        m = ModelPopulator(dds_util)
+        m.populate_user(u)
+        self.assertTrue(u.populated())
+        self.assertFalse(dds_util.get_remote_user.called)
+
+
+    @mock.patch('switchboard.dds_util.DDSUtil')
+    def test_populate_project(self, mock_dds_util):
+        setup_mock_ddsutil(mock_dds_util)
+        p = DukeDSProject.objects.create(project_id='1234-defg')
+        self.assertFalse(p.populated())
+        dds_util = mock_dds_util()
+        m = ModelPopulator(dds_util)
+        m.populate_project(p)
+        self.assertTrue(p.populated())
+        self.assertTrue(dds_util.get_remote_project.called)
+        self.assertTrue(dds_util.get_remote_project.called_with('1234-defg'))
+        self.assertEqual(p.name, MockDetails.project_name)
+
+    @mock.patch('switchboard.dds_util.DDSUtil')
+    def test_skips_populated_project(self, mock_dds_util):
+        setup_mock_ddsutil(mock_dds_util)
+        p = DukeDSProject.objects.create(project_id='1234-defg', name='My project')
+        self.assertTrue(p.populated())
+        dds_util = mock_dds_util()
+        m = ModelPopulator(dds_util)
+        m.populate_project(p)
+        self.assertTrue(p.populated())
+        self.assertFalse(dds_util.get_remote_project.called)

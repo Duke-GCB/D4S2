@@ -3,7 +3,8 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG, REASON_REQUIRED_MSG
-from handover_api.models import Handover, State
+from handover_api.models import Handover, State, DukeDSProject, DukeDSUser
+from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from django.contrib.auth.models import User as django_user
 from mock import patch, Mock
 
@@ -16,7 +17,10 @@ def url_with_token(name, token=None):
 
 
 def create_handover():
-    return Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+    project1 = DukeDSProject.objects.create(project_id='project1')
+    fromuser1 = DukeDSUser.objects.create(dds_id='fromuser1')
+    touser1= DukeDSUser.objects.create(dds_id='touser1')
+    return Handover.objects.create(project=project1, from_user=fromuser1, to_user=touser1)
 
 
 def create_handover_get_token():
@@ -24,23 +28,12 @@ def create_handover_get_token():
     return str(handover.token)
 
 
-class MockDDSUser(object):
-    def __init__(self, full_name, email):
-        self.full_name = full_name
-        self.email = email
-
-
-class MockDDSProject(object):
-    def __init__(self, name):
-        self.name = name
-        self.children = []
-
-
 def setup_mock_handover_details(MockHandoverDetails):
     x = MockHandoverDetails()
     x.get_from_user.return_value = MockDDSUser('joe', 'joe@joe.com')
     x.get_to_user.return_value = MockDDSUser('bob', 'bob@joe.com')
     x.get_project.return_value = MockDDSProject('project')
+
 
 class AuthenticatedTestCase(TestCase):
     def setUp(self):

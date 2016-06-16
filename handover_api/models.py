@@ -5,6 +5,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from simple_history.models import HistoricalRecords
 
+class APIUserManager(models.Manager):
+    """
+    Manager to return API users - those with API keys
+    """
+    def get_queryset(self):
+        return super(APIUserManager, self).get_queryset().exclude(api_key__isnull=True)
+
+
 class DukeDSUser(models.Model):
     """
     Represents a DukeDS user. Keeps track of their API key. The API key
@@ -14,10 +22,33 @@ class DukeDSUser(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    api_key = models.CharField(max_length=36, null=False, unique=True)
+    api_key = models.CharField(max_length=36, null=True, unique=True)
+    full_name = models.TextField(null=True)
+    email = models.EmailField(null=True)
+
+    objects = models.Manager()
+    api_users = APIUserManager()
+
+    def populated(self):
+        if self.full_name and self.email:
+            return True
+        else:
+            return False
 
     def __str__(self):
-        return 'DukeDSUser <{}>'.format(self.dds_id)
+        return "{} - {} - {}".format(self.dds_id, self.email, self.full_name,)
+
+
+class DukeDSProject(models.Model):
+    project_id = models.CharField(max_length=36, null=False, unique=True)
+    name = models.TextField(null=True)
+
+    def populated(self):
+        # Only field to populate is name
+        return bool(self.name)
+
+    def __str__(self):
+        return "{} - {}".format(self.project_id, self.name,)
 
 
 class State(object):
@@ -54,9 +85,9 @@ class Handover(models.Model):
     above.
     """
     history = HistoricalRecords()
-    project_id = models.CharField(max_length=36, null=False)
-    from_user_id = models.CharField(max_length=36, null=False)
-    to_user_id = models.CharField(max_length=36, null=False)
+    project = models.ForeignKey(DukeDSProject)
+    from_user = models.ForeignKey(DukeDSUser, related_name='handovers_from')
+    to_user = models.ForeignKey(DukeDSUser, related_name='handovers_to')
     state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     reject_reason = models.TextField(null=False, blank=True)
@@ -91,11 +122,11 @@ class Handover(models.Model):
 
     def __str__(self):
         return 'Handover Project: {} State: {} Performed by: {}'.format(
-            self.project_id, State.HANDOVER_CHOICES[self.state][1], self.performed_by
+            self.project, State.HANDOVER_CHOICES[self.state][1], self.performed_by
         )
 
     class Meta:
-        unique_together = ('project_id', 'from_user_id', 'to_user_id')
+        unique_together = ('project', 'from_user', 'to_user')
 
 class Draft(models.Model):
     """
@@ -106,9 +137,9 @@ class Draft(models.Model):
 
     """
     history = HistoricalRecords()
-    project_id = models.CharField(max_length=36, null=False)
-    from_user_id = models.CharField(max_length=36, null=False)
-    to_user_id = models.CharField(max_length=36, null=False)
+    project = models.ForeignKey(DukeDSProject)
+    from_user = models.ForeignKey(DukeDSUser, related_name='drafts_from')
+    to_user = models.ForeignKey(DukeDSUser, related_name='drafts_to')
     state = models.IntegerField(choices=State.DRAFT_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
 
@@ -122,8 +153,8 @@ class Draft(models.Model):
 
     def __str__(self):
         return 'Draft Project: {} State: {}'.format(
-            self.project_id, State.HANDOVER_CHOICES[self.state][1]
+            self.project, State.HANDOVER_CHOICES[self.state][1]
         )
 
     class Meta:
-        unique_together = ('project_id', 'from_user_id', 'to_user_id')
+        unique_together = ('project', 'from_user', 'to_user')

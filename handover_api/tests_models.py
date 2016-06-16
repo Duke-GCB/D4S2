@@ -1,27 +1,36 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import DukeDSUser, Handover, Draft, State
+from handover_api.models import DukeDSUser, DukeDSProject, Handover, Draft, State
 
 
-class HandoverTestCase(TestCase):
+class TransferBaseTestCase(TestCase):
+
+    def setUp(self):
+        self.project1 = DukeDSProject.objects.create(project_id='project1')
+        self.user1 = DukeDSUser.objects.create(dds_id='user1')
+        self.user2 = DukeDSUser.objects.create(dds_id='user2')
+
+
+class HandoverTestCase(TransferBaseTestCase):
     HANDOVER_EMAIL_TEXT = 'handover email message'
     ACCEPT_EMAIL_TEXT = 'handover accepted'
     REJECT_EMAIL_TEXT = 'handover rejected'
 
     def setUp(self):
-        Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+        super(HandoverTestCase, self).setUp()
+        Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
         handover = Handover.objects.first()
         self.assertEqual(handover.state, State.NEW, 'New handovers should be in initiated state')
 
     def test_required_fields(self):
-        with self.assertRaises(IntegrityError):
-            Handover.objects.create(project_id=None, from_user_id=None, to_user_id=None)
+        with self.assertRaises(ValueError):
+            Handover.objects.create(project=None, from_user=None, to_user=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Handover.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+            Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_token_autopopulate(self):
         handover = Handover.objects.first()
@@ -63,26 +72,46 @@ class HandoverTestCase(TestCase):
         self.assertEqual(handover.is_complete(), True)
 
 
-class DraftTestCase(TestCase):
+class DraftTestCase(TransferBaseTestCase):
 
     def setUp(self):
-        Draft.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+        super(DraftTestCase, self).setUp()
+        Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
         draft = Draft.objects.first()
         self.assertEqual(draft.state, State.NEW, 'New drafts should be in initiated state')
 
     def test_required_fields(self):
-        with self.assertRaises(IntegrityError):
-            Draft.objects.create(project_id=None, from_user_id=None, to_user_id=None)
+        with self.assertRaises(ValueError):
+            Draft.objects.create(project=None, from_user=None, to_user=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Draft.objects.create(project_id='project1', from_user_id='fromuser1', to_user_id='touser1')
+            Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
+    def test_allows_multiple_drafts(self):
+        user3 = DukeDSUser.objects.create(dds_id='user3')
+        d = Draft.objects.create(project=self.project1, from_user=self.user1, to_user=user3)
+        self.assertIsNotNone(d)
+
+
+class ProjectTestCase(TestCase):
+    def test_requires_project_id(self):
+        with self.assertRaises(IntegrityError):
+            DukeDSProject.objects.create(project_id=None)
+
+    def test_create_project(self):
+        p = DukeDSProject.objects.create(project_id='abcd-1234')
+        self.assertIsNotNone(p)
+
+    def test_populated(self):
+        p = DukeDSProject.objects.create(project_id='abcd-1234')
+        self.assertFalse(p.populated())
+        p.name = 'A Project'
+        self.assertTrue(p.populated())
 
 class UserTestCase(TestCase):
-
     def setUp(self):
         DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='zxxsdvasv//aga')
 
@@ -90,11 +119,92 @@ class UserTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             DukeDSUser.objects.create(dds_id=None, api_key='gwegwg')
 
-    def test_required_fields_api_key(self):
-        with self.assertRaises(IntegrityError):
-            DukeDSUser.objects.create(dds_id='fefwef', api_key=None)
+    def test_requires_api_key(self):
+        api_user_count = DukeDSUser.api_users.count()
+        DukeDSUser.objects.create(dds_id='fewfwef')
+        self.assertEqual(api_user_count, DukeDSUser.api_users.count())
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
             DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
 
+    def test_populated(self):
+        u = DukeDSUser.objects.create(dds_id='1234-abcd-fghi-5678')
+        self.assertFalse(u.populated())
+        u.full_name = 'Test user'
+        self.assertFalse(u.populated())
+        u.email = 'email@domain.com'
+        self.assertTrue(u.populated())
+
+
+class HandoverRelationsTestCase(TransferBaseTestCase):
+    def setUp(self):
+        super(HandoverRelationsTestCase, self).setUp()
+        self.project2 = DukeDSProject.objects.create(project_id='project2')
+        self.project3 = DukeDSProject.objects.create(project_id='project3')
+        self.user3 = DukeDSUser.objects.create(dds_id='user3')
+        self.h1 = Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+        self.h2 = Handover.objects.create(project=self.project2, from_user=self.user1, to_user=self.user3)
+        self.h3 = Handover.objects.create(project=self.project3, from_user=self.user2, to_user=self.user3)
+
+    def test_handovers_from(self):
+        self.assertIn(self.h1, self.user1.handovers_from.all())
+        self.assertIn(self.h2, self.user1.handovers_from.all())
+        self.assertNotIn(self.h3, self.user1.handovers_from.all())
+        self.assertIn(self.h3, self.user2.handovers_from.all())
+
+    def test_handovers_to(self):
+        self.assertIn(self.h1, self.user2.handovers_to.all())
+        self.assertIn(self.h2, self.user3.handovers_to.all())
+        self.assertIn(self.h3, self.user3.handovers_to.all())
+        self.assertNotIn(self.h2, self.user2.handovers_to.all())
+
+    def test_delete_user_deletes_handovers(self):
+        initial = Handover.objects.count()
+        # Deleting user 3 should delete h1 and h2
+        self.user3.delete()
+        expected = initial - 2
+        self.assertEqual(Handover.objects.count(), expected)
+
+    def test_delete_handovers_keeps_users_and_projects(self):
+        users = DukeDSUser.objects.count()
+        projects = DukeDSProject.objects.count()
+        Handover.objects.all().delete()
+        self.assertEqual(DukeDSUser.objects.count(), users)
+        self.assertEqual(DukeDSProject.objects.count(), projects)
+
+
+class DraftRelationsTestCase(TransferBaseTestCase):
+    def setUp(self):
+        super(DraftRelationsTestCase, self).setUp()
+        self.project4 = DukeDSProject.objects.create(project_id='project4')
+        self.project5 = DukeDSProject.objects.create(project_id='project5')
+        self.user4 = DukeDSUser.objects.create(dds_id='user4')
+        self.d1 = Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user4)
+        self.d4 = Draft.objects.create(project=self.project4, from_user=self.user2, to_user=self.user4)
+        self.d5 = Draft.objects.create(project=self.project5, from_user=self.user2, to_user=self.user1)
+
+    def test_drafts_from(self):
+        self.assertIn(self.d1, self.user1.drafts_from.all())
+        self.assertIn(self.d4, self.user2.drafts_from.all())
+        self.assertNotIn(self.d4, self.user1.drafts_from.all())
+        self.assertIn(self.d5, self.user2.drafts_from.all())
+
+    def test_drafts_to(self):
+        self.assertIn(self.d1, self.user4.drafts_to.all())
+        self.assertIn(self.d4, self.user4.drafts_to.all())
+        self.assertIn(self.d5, self.user1.drafts_to.all())
+        self.assertNotIn(self.d5, self.user4.drafts_to.all())
+
+    def test_delete_user_deletes_drafts(self):
+        initial = Draft.objects.count()
+        self.user4.delete()
+        expected = initial - 2
+        self.assertEqual(Draft.objects.count(), expected)
+
+    def test_delete_handovers_keeps_users_and_projects(self):
+        users = DukeDSUser.objects.count()
+        projects = DukeDSProject.objects.count()
+        Draft.objects.all().delete()
+        self.assertEqual(DukeDSUser.objects.count(), users)
+        self.assertEqual(DukeDSProject.objects.count(), projects)

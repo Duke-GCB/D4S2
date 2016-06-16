@@ -73,3 +73,11 @@ class APIKeyTokenAuthenticationTestCase(TestCase):
         auth = APIKeyTokenAuthentication()
         with self.assertRaises(exceptions.AuthenticationFailed):
             auth.authenticate(request)
+
+    def test_empty_key_cannot_auth(self):
+        self.active_ds_user.api_key = ''
+        request = self.factory.get(self.url)
+        request.META['HTTP_AUTHORIZATION'] = 'Token ' + self.active_ds_user.api_key
+        auth = APIKeyTokenAuthentication()
+        with self.assertRaises(exceptions.AuthenticationFailed):
+            auth.authenticate(request)
