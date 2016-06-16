@@ -159,6 +159,20 @@ class HandoverRelationsTestCase(TransferBaseTestCase):
         self.assertIn(self.h3, self.user3.handovers_to.all())
         self.assertNotIn(self.h2, self.user2.handovers_to.all())
 
+    def test_delete_user_deletes_handovers(self):
+        initial = Handover.objects.count()
+        # Deleting user 3 should delete h1 and h2
+        self.user3.delete()
+        expected = initial - 2
+        self.assertEqual(Handover.objects.count(), expected)
+
+    def test_delete_handovers_keeps_users_and_projects(self):
+        users = DukeDSUser.objects.count()
+        projects = DukeDSProject.objects.count()
+        Handover.objects.all().delete()
+        self.assertEqual(DukeDSUser.objects.count(), users)
+        self.assertEqual(DukeDSProject.objects.count(), projects)
+
 
 class DraftRelationsTestCase(TransferBaseTestCase):
     def setUp(self):
@@ -181,3 +195,16 @@ class DraftRelationsTestCase(TransferBaseTestCase):
         self.assertIn(self.d4, self.user4.drafts_to.all())
         self.assertIn(self.d5, self.user1.drafts_to.all())
         self.assertNotIn(self.d5, self.user4.drafts_to.all())
+
+    def test_delete_user_deletes_drafts(self):
+        initial = Draft.objects.count()
+        self.user4.delete()
+        expected = initial - 2
+        self.assertEqual(Draft.objects.count(), expected)
+
+    def test_delete_handovers_keeps_users_and_projects(self):
+        users = DukeDSUser.objects.count()
+        projects = DukeDSProject.objects.count()
+        Draft.objects.all().delete()
+        self.assertEqual(DukeDSUser.objects.count(), users)
+        self.assertEqual(DukeDSProject.objects.count(), projects)
