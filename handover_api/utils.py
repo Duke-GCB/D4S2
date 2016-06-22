@@ -99,7 +99,7 @@ class ProcessedMessage(Message):
         receiver = handover_details.get_to_user()
         project = handover_details.get_project()
         template_name = 'processed.txt'
-        subject = 'Project {} has been {}'.format(project.name, type)
+        subject = 'Project {} has been {}'.format(project.name, process_type)
         context = {
             'project_name': project.name,
             'recipient_name': receiver.full_name,
