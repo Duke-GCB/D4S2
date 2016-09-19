@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import DukeDSUser, DukeDSProject, Handover, Draft, State
+from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State
 
 
 class TransferBaseTestCase(TestCase):
@@ -76,23 +76,23 @@ class DraftTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(DraftTestCase, self).setUp()
-        Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+        Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
-        draft = Draft.objects.first()
+        draft = Share.objects.first()
         self.assertEqual(draft.state, State.NEW, 'New drafts should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(ValueError):
-            Draft.objects.create(project=None, from_user=None, to_user=None)
+            Share.objects.create(project=None, from_user=None, to_user=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+            Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_allows_multiple_drafts(self):
         user3 = DukeDSUser.objects.create(dds_id='user3')
-        d = Draft.objects.create(project=self.project1, from_user=self.user1, to_user=user3)
+        d = Share.objects.create(project=self.project1, from_user=self.user1, to_user=user3)
         self.assertIsNotNone(d)
 
 
@@ -180,9 +180,9 @@ class DraftRelationsTestCase(TransferBaseTestCase):
         self.project4 = DukeDSProject.objects.create(project_id='project4')
         self.project5 = DukeDSProject.objects.create(project_id='project5')
         self.user4 = DukeDSUser.objects.create(dds_id='user4')
-        self.d1 = Draft.objects.create(project=self.project1, from_user=self.user1, to_user=self.user4)
-        self.d4 = Draft.objects.create(project=self.project4, from_user=self.user2, to_user=self.user4)
-        self.d5 = Draft.objects.create(project=self.project5, from_user=self.user2, to_user=self.user1)
+        self.d1 = Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user4)
+        self.d4 = Share.objects.create(project=self.project4, from_user=self.user2, to_user=self.user4)
+        self.d5 = Share.objects.create(project=self.project5, from_user=self.user2, to_user=self.user1)
 
     def test_drafts_from(self):
         self.assertIn(self.d1, self.user1.drafts_from.all())
@@ -197,14 +197,14 @@ class DraftRelationsTestCase(TransferBaseTestCase):
         self.assertNotIn(self.d5, self.user4.drafts_to.all())
 
     def test_delete_user_deletes_drafts(self):
-        initial = Draft.objects.count()
+        initial = Share.objects.count()
         self.user4.delete()
         expected = initial - 2
-        self.assertEqual(Draft.objects.count(), expected)
+        self.assertEqual(Share.objects.count(), expected)
 
     def test_delete_handovers_keeps_users_and_projects(self):
         users = DukeDSUser.objects.count()
         projects = DukeDSProject.objects.count()
-        Draft.objects.all().delete()
+        Share.objects.all().delete()
         self.assertEqual(DukeDSUser.objects.count(), users)
         self.assertEqual(DukeDSProject.objects.count(), projects)

@@ -128,7 +128,7 @@ class Handover(models.Model):
     class Meta:
         unique_together = ('project', 'from_user', 'to_user')
 
-class Draft(models.Model):
+class Share(models.Model):
     """
     Represents a non-destructive preview of a project from one user to another.
     Drafts keep track of the project, sender, and recipient by their DukeDS IDs.

@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
-from handover_api.models import DukeDSUser, Handover, Draft
+from handover_api.models import DukeDSUser, Handover, Share
 from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
 from handover_api.utils import DraftMessage, HandoverMessage
 from switchboard.dds_util import DDSUtil, ModelPopulator
@@ -117,7 +117,7 @@ class DraftViewSet(TransferViewSet):
     API endpoint that allows drafts to be viewed or edited.
     """
     serializer_class = DraftSerializer
-    model = Draft
+    model = Share
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):

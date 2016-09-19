@@ -8,7 +8,7 @@ admin.site.register(DukeDSProject)
 class DraftAdmin(SimpleHistoryAdmin):
     pass
 
-admin.site.register(Draft, DraftAdmin)
+admin.site.register(Share, DraftAdmin)
 
 
 class HandoverAdmin(SimpleHistoryAdmin):

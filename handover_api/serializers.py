@@ -1,4 +1,4 @@
-from handover_api.models import Handover, Draft, DukeDSUser, DukeDSProject
+from handover_api.models import Handover, Share, DukeDSUser, DukeDSProject
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.encoding import smart_text
@@ -47,7 +47,7 @@ class DraftSerializer(serializers.HyperlinkedModelSerializer):
     to_user_id = CreatableSlugRelatedField(source='to_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
 
     class Meta:
-        model = Draft
+        model = Share
         fields = ('id','url','project_id','from_user_id','to_user_id','state')
 
 

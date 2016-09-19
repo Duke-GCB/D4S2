@@ -156,44 +156,44 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Draft.objects.count(), 1)
-        self.assertEqual(Draft.objects.get().from_user.dds_id, 'user1')
+        self.assertEqual(Share.objects.count(), 1)
+        self.assertEqual(Share.objects.get().from_user.dds_id, 'user1')
         # get_remote_user should be called for both from and to users
         self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
         # get_remote project should be called once
         self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
     def test_list_drafts(self):
-        Draft.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
-        Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        Share.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('draft-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
     def test_get_draft(self):
-        d =  Draft.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        d =  Share.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('draft-detail', args=(d.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['project_id'], 'project1')
 
     def test_delete_draft(self):
-        d =  Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        d =  Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('draft-detail', args=(d.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Draft.objects.count(), 0)
+        self.assertEqual(Share.objects.count(), 0)
 
     @patch('handover_api.views.DDSUtil')
     def test_update_draft(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        d =  Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        d =  Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         updated = {'project_id': 'project3', 'from_user_id': 'fromuser1', 'to_user_id':'touser1'}
         url = reverse('draft-detail', args=(d.pk,))
         response = self.client.put(url, data=updated, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        d =  Draft.objects.get(pk=d.pk)
+        d =  Share.objects.get(pk=d.pk)
         self.assertEqual(d.project.project_id, 'project3')
 
         # get_remote_user should be called for both from and to users
@@ -206,12 +206,12 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_draft_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        d =  Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        d =  Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         self.assertFalse(d.is_notified())
         url = reverse('draft-send', args=(d.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        d = Draft.objects.get(pk=d.pk)
+        d = Share.objects.get(pk=d.pk)
         self.assertTrue(d.is_notified())
         self.assertTrue(mock_draft_message.called)
         self.assertTrue(instance.send.called)
@@ -220,7 +220,7 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
     def test_send_draft_fails(self, mock_draft_message):
         instance = mock_draft_message.return_value
         instance.send = Mock()
-        d =  Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        d =  Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         self.assertFalse(d.is_notified())
         d.mark_notified('email text')
         url = reverse('draft-send', args=(d.pk,))
@@ -234,7 +234,7 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_draft_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        d =  Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        d =  Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         self.assertFalse(d.is_notified())
         d.mark_notified('email text')
         url = reverse('draft-send', args=(d.pk,))
@@ -244,7 +244,7 @@ class DraftViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(instance.send.called)
 
     def test_filter_drafts(self):
-        Draft.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('draft-list')
         response=self.client.get(url, {'to_user_id': self.ddsuser2.dds_id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
