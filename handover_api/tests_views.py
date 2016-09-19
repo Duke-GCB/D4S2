@@ -136,6 +136,18 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
 
 class ShareViewTestCase(AuthenticatedResourceTestCase):
 
+    def test_old_draft_url_maps(self):
+        Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        shares_url = reverse('share-list')
+        drafts_url = reverse('draft-list')
+        self.assertNotEqual(shares_url, drafts_url)
+        shares_response = self.client.get(shares_url, format='json')
+        drafts_response = self.client.get(drafts_url, format='json')
+        self.assertEqual(shares_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(drafts_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(shares_response.data, drafts_response.data)
+
+
     def test_fails_unauthenticated(self):
         self.client.logout()
         url = reverse('share-list')
