@@ -41,7 +41,7 @@ class HandoverSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id','url','project_id','from_user_id','to_user_id','state')
 
 
-class DraftSerializer(serializers.HyperlinkedModelSerializer):
+class ShareSerializer(serializers.HyperlinkedModelSerializer):
     project_id = CreatableSlugRelatedField(source='project', slug_field='project_id', queryset=DukeDSProject.objects.all())
     from_user_id = CreatableSlugRelatedField(source='from_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
     to_user_id = CreatableSlugRelatedField(source='to_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())

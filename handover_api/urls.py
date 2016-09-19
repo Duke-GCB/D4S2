@@ -4,7 +4,7 @@ from handover_api import views
 
 router = routers.DefaultRouter()
 router.register(r'handovers', views.HandoverViewSet, 'handover')
-router.register(r'drafts', views.DraftViewSet, 'draft')
+router.register(r'shares', views.ShareViewSet, 'share')
 router.register(r'users', views.UserViewSet, 'dukedsuser')
 
 urlpatterns = [

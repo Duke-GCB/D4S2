@@ -17,7 +17,7 @@ class DukeDSUser(models.Model):
     """
     Represents a DukeDS user. Keeps track of their API key. The API key
     is used when the corresponding user invokes an action that requires
-    communication with DukeDS (e.g. mailing a draft or performing handover)
+    communication with DukeDS (e.g. sharing a project or performing handover)
 
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
@@ -53,7 +53,7 @@ class DukeDSProject(models.Model):
 
 class State(object):
     """
-    States for handover and draft objects
+    States for handover and share objects
     """
     NEW = 0
     NOTIFIED = 1
@@ -67,7 +67,7 @@ class State(object):
         (REJECTED, 'Rejected'),
     )
     HANDOVER_CHOICES = STATES
-    DRAFT_CHOICES = (
+    SHARE_CHOICES = (
         (NEW, 'New'),
         (NOTIFIED, 'Notified'),
         (FAILED, 'Failed'),
@@ -131,16 +131,16 @@ class Handover(models.Model):
 class Share(models.Model):
     """
     Represents a non-destructive preview of a project from one user to another.
-    Drafts keep track of the project, sender, and recipient by their DukeDS IDs.
-    Drafts can be sent, which looks up user/project details and sends an email to the
+    Share keep track of the project, sender, and recipient by their DukeDS IDs.
+    Shares can be sent, which looks up user/project details and sends an email to the
     recipient with a preview link. States are enumerated above.
 
     """
     history = HistoricalRecords()
     project = models.ForeignKey(DukeDSProject)
-    from_user = models.ForeignKey(DukeDSUser, related_name='drafts_from')
-    to_user = models.ForeignKey(DukeDSUser, related_name='drafts_to')
-    state = models.IntegerField(choices=State.DRAFT_CHOICES, default=State.NEW, null=False)
+    from_user = models.ForeignKey(DukeDSUser, related_name='shares_from')
+    to_user = models.ForeignKey(DukeDSUser, related_name='shares_to')
+    state = models.IntegerField(choices=State.SHARE_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
 
     def is_notified(self):
@@ -152,7 +152,7 @@ class Share(models.Model):
         if save: self.save()
 
     def __str__(self):
-        return 'Draft Project: {} State: {}'.format(
+        return 'Share of Project: {} State: {}'.format(
             self.project, State.HANDOVER_CHOICES[self.state][1]
         )
 

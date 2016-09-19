@@ -5,10 +5,10 @@ from simple_history.admin import SimpleHistoryAdmin
 admin.site.register(DukeDSUser)
 admin.site.register(DukeDSProject)
 
-class DraftAdmin(SimpleHistoryAdmin):
+class ShareAdmin(SimpleHistoryAdmin):
     pass
 
-admin.site.register(Share, DraftAdmin)
+admin.site.register(Share, ShareAdmin)
 
 
 class HandoverAdmin(SimpleHistoryAdmin):

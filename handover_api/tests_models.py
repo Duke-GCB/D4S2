@@ -72,15 +72,15 @@ class HandoverTestCase(TransferBaseTestCase):
         self.assertEqual(handover.is_complete(), True)
 
 
-class DraftTestCase(TransferBaseTestCase):
+class ShareTestCase(TransferBaseTestCase):
 
     def setUp(self):
-        super(DraftTestCase, self).setUp()
+        super(ShareTestCase, self).setUp()
         Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
-        draft = Share.objects.first()
-        self.assertEqual(draft.state, State.NEW, 'New drafts should be in initiated state')
+        share = Share.objects.first()
+        self.assertEqual(share.state, State.NEW, 'New shares should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(ValueError):
@@ -90,7 +90,7 @@ class DraftTestCase(TransferBaseTestCase):
         with self.assertRaises(IntegrityError):
             Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
-    def test_allows_multiple_drafts(self):
+    def test_allows_multiple_shares(self):
         user3 = DukeDSUser.objects.create(dds_id='user3')
         d = Share.objects.create(project=self.project1, from_user=self.user1, to_user=user3)
         self.assertIsNotNone(d)
@@ -174,9 +174,9 @@ class HandoverRelationsTestCase(TransferBaseTestCase):
         self.assertEqual(DukeDSProject.objects.count(), projects)
 
 
-class DraftRelationsTestCase(TransferBaseTestCase):
+class ShareRelationsTestCase(TransferBaseTestCase):
     def setUp(self):
-        super(DraftRelationsTestCase, self).setUp()
+        super(ShareRelationsTestCase, self).setUp()
         self.project4 = DukeDSProject.objects.create(project_id='project4')
         self.project5 = DukeDSProject.objects.create(project_id='project5')
         self.user4 = DukeDSUser.objects.create(dds_id='user4')
@@ -184,19 +184,19 @@ class DraftRelationsTestCase(TransferBaseTestCase):
         self.d4 = Share.objects.create(project=self.project4, from_user=self.user2, to_user=self.user4)
         self.d5 = Share.objects.create(project=self.project5, from_user=self.user2, to_user=self.user1)
 
-    def test_drafts_from(self):
-        self.assertIn(self.d1, self.user1.drafts_from.all())
-        self.assertIn(self.d4, self.user2.drafts_from.all())
-        self.assertNotIn(self.d4, self.user1.drafts_from.all())
-        self.assertIn(self.d5, self.user2.drafts_from.all())
+    def test_shares_from(self):
+        self.assertIn(self.d1, self.user1.shares_from.all())
+        self.assertIn(self.d4, self.user2.shares_from.all())
+        self.assertNotIn(self.d4, self.user1.shares_from.all())
+        self.assertIn(self.d5, self.user2.shares_from.all())
 
-    def test_drafts_to(self):
-        self.assertIn(self.d1, self.user4.drafts_to.all())
-        self.assertIn(self.d4, self.user4.drafts_to.all())
-        self.assertIn(self.d5, self.user1.drafts_to.all())
-        self.assertNotIn(self.d5, self.user4.drafts_to.all())
+    def test_shares_to(self):
+        self.assertIn(self.d1, self.user4.shares_to.all())
+        self.assertIn(self.d4, self.user4.shares_to.all())
+        self.assertIn(self.d5, self.user1.shares_to.all())
+        self.assertNotIn(self.d5, self.user4.shares_to.all())
 
-    def test_delete_user_deletes_drafts(self):
+    def test_delete_user_deletes_shares(self):
         initial = Share.objects.count()
         self.user4.delete()
         expected = initial - 2

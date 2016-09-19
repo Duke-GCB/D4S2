@@ -2,8 +2,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
 from handover_api.models import DukeDSUser, Handover, Share
-from handover_api.serializers import UserSerializer, HandoverSerializer, DraftSerializer
-from handover_api.utils import DraftMessage, HandoverMessage
+from handover_api.serializers import UserSerializer, HandoverSerializer, ShareSerializer
+from handover_api.utils import ShareMessage, HandoverMessage
 from switchboard.dds_util import DDSUtil, ModelPopulator
 from django.core.urlresolvers import reverse
 
@@ -57,7 +57,7 @@ class UserViewSet(PopulatingAuthenticatedModelViewSet):
 
 class TransferViewSet(PopulatingAuthenticatedModelViewSet):
     """
-    Base view set for handovers and drafts, both of which can be filtered by
+    Base view set for handovers and shares, both of which can be filtered by
     project_id, from_user_id, to_user_id
 
     """
@@ -112,23 +112,23 @@ class AlreadyNotifiedException(APIException):
     default_detail = 'Already notified'
 
 
-class DraftViewSet(TransferViewSet):
+class ShareViewSet(TransferViewSet):
     """
-    API endpoint that allows drafts to be viewed or edited.
+    API endpoint that allows shares to be viewed or edited.
     """
-    serializer_class = DraftSerializer
+    serializer_class = ShareSerializer
     model = Share
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
-        draft = self.get_object()
+        share = self.get_object()
         if 'force' in request.data:
             force = request.data['force']
         else:
             force = False
-        if draft.is_notified() and not force:
+        if share.is_notified() and not force:
             raise AlreadyNotifiedException()
-        message = DraftMessage(draft)
+        message = ShareMessage(share)
         message.send()
-        draft.mark_notified(message.email_text)
+        share.mark_notified(message.email_text)
         return self.retrieve(request)

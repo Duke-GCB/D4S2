@@ -76,8 +76,8 @@ class ModelPopulator(object):
 
 
 class HandoverDetails(object):
-    def __init__(self, handover_or_draft):
-        self.handover = handover_or_draft
+    def __init__(self, handover_or_share):
+        self.handover = handover_or_share
         self.ddsutil = DDSUtil(self.handover.from_user.dds_id)
         self.model_populator = ModelPopulator(self.ddsutil)
 

@@ -22,17 +22,17 @@ class Message(object):
         self._message.send()
 
 
-class DraftMessage(Message):
+class ShareMessage(Message):
 
-    def __init__(self, draft):
+    def __init__(self, share):
         """
         Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
-        in a models.Draft object. Then calls generate_message with email addresses, subject, and the details to
+        in a models.Share object. Then calls generate_message with email addresses, subject, and the details to
         generate an EmailMessage object, which can be .send()ed.
         """
 
         try:
-            handover_details = HandoverDetails(draft)
+            handover_details = HandoverDetails(share)
             sender = handover_details.get_from_user()
             receiver = handover_details.get_to_user()
             project = handover_details.get_project()
@@ -52,7 +52,7 @@ class DraftMessage(Message):
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
         message = generate_message(sender.email, receiver.email, subject, template_name, context)
-        super(DraftMessage, self).__init__(message)
+        super(ShareMessage, self).__init__(message)
 
 
 class HandoverMessage(Message):
