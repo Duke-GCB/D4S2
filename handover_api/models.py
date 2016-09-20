@@ -74,6 +74,19 @@ class State(object):
     )
 
 
+class ShareRole(object):
+    """
+    Known roles for sharing. This is not enforced as a validator or choices since these roles
+    are defined by Duke Data Service. Instead they are offered as constants for convenience.
+    """
+    DOWNLOAD = 'file_downloader'
+    VIEW = 'project_viewer'
+    EDIT = 'file_editor'
+    UPLOAD = 'file_uploader'
+    ADMIN = 'project_admin'
+    DEFAULT = DOWNLOAD
+
+
 class Handover(models.Model):
     """
     Represents a handover of a project from one user to another
@@ -128,6 +141,7 @@ class Handover(models.Model):
     class Meta:
         unique_together = ('project', 'from_user', 'to_user')
 
+
 class Share(models.Model):
     """
     Represents a non-destructive preview of a project from one user to another.
@@ -142,6 +156,7 @@ class Share(models.Model):
     to_user = models.ForeignKey(DukeDSUser, related_name='shares_to')
     state = models.IntegerField(choices=State.SHARE_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
+    role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
 
     def is_notified(self):
         return self.state == State.NOTIFIED
