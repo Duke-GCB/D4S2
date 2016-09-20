@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 import uuid
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from simple_history.models import HistoricalRecords
 
 class APIUserManager(models.Manager):
@@ -173,3 +173,29 @@ class Share(models.Model):
 
     class Meta:
         unique_together = ('project', 'from_user', 'to_user', 'role')
+
+
+class EmailTemplate(models.Model):
+    """
+    Represents a base email message that can be sent. Multiple templates can be stored
+    based on the users
+    """
+    history = HistoricalRecords()
+    group = models.ForeignKey(Group)
+    owner = models.ForeignKey(User)
+    name = models.CharField(max_length=64, null=False, blank=False,)
+    role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
+    text = models.TextField(null=False, blank=False)
+
+    def __str__(self):
+        return '{} email template: {} owned by: {}: {}'.format(
+            self.group.name,
+            self.name,
+            self.owner,
+            self.text
+        )
+    class Meta:
+        unique_together = (
+            ('group','role'), # Groups may have multiple email templates, but only a single per role
+            ('group','name'), # names must be unique within a group
+        )
