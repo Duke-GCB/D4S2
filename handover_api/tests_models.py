@@ -1,7 +1,7 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State, ShareRole
-
+from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State, ShareRole, EmailTemplate
+from django.contrib.auth.models import User, Group
 
 class TransferBaseTestCase(TestCase):
 
@@ -216,3 +216,68 @@ class ShareRelationsTestCase(TransferBaseTestCase):
         Share.objects.all().delete()
         self.assertEqual(DukeDSUser.objects.count(), users)
         self.assertEqual(DukeDSProject.objects.count(), projects)
+
+
+class EmailTemplateTestCase(TestCase):
+    def setUp(self):
+        # email templates depend on groups and users
+        self.group = Group.objects.create(name='test_group')
+        self.user = User.objects.create(username='test_user')
+
+    def test_create_email_template(self):
+        template = EmailTemplate.objects.create(group=self.group,
+                                                owner=self.user,
+                                                name='template1',
+                                                role=ShareRole.DEFAULT,
+                                                text='email body')
+        self.assertIsNotNone(template)
+
+    def test_prevent_duplicate_roles(self):
+        template1 = EmailTemplate.objects.create(group=self.group,
+                                                 owner=self.user,
+                                                 name='template1',
+                                                 role=ShareRole.DOWNLOAD,
+                                                 text='email body 1')
+        self.assertIsNotNone(template1)
+        with self.assertRaises(IntegrityError):
+            EmailTemplate.objects.create(group=self.group,
+                                         owner=self.user,
+                                         name='template2',
+                                         role=ShareRole.DOWNLOAD,
+                                         text='email body 2')
+
+    def test_prevents_duplicate_names(self):
+        template1 = EmailTemplate.objects.create(group=self.group,
+                                                 owner=self.user,
+                                                 name='template1',
+                                                 role=ShareRole.DOWNLOAD,
+                                                 text='email body 1')
+        self.assertIsNotNone(template1)
+        with self.assertRaises(IntegrityError):
+            EmailTemplate.objects.create(group=self.group,
+                                         owner=self.user,
+                                         name='template1',
+                                         role=ShareRole.VIEW,
+                                         text='email body 2')
+
+    def test_allows_duplicate_names_outside_group(self):
+        group2 = Group.objects.create(name='group2')
+        template1 = EmailTemplate.objects.create(group=self.group,
+                                                 owner=self.user,
+                                                 name='template1',
+                                                 role=ShareRole.DOWNLOAD,
+                                                 text='email body 1')
+        self.assertIsNotNone(template1)
+        template2 = EmailTemplate.objects.create(group=group2,
+                                                 owner=self.user,
+                                                 name='template1',
+                                                 role=ShareRole.DOWNLOAD,
+                                                 text='email body 1')
+        # assert different items but otherwise data is the same
+        self.assertIsNotNone(template2)
+        self.assertNotEqual(template1, template2)
+        self.assertEqual(template1.owner, template2.owner)
+        self.assertEqual(template1.role, template2.role)
+        self.assertEqual(template1.name, template2.name)
+        self.assertEqual(template1.text, template2.text)
+        self.assertNotEqual(template1.group, template2.group)
