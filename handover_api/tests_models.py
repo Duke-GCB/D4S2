@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State
+from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State, ShareRole
 
 
 class TransferBaseTestCase(TestCase):
@@ -81,6 +81,7 @@ class ShareTestCase(TransferBaseTestCase):
     def test_initial_state(self):
         share = Share.objects.first()
         self.assertEqual(share.state, State.NEW, 'New shares should be in initiated state')
+        self.assertEqual(share.role, ShareRole.DEFAULT, 'New shares should have default role')
 
     def test_required_fields(self):
         with self.assertRaises(ValueError):
@@ -94,6 +95,13 @@ class ShareTestCase(TransferBaseTestCase):
         user3 = DukeDSUser.objects.create(dds_id='user3')
         d = Share.objects.create(project=self.project1, from_user=self.user1, to_user=user3)
         self.assertIsNotNone(d)
+
+    def test_allows_multiple_shares_different_roles(self):
+        v = Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2, role=ShareRole.VIEW)
+        d = Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2, role=ShareRole.EDIT)
+        self.assertIsNotNone(v)
+        self.assertIsNotNone(d)
+        self.assertNotEqual(v, d)
 
 
 class ProjectTestCase(TestCase):

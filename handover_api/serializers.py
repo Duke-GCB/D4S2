@@ -48,7 +48,7 @@ class ShareSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Share
-        fields = ('id','url','project_id','from_user_id','to_user_id','state')
+        fields = ('id','url','project_id','from_user_id','to_user_id','role','state')
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):

@@ -147,7 +147,6 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(drafts_response.status_code, status.HTTP_200_OK)
         self.assertEqual(shares_response.data, drafts_response.data)
 
-
     def test_fails_unauthenticated(self):
         self.client.logout()
         url = reverse('share-list')
@@ -165,11 +164,12 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
     def test_create_share(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('share-list')
-        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
+        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'role': 'share_role'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Share.objects.count(), 1)
         self.assertEqual(Share.objects.get().from_user.dds_id, 'user1')
+        self.assertEqual(Share.objects.get().role, 'share_role')
         # get_remote_user should be called for both from and to users
         self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
         # get_remote project should be called once
@@ -201,7 +201,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
     def test_update_share(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         d =  Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
-        updated = {'project_id': 'project3', 'from_user_id': 'fromuser1', 'to_user_id':'touser1'}
+        updated = {'project_id': 'project3', 'from_user_id': 'fromuser1', 'to_user_id': 'touser1'}
         url = reverse('share-detail', args=(d.pk,))
         response = self.client.put(url, data=updated, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
