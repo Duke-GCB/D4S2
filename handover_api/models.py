@@ -172,4 +172,4 @@ class Share(models.Model):
         )
 
     class Meta:
-        unique_together = ('project', 'from_user', 'to_user')
+        unique_together = ('project', 'from_user', 'to_user', 'role')
