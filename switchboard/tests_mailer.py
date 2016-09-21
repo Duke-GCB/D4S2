@@ -8,20 +8,17 @@ class MailerTestCase(TestCase):
         sender_email = 'sender@domain.com'
         rcpt_email = 'receiver@school.edu'
         subject = 'Data is ready'
-        template_name = 'draft.txt'
+        template_text = 'order {{ order_number }} draft to {{ recipient_name }} from {{ sender_name }} for {{ project_name }}'
         context = {
             'order_number': 12345,
             'project_name': 'Project ABC',
             'recipient_name': 'Receiver Name',
             'sender_name': 'Sender Name',
-            'sender_email': sender_email,
-            'url': 'http://domain.com/data',
-            'signature': 'Sender Co\n123Fake St\nAnytown WA 90909',
         }
-        message = generate_message(sender_email, rcpt_email, subject, template_name, context)
-        self.assertIn('Sender Name has sent you a data set via the Duke Data Service', message.body)
-        self.assertIn('contact sender@domain.com', message.body)
-        self.assertIn('Preview URL: http://domain.com/data', message.body)
+        message = generate_message(sender_email, rcpt_email, subject, template_text, context)
+        self.assertIn('order 12345', message.body)
+        self.assertIn('draft to Receiver Name', message.body)
+        self.assertIn('from Sender Name', message.body)
         self.assertEqual(sender_email, message.from_email)
         self.assertEqual(subject, message.subject)
         self.assertIn(rcpt_email, message.to)
@@ -30,17 +27,15 @@ class MailerTestCase(TestCase):
         sender_email = 'sender@domain.com'
         rcpt_email = 'receiver@school.edu'
         subject = 'Data is ready'
-        template_name = 'processed.txt'
+        template_text = 'message {{ message }}'
         context = {
             'project_name': 'Project ABC',
             'recipient_name': 'Receiver Name',
             'sender_name': 'Sender Name',
-            'type': 'processed',
             'message': "I don't want this",
-            'signature': 'Sender Co\n123Fake St\nAnytown WA 90909',
         }
-        message = generate_message(sender_email, rcpt_email, subject, template_name, context)
-        self.assertIn("I don't want this", message.body)
+        message = generate_message(sender_email, rcpt_email, subject, template_text, context)
+        self.assertIn("message I don't want this", message.body)
         self.assertEqual(sender_email, message.from_email)
         self.assertEqual(subject, message.subject)
         self.assertIn(rcpt_email, message.to)

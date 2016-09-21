@@ -33,6 +33,7 @@ def setup_mock_handover_details(MockHandoverDetails):
     x.get_from_user.return_value = MockDDSUser('joe', 'joe@joe.com')
     x.get_to_user.return_value = MockDDSUser('bob', 'bob@joe.com')
     x.get_project.return_value = MockDDSProject('project')
+    x.get_email_template_text.return_value = 'Email Template Text'
 
 
 class AuthenticatedTestCase(TestCase):

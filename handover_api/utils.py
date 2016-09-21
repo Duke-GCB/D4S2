@@ -39,7 +39,7 @@ class ShareMessage(Message):
             url = handover_details.get_project_url()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_name = 'draft.txt'
+        email_template_text = handover_details.get_email_template_text()
         subject = 'Data ready for Project {}'.format(project.name)
         context = {
             'project_name': project.name,
@@ -51,7 +51,7 @@ class ShareMessage(Message):
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
-        message = generate_message(sender.email, receiver.email, subject, template_name, context)
+        message = generate_message(sender.email, receiver.email, subject, email_template_text, context)
         super(ShareMessage, self).__init__(message)
 
 

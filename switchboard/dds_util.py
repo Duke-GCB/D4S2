@@ -1,7 +1,7 @@
 from ddsc.config import Config
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from handover_api.models import DukeDSUser
+from handover_api.models import DukeDSUser, EmailTemplate, EmailTemplateException
 
 
 class DDSUtil(object):
@@ -95,3 +95,10 @@ class HandoverDetails(object):
 
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.handover.project.project_id)
+
+    def get_email_template_text(self):
+        email_template = EmailTemplate.for_share(self.handover)
+        if email_template:
+            return email_template.text
+        else:
+            raise RuntimeError('No email template found')
