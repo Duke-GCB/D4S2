@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import uuid
 from django.db import models
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.contrib.auth.models import User, Group
 from simple_history.models import HistoricalRecords
 
@@ -175,6 +176,10 @@ class Share(models.Model):
         unique_together = ('project', 'from_user', 'to_user', 'role')
 
 
+class EmailTemplateException(BaseException):
+    pass
+
+
 class EmailTemplate(models.Model):
     """
     Represents a base email message that can be sent. Multiple templates can be stored
@@ -199,3 +204,16 @@ class EmailTemplate(models.Model):
             ('group','role'), # Groups may have multiple email templates, but only a single per role
             ('group','name'), # names must be unique within a group
         )
+
+    @classmethod
+    def for_share(cls, share):
+        user = share.from_user.user
+        if user is None:
+            raise EmailTemplateException('User object not found for share {}'.format(share))
+        matches = cls.objects.filter(group__in=user.groups.all(), role=share.role)
+        if len(matches) == 0:
+            return None
+        elif len(matches) > 1:
+            raise EmailTemplateException('Multiple email templates found for share {}'.format(share))
+        else:
+            return matches.first()

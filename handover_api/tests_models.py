@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State, ShareRole, EmailTemplate
+from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State, ShareRole, EmailTemplate, EmailTemplateException
 from django.contrib.auth.models import User, Group
 
 class TransferBaseTestCase(TestCase):
@@ -119,6 +119,7 @@ class ProjectTestCase(TestCase):
         p.name = 'A Project'
         self.assertTrue(p.populated())
 
+
 class UserTestCase(TestCase):
     def setUp(self):
         DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='zxxsdvasv//aga')
@@ -219,10 +220,15 @@ class ShareRelationsTestCase(TransferBaseTestCase):
 
 
 class EmailTemplateTestCase(TestCase):
+
     def setUp(self):
         # email templates depend on groups and users
         self.group = Group.objects.create(name='test_group')
         self.user = User.objects.create(username='test_user')
+        self.group.user_set.add(self.user)
+        self.dds_project = DukeDSProject.objects.create(project_id='project1')
+        self.dds_user1 = DukeDSUser.objects.create(dds_id='user1', user=self.user)
+        self.dds_user2 = DukeDSUser.objects.create(dds_id='user2')
 
     def test_create_email_template(self):
         template = EmailTemplate.objects.create(group=self.group,
@@ -281,3 +287,59 @@ class EmailTemplateTestCase(TestCase):
         self.assertEqual(template1.name, template2.name)
         self.assertEqual(template1.text, template2.text)
         self.assertNotEqual(template1.group, template2.group)
+
+    def test_for_share(self):
+        # Create an email template
+        EmailTemplate.objects.create(group=self.group,
+                                     owner=self.user,
+                                     name='template',
+                                     role=ShareRole.DOWNLOAD,
+                                     text='email body')
+        share = Share.objects.create(project=self.dds_project,
+                                     from_user=self.dds_user1,
+                                     to_user=self.dds_user2,
+                                     role=ShareRole.DOWNLOAD)
+        t = EmailTemplate.for_share(share)
+        self.assertIsNotNone(t)
+        self.assertEqual(t.name, 'template')
+
+    def test_no_templates(self):
+        share = Share.objects.create(project=self.dds_project,
+                                     from_user=self.dds_user1,
+                                     to_user=self.dds_user2,
+                                     role=ShareRole.DOWNLOAD)
+        self.assertIsNone(EmailTemplate.for_share(share))
+
+    def test_user_not_found(self):
+        # dds_user2 is not bound to a django user, so we can't find templates
+        share = Share.objects.create(project=self.dds_project,
+                                     from_user=self.dds_user2,
+                                     to_user=self.dds_user1,
+                                     role=ShareRole.DOWNLOAD)
+        with self.assertRaises(EmailTemplateException):
+            EmailTemplate.for_share(share)
+
+    def test_multiple_template_error(self):
+        # If user is in multiple groups and each has a template for a given role
+        # we can't use the simple for_share lookup
+        group2 = Group.objects.create(name='group2')
+        group2.user_set.add(self.user)
+        t1 = EmailTemplate.objects.create(group=self.group,
+                                          owner=self.user,
+                                          name='group1_template',
+                                          role=ShareRole.DOWNLOAD,
+                                          text='email body')
+        t2 = EmailTemplate.objects.create(group=group2,
+                                          owner=self.user,
+                                          name='group2_template',
+                                          role=ShareRole.DOWNLOAD,
+                                          text='email body')
+        self.assertEqual(t1.role, t2.role)
+        self.assertEqual(t1.owner, t2.owner)
+        self.assertNotEqual(t1.group, t2.group)
+        share = Share.objects.create(project=self.dds_project,
+                                     from_user=self.dds_user1,
+                                     to_user=self.dds_user2,
+                                     role=ShareRole.DOWNLOAD)
+        with self.assertRaises(EmailTemplateException):
+            EmailTemplate.for_share(share)
