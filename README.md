@@ -83,23 +83,28 @@ The Handover Service communicates with the Duke Data Service API as a software a
   2. Enter the DukeDS UDID of the user and the user's API key
   3. Click **Save**
 
-## Sending a Draft
+## Sharing a project
 
-The term draft is used to refer to a project that is about to be handed over from a sender to a receiver. The sender is expected to use the [DukeDSClient](https://github.com/Duke-GCB/DukeDSClient) to create and upload a project. Prior to review/acceptance by the receiver, it is in a "draft" state. The Handover service can send an email to the receiver, notifying them the data in the project is ready for their review.
+Sharing a project is done by granting permissions to additional users, then notifying those users via email.
 
+This application is responsible for sending emails to the recipients, based on the roles they are given.
 
-1. Create a Draft:
+_September 21, 2016: Instructions are WIP due to email templates tied to groups_
+
+1. Create a Django group, add django user to group. Must correspond to
+2. Create an email template, associate with group and role
+3. Create a Share:
 
         $ curl -X POST \
           -H "Authorization: Token <your-api-key>"
           -H "Content-Type: application/json" \
-          -d '{"project_id": "project-dds-uuid", "from_user_id": "from-user-uuid", "to_user_id": "to-user-uuid"}' \
-          http://127.0.0.1:8000/api/v1/drafts/
-          {"id":1,"url":"http://127.0.0.1:8000/api/v1/drafts/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":0}
+          -d '{"project_id": "project-dds-uuid", "from_user_id": "from-user-uuid", "to_user_id": "to-user-uuid", "role": "file_downloader" } \
+          http://127.0.0.1:8000/api/v1/shares/
+          {"id":1,"url":"http://127.0.0.1:8000/api/v1/hsares/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":0}
 
 2. Send the email (**Without changing settings.py to activate a real email backend, emails will only be printed to the django console**)
 
-        $ curl -X POST http://127.0.0.1:8000/api/v1/drafts/1/send/
-            {"id":1,"url":"http://127.0.0.1:8000/api/v1/drafts/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":1}
+        $ curl -X POST http://127.0.0.1:8000/api/v1/shares/1/send/
+            {"id":1,"url":"http://127.0.0.1:8000/api/v1/hsares/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":1}
 
 Notice the state change, and the running django server should print out the email to the console
