@@ -1,9 +1,0 @@
-Hello {{ sender_name }},
-
-{{ recipient_name }} has {{ type }} project {{ project_name }}.
-
-{{ message }}
-
-Regards,
-
-{{ signature }}
