@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import DukeDSUser, DukeDSProject, Handover, Share, State, ShareRole, EmailTemplate, EmailTemplateException
+from handover_api.models import *
 from django.contrib.auth.models import User, Group
 
 class TransferBaseTestCase(TestCase):
@@ -219,6 +219,29 @@ class ShareRelationsTestCase(TransferBaseTestCase):
         self.assertEqual(DukeDSProject.objects.count(), projects)
 
 
+class EmailTemplateTypeTestCase(TestCase):
+
+    def requires_unique_types(self):
+        EmailTemplateType.objects.create(name='type1')
+        with self.assertRaises(IntegrityError):
+            EmailTemplateType.objects.create(name='type1')
+
+    def test_initial_data(self):
+        """
+        Data for this is loaded by a migration, make sure it's there.
+        :return:
+        """
+        for role in ShareRole.ROLES:
+            self.assertIsNotNone(EmailTemplateType.objects.get(name='share_{}'.format(role)))
+        self.assertIsNotNone(EmailTemplateType.objects.get(name='delivery'))
+        self.assertIsNotNone(EmailTemplateType.objects.get(name='accept'))
+        self.assertIsNotNone(EmailTemplateType.objects.get(name='decline'))
+
+    def test_from_share_role(self):
+        role = 'project_viewer'
+        e = EmailTemplateType.from_share_role(role)
+        self.assertEqual(e.name, 'share_project_viewer')
+
 class EmailTemplateTestCase(TestCase):
 
     def setUp(self):
@@ -229,71 +252,54 @@ class EmailTemplateTestCase(TestCase):
         self.dds_project = DukeDSProject.objects.create(project_id='project1')
         self.dds_user1 = DukeDSUser.objects.create(dds_id='user1', user=self.user)
         self.dds_user2 = DukeDSUser.objects.create(dds_id='user2')
+        self.default_type = EmailTemplateType.from_share_role(ShareRole.DEFAULT)
+        self.download_type = EmailTemplateType.from_share_role(ShareRole.DOWNLOAD)
+        self.view_type = EmailTemplateType.from_share_role(ShareRole.VIEW)
+
 
     def test_create_email_template(self):
         template = EmailTemplate.objects.create(group=self.group,
                                                 owner=self.user,
-                                                name='template1',
-                                                role=ShareRole.DEFAULT,
+                                                template_type=self.default_type,
                                                 text='email body')
         self.assertIsNotNone(template)
 
-    def test_prevent_duplicate_roles(self):
+    def test_prevent_duplicate_types(self):
         template1 = EmailTemplate.objects.create(group=self.group,
                                                  owner=self.user,
-                                                 name='template1',
-                                                 role=ShareRole.DOWNLOAD,
+                                                 template_type=self.download_type,
                                                  text='email body 1')
         self.assertIsNotNone(template1)
         with self.assertRaises(IntegrityError):
             EmailTemplate.objects.create(group=self.group,
                                          owner=self.user,
-                                         name='template2',
-                                         role=ShareRole.DOWNLOAD,
+                                         template_type=self.download_type,
                                          text='email body 2')
 
-    def test_prevents_duplicate_names(self):
-        template1 = EmailTemplate.objects.create(group=self.group,
-                                                 owner=self.user,
-                                                 name='template1',
-                                                 role=ShareRole.DOWNLOAD,
-                                                 text='email body 1')
-        self.assertIsNotNone(template1)
-        with self.assertRaises(IntegrityError):
-            EmailTemplate.objects.create(group=self.group,
-                                         owner=self.user,
-                                         name='template1',
-                                         role=ShareRole.VIEW,
-                                         text='email body 2')
-
-    def test_allows_duplicate_names_outside_group(self):
+    def test_allows_duplicate_types_outspide_group(self):
         group2 = Group.objects.create(name='group2')
         template1 = EmailTemplate.objects.create(group=self.group,
                                                  owner=self.user,
-                                                 name='template1',
-                                                 role=ShareRole.DOWNLOAD,
+                                                 template_type=self.download_type,
                                                  text='email body 1')
         self.assertIsNotNone(template1)
         template2 = EmailTemplate.objects.create(group=group2,
                                                  owner=self.user,
-                                                 name='template1',
-                                                 role=ShareRole.DOWNLOAD,
+                                                 template_type=self.download_type,
                                                  text='email body 1')
         # assert different items but otherwise data is the same
         self.assertIsNotNone(template2)
         self.assertNotEqual(template1, template2)
         self.assertEqual(template1.owner, template2.owner)
-        self.assertEqual(template1.role, template2.role)
-        self.assertEqual(template1.name, template2.name)
         self.assertEqual(template1.text, template2.text)
+        self.assertEqual(template1.template_type, template2.template_type)
         self.assertNotEqual(template1.group, template2.group)
 
     def test_for_share(self):
         # Create an email template
         EmailTemplate.objects.create(group=self.group,
                                      owner=self.user,
-                                     name='template',
-                                     role=ShareRole.DOWNLOAD,
+                                     template_type=self.download_type,
                                      text='email body')
         share = Share.objects.create(project=self.dds_project,
                                      from_user=self.dds_user1,
@@ -301,7 +307,7 @@ class EmailTemplateTestCase(TestCase):
                                      role=ShareRole.DOWNLOAD)
         t = EmailTemplate.for_share(share)
         self.assertIsNotNone(t)
-        self.assertEqual(t.name, 'template')
+        self.assertEqual(t.text, 'email body')
 
     def test_no_templates(self):
         share = Share.objects.create(project=self.dds_project,
@@ -326,15 +332,13 @@ class EmailTemplateTestCase(TestCase):
         group2.user_set.add(self.user)
         t1 = EmailTemplate.objects.create(group=self.group,
                                           owner=self.user,
-                                          name='group1_template',
-                                          role=ShareRole.DOWNLOAD,
+                                          template_type=self.download_type,
                                           text='email body')
         t2 = EmailTemplate.objects.create(group=group2,
                                           owner=self.user,
-                                          name='group2_template',
-                                          role=ShareRole.DOWNLOAD,
+                                          template_type=self.download_type,
                                           text='email body')
-        self.assertEqual(t1.role, t2.role)
+        self.assertEqual(t1.template_type, t2.template_type)
         self.assertEqual(t1.owner, t2.owner)
         self.assertNotEqual(t1.group, t2.group)
         share = Share.objects.create(project=self.dds_project,

@@ -85,6 +85,7 @@ class ShareRole(object):
     EDIT = 'file_editor'
     UPLOAD = 'file_uploader'
     ADMIN = 'project_admin'
+    ROLES = (DOWNLOAD, VIEW, EDIT, UPLOAD, ADMIN)
     DEFAULT = DOWNLOAD
 
 
@@ -179,41 +180,66 @@ class Share(models.Model):
 class EmailTemplateException(BaseException):
     pass
 
+class EmailTemplateType(models.Model):
+    """
+    Type of email template, e.g. share_project_viewer, delivery, final_notification
+    """
+    name = models.CharField(max_length=64, null=False, blank=False, unique=True)
+
+    def __str__(self):
+        return self.template_type
+
+    @classmethod
+    def from_share_role(cls, role):
+        return cls.objects.get(name='share_{}'.format(role))
 
 class EmailTemplate(models.Model):
     """
-    Represents a base email message that can be sent. Multiple templates can be stored
-    based on the users
+    Represents a base email message that can be sent
     """
     history = HistoricalRecords()
     group = models.ForeignKey(Group)
     owner = models.ForeignKey(User)
-    name = models.CharField(max_length=64, null=False, blank=False,)
-    role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
+    template_type = models.ForeignKey(EmailTemplateType)
     text = models.TextField(null=False, blank=False)
 
     def __str__(self):
-        return '{} email template: {} owned by: {}: {}'.format(
-            self.group.name,
-            self.name,
-            self.owner,
-            self.text
+        return 'Email Template in group <{}>, type <{}>: {}'.format(
+            self.template_type,
+            self.group,
+            self.text,
         )
     class Meta:
         unique_together = (
-            ('group','role'), # Groups may have multiple email templates, but only a single per role
-            ('group','name'), # names must be unique within a group
+            ('group','template_type'),
         )
 
     @classmethod
-    def for_share(cls, share):
-        user = share.from_user.user
+    def by_action_type_name(cls, action, template_type_name):
+        user = action.from_user.user
         if user is None:
-            raise EmailTemplateException('User object not found for share {}'.format(share))
-        matches = cls.objects.filter(group__in=user.groups.all(), role=share.role)
+            raise EmailTemplateException('User object not found in {}'.format(action))
+        matches = cls.objects.filter(group__in=user.groups.all(), template_type__name=template_type_name)
         if len(matches) == 0:
             return None
         elif len(matches) > 1:
-            raise EmailTemplateException('Multiple email templates found for share {}'.format(share))
+            raise EmailTemplateException('Multiple email templates found for type {}'.format(template_type_name))
         else:
             return matches.first()
+
+    @classmethod
+    def for_share(cls, share):
+        type_name = 'share_{}'.format(share.role)
+        return cls.by_action_type_name(share, type_name)
+
+    @classmethod
+    def for_delivery(cls, delivery):
+        return cls.by_action_type_name(delivery, 'delivery')
+
+    @classmethod
+    def for_accept(cls, delivery):
+        return cls.by_action_type_name(delivery, 'accept')
+
+    @classmethod
+    def for_decline(cls, delivery):
+        return cls.by_action_type_name(delivery, 'decline')
