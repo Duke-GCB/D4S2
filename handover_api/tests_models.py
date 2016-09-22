@@ -14,7 +14,7 @@ class TransferBaseTestCase(TestCase):
 class HandoverTestCase(TransferBaseTestCase):
     HANDOVER_EMAIL_TEXT = 'handover email message'
     ACCEPT_EMAIL_TEXT = 'handover accepted'
-    REJECT_EMAIL_TEXT = 'handover rejected'
+    DECLINE_EMAIL_TEXT = 'handover declined'
 
     def setUp(self):
         super(HandoverTestCase, self).setUp()
@@ -51,15 +51,15 @@ class HandoverTestCase(TransferBaseTestCase):
         self.assertEqual(handover.performed_by, performed_by)
         self.assertEqual(handover.completion_email_text, HandoverTestCase.ACCEPT_EMAIL_TEXT)
 
-    def test_mark_rejected(self):
+    def test_mark_declined(self):
         performed_by = 'performer'
         handover = Handover.objects.first()
         self.assertEqual(handover.state, State.NEW)
-        handover.mark_rejected(performed_by, 'Wrong person.',  HandoverTestCase.REJECT_EMAIL_TEXT)
-        self.assertEqual(handover.state, State.REJECTED)
-        self.assertEqual(handover.reject_reason, 'Wrong person.')
+        handover.mark_declined(performed_by, 'Wrong person.',  HandoverTestCase.DECLINE_EMAIL_TEXT)
+        self.assertEqual(handover.state, State.DECLINED)
+        self.assertEqual(handover.decline_reason, 'Wrong person.')
         self.assertEqual(handover.performed_by, performed_by)
-        self.assertEqual(handover.completion_email_text, HandoverTestCase.REJECT_EMAIL_TEXT)
+        self.assertEqual(handover.completion_email_text, HandoverTestCase.DECLINE_EMAIL_TEXT)
 
     def test_is_complete(self):
         handover = Handover.objects.first()
@@ -68,7 +68,7 @@ class HandoverTestCase(TransferBaseTestCase):
         self.assertEqual(handover.is_complete(), False)
         handover.mark_accepted('','')
         self.assertEqual(handover.is_complete(), True)
-        handover.mark_rejected('','','')
+        handover.mark_declined('','','')
         self.assertEqual(handover.is_complete(), True)
 
 
@@ -234,8 +234,8 @@ class EmailTemplateTypeTestCase(TestCase):
         for role in ShareRole.ROLES:
             self.assertIsNotNone(EmailTemplateType.objects.get(name='share_{}'.format(role)))
         self.assertIsNotNone(EmailTemplateType.objects.get(name='delivery'))
-        self.assertIsNotNone(EmailTemplateType.objects.get(name='accept'))
-        self.assertIsNotNone(EmailTemplateType.objects.get(name='decline'))
+        self.assertIsNotNone(EmailTemplateType.objects.get(name='accepted'))
+        self.assertIsNotNone(EmailTemplateType.objects.get(name='declined'))
 
     def test_from_share_role(self):
         role = 'project_viewer'

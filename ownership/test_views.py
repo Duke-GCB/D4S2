@@ -133,14 +133,14 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn(TOKEN_NOT_FOUND_MSG, str(response.content))
 
-    def test_with_already_rejected(self):
+    def test_with_already_declined(self):
         handover = create_handover()
-        handover.mark_rejected('user', 'Done', 'email text')
+        handover.mark_declined('user', 'Done', 'email text')
         token = handover.token
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(State.HANDOVER_CHOICES[State.REJECTED][1], str(response.content))
+        self.assertIn(State.HANDOVER_CHOICES[State.DECLINED][1], str(response.content))
 
     def test_with_already_accepted(self):
         handover = create_handover()
@@ -153,30 +153,30 @@ class ProcessTestCase(AuthenticatedTestCase):
 
     @patch('ownership.views.HandoverDetails')
     @patch('ownership.views.perform_handover')
-    def test_normal_with_reject(self, MockHandoverDetails, mock_perform_handover):
+    def test_normal_with_decline(self, MockHandoverDetails, mock_perform_handover):
         setup_mock_handover_details(MockHandoverDetails)
         token = create_handover_get_token()
         url = reverse('ownership-process')
-        response = self.client.post(url, {'token': token, 'reject':'reject'})
+        response = self.client.post(url, {'token': token, 'decline':'decline'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('reason for rejecting project', str(response.content))
+        self.assertIn('reason for declining project', str(response.content))
 
 
-class RejectReasonTestCase(AuthenticatedTestCase):
+class DeclineReasonTestCase(AuthenticatedTestCase):
 
     def test_redirects_for_login(self):
         self.client.logout()
-        url = reverse('ownership-reject')
+        url = reverse('ownership-decline')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn('login', response['Location'])
 
     @patch('ownership.views.HandoverDetails')
     @patch('ownership.views.perform_handover')
-    def test_cancel_reject(self, MockHandoverDetails, mock_perform_handover):
+    def test_cancel_decline(self, MockHandoverDetails, mock_perform_handover):
         setup_mock_handover_details(MockHandoverDetails)
         token = create_handover_get_token()
-        url = reverse('ownership-reject')
+        url = reverse('ownership-decline')
         response = self.client.post(url, {'token': token, 'cancel': 'cancel'})
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         expected_url = reverse('ownership-prompt')
@@ -185,23 +185,23 @@ class RejectReasonTestCase(AuthenticatedTestCase):
     @patch('ownership.views.HandoverDetails')
     @patch('handover_api.utils.HandoverDetails')
     @patch('ownership.views.perform_handover')
-    def test_confirm_reject(self, MockHandoverDetails, MockHandoverDetails2, mock_perform_handover):
+    def test_confirm_decline(self, MockHandoverDetails, MockHandoverDetails2, mock_perform_handover):
         setup_mock_handover_details(MockHandoverDetails)
         setup_mock_handover_details(MockHandoverDetails2)
         token = create_handover_get_token()
-        url = reverse('ownership-reject')
-        response = self.client.post(url, {'token': token, 'reject_reason':'Wrong person.'})
+        url = reverse('ownership-decline')
+        response = self.client.post(url, {'token': token, 'decline_reason':'Wrong person.'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('has been rejected', str(response.content))
+        self.assertIn('has been declined', str(response.content))
 
     @patch('ownership.views.HandoverDetails')
     @patch('handover_api.utils.HandoverDetails')
     @patch('ownership.views.perform_handover')
-    def test_reject_with_blank(self, MockHandoverDetails, MockHandoverDetails2, mock_perform_handover):
+    def test_decline_with_blank(self, MockHandoverDetails, MockHandoverDetails2, mock_perform_handover):
         setup_mock_handover_details(MockHandoverDetails)
         setup_mock_handover_details(MockHandoverDetails2)
         token = create_handover_get_token()
-        url = reverse('ownership-reject')
-        response = self.client.post(url, {'token': token, 'reject_reason': ''})
+        url = reverse('ownership-decline')
+        response = self.client.post(url, {'token': token, 'decline_reason': ''})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(REASON_REQUIRED_MSG, str(response.content))

@@ -11,14 +11,14 @@ from django.contrib.auth.decorators import login_required
 MISSING_TOKEN_MSG = 'Missing authorization token.'
 INVALID_TOKEN_MSG = 'Invalid authorization token.'
 TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
-REASON_REQUIRED_MSG = 'You must specify a reason for rejecting this project.'
+REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
 
 
 @login_required
 @never_cache
 def ownership_prompt(request):
     """
-    Main accept screen where user accepts or rejects a project.
+    Main accept screen where user accepts or declines a project.
     """
     return response_with_handover(request, request.GET, render_accept_handover_page)
 
@@ -42,7 +42,7 @@ def build_handover_context(handover):
 
 def render_accept_handover_page(request, handover):
     """
-    Renders page with handover details and ACCEPT/REJECT buttons.
+    Renders page with handover details and ACCEPT/DECLINE buttons.
     """
     return render(request, 'ownership/index.html', build_handover_context(handover))
 
@@ -51,11 +51,11 @@ def render_accept_handover_page(request, handover):
 @never_cache
 def ownership_process(request):
     """
-    Handles response to either accept or reject a project..
+    Handles response to either accept or decline a project..
     """
     func = accept_project_redirect
-    if request.POST.get('reject', None):
-        func = render_reject_reason_prompt
+    if request.POST.get('decline', None):
+        func = render_decline_reason_prompt
     return response_with_handover(request, request.POST, func)
 
 
@@ -75,43 +75,43 @@ def accept_project_redirect(request, handover):
     return redirect(url)
 
 
-def render_reject_reason_prompt(request, handover):
+def render_decline_reason_prompt(request, handover):
     """
-    Prompts for a reason for rejecting the project.
+    Prompts for a reason for declineing the project.
     """
-    return render(request, 'ownership/reject_reason.html', build_handover_context(handover))
+    return render(request, 'ownership/decline_reason.html', build_handover_context(handover))
 
 
-def reject_project(request, handover):
+def decline_project(request, handover):
     """
-    Marks handover rejected.
+    Marks handover declined.
     """
-    reason = request.POST.get('reject_reason')
+    reason = request.POST.get('decline_reason')
     if not reason:
         context = build_handover_context(handover)
         context['error_message'] = REASON_REQUIRED_MSG
-        return render(request, 'ownership/reject_reason.html', context, status=400)
+        return render(request, 'ownership/decline_reason.html', context, status=400)
 
-    message = ProcessedMessage(handover, "rejected", "Reason: {}".format(reason))
+    message = ProcessedMessage(handover, "declined", "Reason: {}".format(reason))
     message.send()
-    handover.mark_rejected(request.user.get_username(), reason, message.email_text)
-    return render(request, 'ownership/reject_done.html', build_handover_context(handover))
+    handover.mark_declined(request.user.get_username(), reason, message.email_text)
+    return render(request, 'ownership/decline_done.html', build_handover_context(handover))
 
 
 @login_required
 @never_cache
-def ownership_reject(request):
+def ownership_decline(request):
     """
-    Handle response from reject reason prompt.
+    Handle response from decline reason prompt.
     """
     if request.POST.get('cancel', None):
         url = url_with_token('ownership-prompt', request.POST.get('token'))
         return redirect(url)
     params = request.GET
-    func = render_reject_reason_prompt
+    func = render_decline_reason_prompt
     if request.method == 'POST':
         params = request.POST
-        func = reject_project
+        func = decline_project
     return response_with_handover(request, params, func)
 
 
@@ -150,7 +150,7 @@ def response_with_handover(request, param_dict, func):
 
 def render_already_complete(request, handover):
     """
-    Users is trying to access a handover that has already been rejected or accepted.
+    Users is trying to access a handover that has already been declined or accepted.
     """
     status = State.HANDOVER_CHOICES[handover.state][1]
     message = "This project has already been processed: {}.".format(status)

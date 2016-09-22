@@ -13,8 +13,8 @@ TEMPLATE_TYPES = (
     'share_file_uploader',
     'share_project_admin',
     'delivery',
-    'accept',
-    'decline',
+    'accepted',
+    'declined',
 )
 
 
