@@ -96,8 +96,15 @@ class HandoverDetails(object):
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.handover.project.project_id)
 
-    def get_email_template_text(self):
+    def get_share_template_text(self):
         email_template = EmailTemplate.for_share(self.handover)
+        if email_template:
+            return email_template.text
+        else:
+            raise RuntimeError('No email template found')
+
+    def get_action_template_text(self, action_name):
+        email_template = EmailTemplate.by_action(self.handover, action_name)
         if email_template:
             return email_template.text
         else:

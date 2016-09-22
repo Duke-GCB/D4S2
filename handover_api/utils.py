@@ -1,5 +1,6 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import HandoverDetails, DDSUtil
+from models import EmailTemplateType
 
 
 class Message(object):
@@ -30,7 +31,6 @@ class ShareMessage(Message):
         in a models.Share object. Then calls generate_message with email addresses, subject, and the details to
         generate an EmailMessage object, which can be .send()ed.
         """
-
         try:
             handover_details = HandoverDetails(share)
             sender = handover_details.get_from_user()
@@ -39,7 +39,7 @@ class ShareMessage(Message):
             url = handover_details.get_project_url()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        email_template_text = handover_details.get_email_template_text()
+        email_template_text = handover_details.get_share_template_text()
         subject = 'Data ready for Project {}'.format(project.name)
         context = {
             'project_name': project.name,
@@ -71,8 +71,7 @@ class HandoverMessage(Message):
             project = handover_details.get_project()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-
-        template_name = 'handover.txt'
+        email_template_text = handover_details.get_email_template_text('delivery')
         subject = 'Data finalized for Project {}'.format(project.name)
         context = {
             'project_name': project.name,
@@ -84,7 +83,7 @@ class HandoverMessage(Message):
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
-        message = generate_message(sender.email, receiver.email, subject, template_name, context)
+        message = generate_message(sender.email, receiver.email, subject, email_template_text, context)
         super(HandoverMessage, self).__init__(message)
 
 
@@ -94,11 +93,14 @@ class ProcessedMessage(Message):
         """
         Generates an EmailMessage reporting whether or not the recipient accepted the handover
         """
-        handover_details = HandoverDetails(handover)
-        sender = handover_details.get_from_user()
-        receiver = handover_details.get_to_user()
-        project = handover_details.get_project()
-        template_name = 'processed.txt'
+        try:
+            handover_details = HandoverDetails(handover)
+            sender = handover_details.get_from_user()
+            receiver = handover_details.get_to_user()
+            project = handover_details.get_project()
+        except ValueError as e:
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+        email_template_text = handover_details.get_email_template_text(process_type)
         subject = 'Project {} has been {}'.format(project.name, process_type)
         context = {
             'project_name': project.name,
@@ -109,7 +111,7 @@ class ProcessedMessage(Message):
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
-        message = generate_message(receiver.email, sender.email, subject, template_name, context)
+        message = generate_message(receiver.email, sender.email, subject, email_template_text, context)
         super(ProcessedMessage, self).__init__(message)
 
 

@@ -242,6 +242,7 @@ class EmailTemplateTypeTestCase(TestCase):
         e = EmailTemplateType.from_share_role(role)
         self.assertEqual(e.name, 'share_project_viewer')
 
+
 class EmailTemplateTestCase(TestCase):
 
     def setUp(self):
@@ -255,7 +256,6 @@ class EmailTemplateTestCase(TestCase):
         self.default_type = EmailTemplateType.from_share_role(ShareRole.DEFAULT)
         self.download_type = EmailTemplateType.from_share_role(ShareRole.DOWNLOAD)
         self.view_type = EmailTemplateType.from_share_role(ShareRole.VIEW)
-
 
     def test_create_email_template(self):
         template = EmailTemplate.objects.create(group=self.group,
@@ -308,6 +308,19 @@ class EmailTemplateTestCase(TestCase):
         t = EmailTemplate.for_share(share)
         self.assertIsNotNone(t)
         self.assertEqual(t.text, 'email body')
+
+    def test_for_operation(self):
+        # Create an email template
+        handover = Handover.objects.create(project=self.dds_project,
+                                           from_user=self.dds_user1,
+                                           to_user=self.dds_user2)
+        EmailTemplate.objects.create(group=self.group,
+                                     owner=self.user,
+                                     template_type=EmailTemplateType.objects.get(name='accepted'),
+                                     text='Acceptance Email')
+        t = EmailTemplate.for_operation(handover, 'accepted')
+        self.assertIsNotNone(t)
+        self.assertEqual(t.text, 'Acceptance Email')
 
     def test_no_templates(self):
         share = Share.objects.create(project=self.dds_project,

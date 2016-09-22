@@ -215,10 +215,10 @@ class EmailTemplate(models.Model):
         )
 
     @classmethod
-    def by_action_type_name(cls, action, template_type_name):
-        user = action.from_user.user
+    def for_operation(cls, operation, template_type_name):
+        user = operation.from_user.user
         if user is None:
-            raise EmailTemplateException('User object not found in {}'.format(action))
+            raise EmailTemplateException('User object not found in {}'.format(operation))
         matches = cls.objects.filter(group__in=user.groups.all(), template_type__name=template_type_name)
         if len(matches) == 0:
             return None
@@ -230,16 +230,4 @@ class EmailTemplate(models.Model):
     @classmethod
     def for_share(cls, share):
         type_name = 'share_{}'.format(share.role)
-        return cls.by_action_type_name(share, type_name)
-
-    @classmethod
-    def for_delivery(cls, delivery):
-        return cls.by_action_type_name(delivery, 'delivery')
-
-    @classmethod
-    def for_accept(cls, delivery):
-        return cls.by_action_type_name(delivery, 'accept')
-
-    @classmethod
-    def for_decline(cls, delivery):
-        return cls.by_action_type_name(delivery, 'decline')
+        return cls.for_operation(share, type_name)
