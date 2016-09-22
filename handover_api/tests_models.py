@@ -261,37 +261,43 @@ class EmailTemplateTestCase(TestCase):
         template = EmailTemplate.objects.create(group=self.group,
                                                 owner=self.user,
                                                 template_type=self.default_type,
-                                                text='email body')
+                                                subject='Subject',
+                                                body='email body')
         self.assertIsNotNone(template)
 
     def test_prevent_duplicate_types(self):
         template1 = EmailTemplate.objects.create(group=self.group,
                                                  owner=self.user,
                                                  template_type=self.download_type,
-                                                 text='email body 1')
+                                                 subject='Subject',
+                                                 body='email body 1')
         self.assertIsNotNone(template1)
         with self.assertRaises(IntegrityError):
             EmailTemplate.objects.create(group=self.group,
                                          owner=self.user,
                                          template_type=self.download_type,
-                                         text='email body 2')
+                                         subject='Subject',
+                                         body='email body 2')
 
     def test_allows_duplicate_types_outspide_group(self):
         group2 = Group.objects.create(name='group2')
         template1 = EmailTemplate.objects.create(group=self.group,
                                                  owner=self.user,
                                                  template_type=self.download_type,
-                                                 text='email body 1')
+                                                 subject='Subject',
+                                                 body='email body 1')
         self.assertIsNotNone(template1)
         template2 = EmailTemplate.objects.create(group=group2,
                                                  owner=self.user,
                                                  template_type=self.download_type,
-                                                 text='email body 1')
+                                                 subject='Subject',
+                                                 body='email body 1')
         # assert different items but otherwise data is the same
         self.assertIsNotNone(template2)
         self.assertNotEqual(template1, template2)
         self.assertEqual(template1.owner, template2.owner)
-        self.assertEqual(template1.text, template2.text)
+        self.assertEqual(template1.subject, template2.subject)
+        self.assertEqual(template1.body, template2.body)
         self.assertEqual(template1.template_type, template2.template_type)
         self.assertNotEqual(template1.group, template2.group)
 
@@ -300,14 +306,15 @@ class EmailTemplateTestCase(TestCase):
         EmailTemplate.objects.create(group=self.group,
                                      owner=self.user,
                                      template_type=self.download_type,
-                                     text='email body')
+                                     subject='Subject',
+                                     body='email body')
         share = Share.objects.create(project=self.dds_project,
                                      from_user=self.dds_user1,
                                      to_user=self.dds_user2,
                                      role=ShareRole.DOWNLOAD)
         t = EmailTemplate.for_share(share)
         self.assertIsNotNone(t)
-        self.assertEqual(t.text, 'email body')
+        self.assertEqual(t.body, 'email body')
 
     def test_for_operation(self):
         # Create an email template
@@ -317,10 +324,11 @@ class EmailTemplateTestCase(TestCase):
         EmailTemplate.objects.create(group=self.group,
                                      owner=self.user,
                                      template_type=EmailTemplateType.objects.get(name='accepted'),
-                                     text='Acceptance Email')
+                                     subject='Acceptance Email Subject',
+                                     body='Acceptance Email Body')
         t = EmailTemplate.for_operation(handover, 'accepted')
         self.assertIsNotNone(t)
-        self.assertEqual(t.text, 'Acceptance Email')
+        self.assertEqual(t.subject, 'Acceptance Email Subject')
 
     def test_no_templates(self):
         share = Share.objects.create(project=self.dds_project,
@@ -346,11 +354,13 @@ class EmailTemplateTestCase(TestCase):
         t1 = EmailTemplate.objects.create(group=self.group,
                                           owner=self.user,
                                           template_type=self.download_type,
-                                          text='email body')
+                                          subject='Subject',
+                                          body='email body')
         t2 = EmailTemplate.objects.create(group=group2,
                                           owner=self.user,
                                           template_type=self.download_type,
-                                          text='email body')
+                                          subject='Subject',
+                                          body='email body')
         self.assertEqual(t1.template_type, t2.template_type)
         self.assertEqual(t1.owner, t2.owner)
         self.assertNotEqual(t1.group, t2.group)

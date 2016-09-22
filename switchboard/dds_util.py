@@ -99,13 +99,13 @@ class HandoverDetails(object):
     def get_share_template_text(self):
         email_template = EmailTemplate.for_share(self.handover)
         if email_template:
-            return email_template.text
+            return email_template.subject, email_template.body
         else:
             raise RuntimeError('No email template found')
 
     def get_action_template_text(self, action_name):
         email_template = EmailTemplate.by_action(self.handover, action_name)
         if email_template:
-            return email_template.text
+            return email_template.subject, email_template.body
         else:
             raise RuntimeError('No email template found')

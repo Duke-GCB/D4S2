@@ -193,6 +193,7 @@ class EmailTemplateType(models.Model):
     def from_share_role(cls, role):
         return cls.objects.get(name='share_{}'.format(role))
 
+
 class EmailTemplate(models.Model):
     """
     Represents a base email message that can be sent
@@ -201,13 +202,14 @@ class EmailTemplate(models.Model):
     group = models.ForeignKey(Group)
     owner = models.ForeignKey(User)
     template_type = models.ForeignKey(EmailTemplateType)
-    text = models.TextField(null=False, blank=False)
+    body = models.TextField(null=False, blank=False)
+    subject = models.TextField(null=False, blank=False)
 
     def __str__(self):
         return 'Email Template in group <{}>, type <{}>: {}'.format(
             self.template_type,
             self.group,
-            self.text,
+            self.subject,
         )
     class Meta:
         unique_together = (

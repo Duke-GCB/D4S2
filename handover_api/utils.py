@@ -1,6 +1,5 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import HandoverDetails, DDSUtil
-from models import EmailTemplateType
 
 
 class Message(object):
@@ -39,8 +38,7 @@ class ShareMessage(Message):
             url = handover_details.get_project_url()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        email_template_text = handover_details.get_share_template_text()
-        subject = 'Data ready for Project {}'.format(project.name)
+        template_subject, template_body = handover_details.get_share_template_text()
         context = {
             'project_name': project.name,
             'status': 'Draft',
@@ -51,7 +49,7 @@ class ShareMessage(Message):
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
-        message = generate_message(sender.email, receiver.email, subject, email_template_text, context)
+        message = generate_message(sender.email, receiver.email, template_subject, template_body, context)
         super(ShareMessage, self).__init__(message)
 
 
@@ -71,8 +69,7 @@ class HandoverMessage(Message):
             project = handover_details.get_project()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        email_template_text = handover_details.get_email_template_text('delivery')
-        subject = 'Data finalized for Project {}'.format(project.name)
+        template_subject, template_body = handover_details.get_email_template_text('delivery')
         context = {
             'project_name': project.name,
             'status': 'Final',
@@ -83,7 +80,7 @@ class HandoverMessage(Message):
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
-        message = generate_message(sender.email, receiver.email, subject, email_template_text, context)
+        message = generate_message(sender.email, receiver.email, template_subject, template_body, context)
         super(HandoverMessage, self).__init__(message)
 
 
@@ -100,8 +97,7 @@ class ProcessedMessage(Message):
             project = handover_details.get_project()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        email_template_text = handover_details.get_email_template_text(process_type)
-        subject = 'Project {} has been {}'.format(project.name, process_type)
+        template_subject, template_body = handover_details.get_email_template_text(process_type)
         context = {
             'project_name': project.name,
             'recipient_name': receiver.full_name,
@@ -111,7 +107,7 @@ class ProcessedMessage(Message):
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
-        message = generate_message(receiver.email, sender.email, subject, email_template_text, context)
+        message = generate_message(receiver.email, sender.email, template_subject, template_body, context)
         super(ProcessedMessage, self).__init__(message)
 
 
