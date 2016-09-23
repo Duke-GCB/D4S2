@@ -35,7 +35,7 @@ class UtilsTestCaseHandover(TestCase):
         project_mock.name = 'Project 123' # Can't make a MagicMock with a name keyword
         mock_details.get_project = Mock(return_value=project_mock)
         templates = ('{{ project_name }}','Hi, {{ recipient_name }}. data at {{ url }}')
-        mock_details.get_email_template_text = Mock(return_value=templates)
+        mock_details.get_action_template_text = Mock(return_value=templates)
         message = HandoverMessage(self.h, 'http://localhost/accept')
         self.assertEqual(mock_details.get_project.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)

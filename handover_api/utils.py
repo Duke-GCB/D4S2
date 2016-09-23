@@ -69,7 +69,7 @@ class HandoverMessage(Message):
             project = handover_details.get_project()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = handover_details.get_email_template_text('delivery')
+        template_subject, template_body = handover_details.get_action_template_text('delivery')
         context = {
             'project_name': project.name,
             'status': 'Final',
@@ -97,7 +97,7 @@ class ProcessedMessage(Message):
             project = handover_details.get_project()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = handover_details.get_email_template_text(process_type)
+        template_subject, template_body = handover_details.get_action_template_text(process_type)
         context = {
             'project_name': project.name,
             'recipient_name': receiver.full_name,
