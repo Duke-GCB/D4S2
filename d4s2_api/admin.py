@@ -11,7 +11,7 @@ class ShareAdmin(SimpleHistoryAdmin):
 admin.site.register(Share, ShareAdmin)
 
 
-class HandoverAdmin(SimpleHistoryAdmin):
+class DeliveryAdmin(SimpleHistoryAdmin):
     readonly_fields = ('token',)
 
-admin.site.register(Delivery, HandoverAdmin)
+admin.site.register(Delivery, DeliveryAdmin)
