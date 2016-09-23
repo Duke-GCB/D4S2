@@ -6,4 +6,4 @@ python:
 install:
   - pip install -r requirements.txt
 # command to run tests
-script: DJANGO_SETTINGS_MODULE=handoverservice.settings_test python manage.py test
+script: DJANGO_SETTINGS_MODULE=d4s2.settings_test python manage.py test

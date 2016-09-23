@@ -1,7 +1,7 @@
 from ddsc.config import Config
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from handover_api.models import DukeDSUser
+from d4s2_api.models import DukeDSUser, EmailTemplate
 
 
 class DDSUtil(object):
@@ -75,23 +75,37 @@ class ModelPopulator(object):
             dds_project.save()
 
 
-class HandoverDetails(object):
-    def __init__(self, handover_or_draft):
-        self.handover = handover_or_draft
-        self.ddsutil = DDSUtil(self.handover.from_user.dds_id)
+class DeliveryDetails(object):
+    def __init__(self, delivery_or_share):
+        self.delivery = delivery_or_share
+        self.ddsutil = DDSUtil(self.delivery.from_user.dds_id)
         self.model_populator = ModelPopulator(self.ddsutil)
 
     def get_from_user(self):
-        self.model_populator.populate_user(self.handover.from_user)
-        return self.handover.from_user
+        self.model_populator.populate_user(self.delivery.from_user)
+        return self.delivery.from_user
 
     def get_to_user(self):
-        self.model_populator.populate_user(self.handover.to_user)
-        return self.handover.to_user
+        self.model_populator.populate_user(self.delivery.to_user)
+        return self.delivery.to_user
 
     def get_project(self):
-        self.model_populator.populate_project(self.handover.project)
-        return self.handover.project
+        self.model_populator.populate_project(self.delivery.project)
+        return self.delivery.project
 
     def get_project_url(self):
-        return self.ddsutil.get_project_url(self.handover.project.project_id)
+        return self.ddsutil.get_project_url(self.delivery.project.project_id)
+
+    def get_share_template_text(self):
+        email_template = EmailTemplate.for_share(self.delivery)
+        if email_template:
+            return email_template.subject, email_template.body
+        else:
+            raise RuntimeError('No email template found')
+
+    def get_action_template_text(self, action_name):
+        email_template = EmailTemplate.by_action(self.delivery, action_name)
+        if email_template:
+            return email_template.subject, email_template.body
+        else:
+            raise RuntimeError('No email template found')

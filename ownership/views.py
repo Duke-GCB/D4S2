@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
-from handover_api.models import Handover, State
-from handover_api.utils import perform_handover, ProcessedMessage
-from switchboard.dds_util import HandoverDetails
+from d4s2_api.models import Delivery, State
+from d4s2_api.utils import perform_delivery, ProcessedMessage
+from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
@@ -11,28 +11,28 @@ from django.contrib.auth.decorators import login_required
 MISSING_TOKEN_MSG = 'Missing authorization token.'
 INVALID_TOKEN_MSG = 'Invalid authorization token.'
 TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
-REASON_REQUIRED_MSG = 'You must specify a reason for rejecting this project.'
+REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
 
 
 @login_required
 @never_cache
 def ownership_prompt(request):
     """
-    Main accept screen where user accepts or rejects a project.
+    Main accept screen where user accepts or declines a project.
     """
-    return response_with_handover(request, request.GET, render_accept_handover_page)
+    return response_with_delivery(request, request.GET, render_accept_delivery_page)
 
 
-def build_handover_context(handover):
+def build_delivery_context(delivery):
     """
-    Return dictionary of commonly needed handover data for use with templates.
+    Return dictionary of commonly needed delivery data for use with templates.
     """
-    handover_details = HandoverDetails(handover)
-    from_user = handover_details.get_from_user()
-    to_user = handover_details.get_to_user()
-    project = handover_details.get_project()
+    delivery_details = DeliveryDetails(delivery)
+    from_user = delivery_details.get_from_user()
+    to_user = delivery_details.get_to_user()
+    project = delivery_details.get_project()
     return {
-        'token': str(handover.token),
+        'token': str(delivery.token),
         'from_name': from_user.full_name,
         'from_email': from_user.email,
         'to_name': to_user.full_name,
@@ -40,79 +40,79 @@ def build_handover_context(handover):
     }
 
 
-def render_accept_handover_page(request, handover):
+def render_accept_delivery_page(request, delivery):
     """
-    Renders page with handover details and ACCEPT/REJECT buttons.
+    Renders page with delivery details and ACCEPT/DECLINE buttons.
     """
-    return render(request, 'ownership/index.html', build_handover_context(handover))
+    return render(request, 'ownership/index.html', build_delivery_context(delivery))
 
 
 @login_required
 @never_cache
 def ownership_process(request):
     """
-    Handles response to either accept or reject a project..
+    Handles response to either accept or decline a project..
     """
     func = accept_project_redirect
-    if request.POST.get('reject', None):
-        func = render_reject_reason_prompt
-    return response_with_handover(request, request.POST, func)
+    if request.POST.get('decline', None):
+        func = render_decline_reason_prompt
+    return response_with_delivery(request, request.POST, func)
 
 
-def accept_project_redirect(request, handover):
+def accept_project_redirect(request, delivery):
     """
-    Perform handover and redirect user to look at the project.
+    Perform delivery and redirect user to look at the project.
     """
     try:
-        perform_handover(handover)
-        message = ProcessedMessage(handover, "accepted")
+        perform_delivery(delivery)
+        message = ProcessedMessage(delivery, "accepted")
         message.send()
-        handover.mark_accepted(request.user.get_username(), message.email_text)
+        delivery.mark_accepted(request.user.get_username(), message.email_text)
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
-    handover_details = HandoverDetails(handover)
-    url = handover_details.get_project_url()
+    delivery_details = DeliveryDetails(delivery)
+    url = delivery_details.get_project_url()
     return redirect(url)
 
 
-def render_reject_reason_prompt(request, handover):
+def render_decline_reason_prompt(request, delivery):
     """
-    Prompts for a reason for rejecting the project.
+    Prompts for a reason for declineing the project.
     """
-    return render(request, 'ownership/reject_reason.html', build_handover_context(handover))
+    return render(request, 'ownership/decline_reason.html', build_delivery_context(delivery))
 
 
-def reject_project(request, handover):
+def decline_project(request, delivery):
     """
-    Marks handover rejected.
+    Marks delivery declined.
     """
-    reason = request.POST.get('reject_reason')
+    reason = request.POST.get('decline_reason')
     if not reason:
-        context = build_handover_context(handover)
+        context = build_delivery_context(delivery)
         context['error_message'] = REASON_REQUIRED_MSG
-        return render(request, 'ownership/reject_reason.html', context, status=400)
+        return render(request, 'ownership/decline_reason.html', context, status=400)
 
-    message = ProcessedMessage(handover, "rejected", "Reason: {}".format(reason))
+    message = ProcessedMessage(delivery, "declined", "Reason: {}".format(reason))
     message.send()
-    handover.mark_rejected(request.user.get_username(), reason, message.email_text)
-    return render(request, 'ownership/reject_done.html', build_handover_context(handover))
+    delivery.mark_declined(request.user.get_username(), reason, message.email_text)
+    return render(request, 'ownership/decline_done.html', build_delivery_context(delivery))
 
 
 @login_required
 @never_cache
-def ownership_reject(request):
+def ownership_decline(request):
     """
-    Handle response from reject reason prompt.
+    Handle response from decline reason prompt.
     """
     if request.POST.get('cancel', None):
         url = url_with_token('ownership-prompt', request.POST.get('token'))
         return redirect(url)
     params = request.GET
-    func = render_reject_reason_prompt
+    func = render_decline_reason_prompt
     if request.method == 'POST':
         params = request.POST
-        func = reject_project
-    return response_with_handover(request, params, func)
+        func = decline_project
+    return response_with_delivery(request, params, func)
 
 
 def url_with_token(name, token=None):
@@ -125,19 +125,19 @@ def url_with_token(name, token=None):
     return url
 
 
-def response_with_handover(request, param_dict, func):
+def response_with_delivery(request, param_dict, func):
     """
-    Pull out token from request params and return func(handover).
-    If handover already complete render already complete message.
+    Pull out token from request params and return func(delivery).
+    If delivery already complete render already complete message.
     Renders missing authorization token message otherwise.
     """
     token = param_dict.get('token', None)
     if token:
         try:
-            handover = Handover.objects.get(token=token)
-            if handover.is_complete():
-                return render_already_complete(request, handover)
-            return func(request, handover)
+            delivery = Delivery.objects.get(token=token)
+            if delivery.is_complete():
+                return render_already_complete(request, delivery)
+            return func(request, delivery)
         except ValueError as err:
             return general_error(request, msg=INVALID_TOKEN_MSG, status=400)
         except ObjectDoesNotExist:
@@ -148,11 +148,11 @@ def response_with_handover(request, param_dict, func):
         return general_error(request, msg=MISSING_TOKEN_MSG, status=400)
 
 
-def render_already_complete(request, handover):
+def render_already_complete(request, delivery):
     """
-    Users is trying to access a handover that has already been rejected or accepted.
+    User is trying to access a delivery that has already been declined or accepted.
     """
-    status = State.HANDOVER_CHOICES[handover.state][1]
+    status = State.DELIVERY_CHOICES[delivery.state][1]
     message = "This project has already been processed: {}.".format(status)
     return general_error(request, msg=message, status=400)
 

@@ -19,7 +19,7 @@ COPY requirements.txt /usr/src/app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /usr/src/app
-COPY handoverservice/settings.docker /usr/src/app/handoverservice/settings.py
+COPY d4s2/settings.docker /usr/src/app/d4s2/settings.py
 
 EXPOSE 8000
 

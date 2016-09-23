@@ -1,0 +1,1 @@
+default_app_config = 'd4s2_api.apps.D4S2ApiConfig'

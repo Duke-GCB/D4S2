@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG, REASON_REQUIRED_MSG
-from handover_api.models import Handover, State, DukeDSProject, DukeDSUser
+from d4s2_api.models import Delivery, State, DukeDSProject, DukeDSUser
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from django.contrib.auth.models import User as django_user
 from mock import patch, Mock
@@ -16,23 +16,24 @@ def url_with_token(name, token=None):
     return url
 
 
-def create_handover():
+def create_delivery():
     project1 = DukeDSProject.objects.create(project_id='project1')
     fromuser1 = DukeDSUser.objects.create(dds_id='fromuser1')
     touser1= DukeDSUser.objects.create(dds_id='touser1')
-    return Handover.objects.create(project=project1, from_user=fromuser1, to_user=touser1)
+    return Delivery.objects.create(project=project1, from_user=fromuser1, to_user=touser1)
 
 
-def create_handover_get_token():
-    handover = create_handover()
-    return str(handover.token)
+def create_delivery_get_token():
+    delivery = create_delivery()
+    return str(delivery.token)
 
 
-def setup_mock_handover_details(MockHandoverDetails):
-    x = MockHandoverDetails()
+def setup_mock_delivery_details(MockDeliveryDetails):
+    x = MockDeliveryDetails()
     x.get_from_user.return_value = MockDDSUser('joe', 'joe@joe.com')
     x.get_to_user.return_value = MockDDSUser('bob', 'bob@joe.com')
     x.get_project.return_value = MockDDSProject('project')
+    x.get_action_template_text.return_value = ('Subject Template {{ project_name }}', 'Body Template {{ recipient_name }}')
 
 
 class AuthenticatedTestCase(TestCase):
@@ -58,10 +59,10 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
 
-    @patch('ownership.views.HandoverDetails')
-    def test_normal_with_valid_token(self, MockHandoverDetails):
-        setup_mock_handover_details(MockHandoverDetails)
-        token = create_handover_get_token()
+    @patch('ownership.views.DeliveryDetails')
+    def test_normal_with_valid_token(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        token = create_delivery_get_token()
         url = url_with_token('ownership-prompt', token)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -69,7 +70,7 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertIn(token, str(response.content))
 
     def test_with_bad_token(self):
-        token = create_handover_get_token() + "a"
+        token = create_delivery_get_token() + "a"
         url = url_with_token('ownership-prompt', token)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -92,34 +93,34 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn('login', response['Location'])
 
-    @patch('handover_api.utils.DDSUtil')
+    @patch('d4s2_api.utils.DDSUtil')
     def test_error_when_no_token(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
-        token = create_handover_get_token()
+        token = create_delivery_get_token()
         url = url_with_token('ownership-process', token)
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
 
-    @patch('ownership.views.HandoverDetails')
-    @patch('handover_api.utils.HandoverDetails')
-    @patch('handover_api.utils.DDSUtil')
-    def test_normal_with_token_is_redirect(self, MockHandoverDetails, MockHandoverDetails2, MockDDSUtil):
-        setup_mock_handover_details(MockHandoverDetails)
-        setup_mock_handover_details(MockHandoverDetails2)
+    @patch('ownership.views.DeliveryDetails')
+    @patch('d4s2_api.utils.DeliveryDetails')
+    @patch('d4s2_api.utils.DDSUtil')
+    def test_normal_with_token_is_redirect(self, MockDeliveryDetails, MockDeliveryDetails2, MockDDSUtil):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        setup_mock_delivery_details(MockDeliveryDetails2)
         mock_ddsutil = MockDDSUtil()
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
-        token = create_handover_get_token()
+        token = create_delivery_get_token()
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertNotIn(MISSING_TOKEN_MSG, str(response.content))
 
     def test_with_bad_token(self):
-        token = create_handover_get_token() + "a"
+        token = create_delivery_get_token() + "a"
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -132,75 +133,75 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn(TOKEN_NOT_FOUND_MSG, str(response.content))
 
-    def test_with_already_rejected(self):
-        handover = create_handover()
-        handover.mark_rejected('user', 'Done', 'email text')
-        token = handover.token
+    def test_with_already_declined(self):
+        delivery = create_delivery()
+        delivery.mark_declined('user', 'Done', 'email text')
+        token = delivery.token
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(State.HANDOVER_CHOICES[State.REJECTED][1], str(response.content))
+        self.assertIn(State.DELIVERY_CHOICES[State.DECLINED][1], str(response.content))
 
     def test_with_already_accepted(self):
-        handover = create_handover()
-        handover.mark_accepted('user', 'email text')
-        token = handover.token
+        delivery = create_delivery()
+        delivery.mark_accepted('user', 'email text')
+        token = delivery.token
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(State.HANDOVER_CHOICES[State.ACCEPTED][1], str(response.content))
+        self.assertIn(State.DELIVERY_CHOICES[State.ACCEPTED][1], str(response.content))
 
-    @patch('ownership.views.HandoverDetails')
-    @patch('ownership.views.perform_handover')
-    def test_normal_with_reject(self, MockHandoverDetails, mock_perform_handover):
-        setup_mock_handover_details(MockHandoverDetails)
-        token = create_handover_get_token()
+    @patch('ownership.views.DeliveryDetails')
+    @patch('ownership.views.perform_delivery')
+    def test_normal_with_decline(self, MockDeliveryDetails, mock_perform_delivery):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        token = create_delivery_get_token()
         url = reverse('ownership-process')
-        response = self.client.post(url, {'token': token, 'reject':'reject'})
+        response = self.client.post(url, {'token': token, 'decline':'decline'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('reason for rejecting project', str(response.content))
+        self.assertIn('reason for declining project', str(response.content))
 
 
-class RejectReasonTestCase(AuthenticatedTestCase):
+class DeclineReasonTestCase(AuthenticatedTestCase):
 
     def test_redirects_for_login(self):
         self.client.logout()
-        url = reverse('ownership-reject')
+        url = reverse('ownership-decline')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn('login', response['Location'])
 
-    @patch('ownership.views.HandoverDetails')
-    @patch('ownership.views.perform_handover')
-    def test_cancel_reject(self, MockHandoverDetails, mock_perform_handover):
-        setup_mock_handover_details(MockHandoverDetails)
-        token = create_handover_get_token()
-        url = reverse('ownership-reject')
+    @patch('ownership.views.DeliveryDetails')
+    @patch('ownership.views.perform_delivery')
+    def test_cancel_decline(self, MockDeliveryDetails, mock_perform_delivery):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        token = create_delivery_get_token()
+        url = reverse('ownership-decline')
         response = self.client.post(url, {'token': token, 'cancel': 'cancel'})
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         expected_url = reverse('ownership-prompt')
         self.assertIn(expected_url, response.url)
 
-    @patch('ownership.views.HandoverDetails')
-    @patch('handover_api.utils.HandoverDetails')
-    @patch('ownership.views.perform_handover')
-    def test_confirm_reject(self, MockHandoverDetails, MockHandoverDetails2, mock_perform_handover):
-        setup_mock_handover_details(MockHandoverDetails)
-        setup_mock_handover_details(MockHandoverDetails2)
-        token = create_handover_get_token()
-        url = reverse('ownership-reject')
-        response = self.client.post(url, {'token': token, 'reject_reason':'Wrong person.'})
+    @patch('ownership.views.DeliveryDetails')
+    @patch('d4s2_api.utils.DeliveryDetails')
+    @patch('ownership.views.perform_delivery')
+    def test_confirm_decline(self, MockDeliveryDetails, MockDeliveryDetails2, mock_perform_delivery):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        setup_mock_delivery_details(MockDeliveryDetails2)
+        token = create_delivery_get_token()
+        url = reverse('ownership-decline')
+        response = self.client.post(url, {'token': token, 'decline_reason':'Wrong person.'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('has been rejected', str(response.content))
+        self.assertIn('has been declined', str(response.content))
 
-    @patch('ownership.views.HandoverDetails')
-    @patch('handover_api.utils.HandoverDetails')
-    @patch('ownership.views.perform_handover')
-    def test_reject_with_blank(self, MockHandoverDetails, MockHandoverDetails2, mock_perform_handover):
-        setup_mock_handover_details(MockHandoverDetails)
-        setup_mock_handover_details(MockHandoverDetails2)
-        token = create_handover_get_token()
-        url = reverse('ownership-reject')
-        response = self.client.post(url, {'token': token, 'reject_reason': ''})
+    @patch('ownership.views.DeliveryDetails')
+    @patch('d4s2_api.utils.DeliveryDetails')
+    @patch('ownership.views.perform_delivery')
+    def test_decline_with_blank(self, MockDeliveryDetails, MockDeliveryDetails2, mock_perform_delivery):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        setup_mock_delivery_details(MockDeliveryDetails2)
+        token = create_delivery_get_token()
+        url = reverse('ownership-decline')
+        response = self.client.post(url, {'token': token, 'decline_reason': ''})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(REASON_REQUIRED_MSG, str(response.content))
