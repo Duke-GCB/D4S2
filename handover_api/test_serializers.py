@@ -1,6 +1,6 @@
 from django.test import TestCase
-from handover_api.serializers import HandoverSerializer
-from handover_api.models import DukeDSProject, DukeDSUser, Handover
+from handover_api.serializers import DeliverySerializer
+from handover_api.models import DukeDSProject, DukeDSUser, Delivery
 
 
 class HandoverSerializerTestCase(TestCase):
@@ -12,7 +12,7 @@ class HandoverSerializerTestCase(TestCase):
         }
 
     def test_serializes_handover(self):
-        serializer = HandoverSerializer(data=self.data)
+        serializer = DeliverySerializer(data=self.data)
         self.assertTrue(serializer.is_valid())
         handover = serializer.save()
         self.assertEqual(handover.project.project_id, self.data['project_id'])
@@ -21,7 +21,7 @@ class HandoverSerializerTestCase(TestCase):
 
     def test_finds_related_project(self):
         p = DukeDSProject.objects.create(project_id=self.data['project_id'])
-        serializer = HandoverSerializer(data=self.data)
+        serializer = DeliverySerializer(data=self.data)
         self.assertTrue(serializer.is_valid())
         handover = serializer.save()
         self.assertEqual(handover.project, p)
@@ -29,7 +29,7 @@ class HandoverSerializerTestCase(TestCase):
     def test_finds_related_users(self):
         from_user = DukeDSUser.objects.create(dds_id=self.data['from_user_id'])
         to_user = DukeDSUser.objects.create(dds_id=self.data['to_user_id'])
-        serializer = HandoverSerializer(data=self.data)
+        serializer = DeliverySerializer(data=self.data)
         self.assertTrue(serializer.is_valid())
         handover = serializer.save()
         self.assertEqual(handover.from_user, from_user)
@@ -37,7 +37,7 @@ class HandoverSerializerTestCase(TestCase):
 
     def test_changing_project_id_creates_new(self):
         # Create an initial handover, project, and users
-        serializer = HandoverSerializer(data=self.data)
+        serializer = DeliverySerializer(data=self.data)
         self.assertTrue(serializer.is_valid())
         handover = serializer.save()
         original_handover_pk = handover.pk
@@ -50,7 +50,7 @@ class HandoverSerializerTestCase(TestCase):
         # Update the serialized instance and change the project id
         data = dict(self.data)
         data['project_id'] = 'project0000'
-        serializer = HandoverSerializer(data=data)
+        serializer = DeliverySerializer(data=data)
         self.assertTrue(serializer.is_valid())
         updated_handover = serializer.save()
         self.assertEqual(DukeDSProject.objects.count(), 2, "changing id should create another project")
@@ -62,7 +62,7 @@ class HandoverSerializerTestCase(TestCase):
 
     def test_changing_project_id_matches_other(self):
         # Create an initial handover, project, and users
-        serializer = HandoverSerializer(data=self.data)
+        serializer = DeliverySerializer(data=self.data)
         self.assertTrue(serializer.is_valid())
         handover = serializer.save()
         original_handover_pk = handover.pk
@@ -79,7 +79,7 @@ class HandoverSerializerTestCase(TestCase):
         # Update the serialized instance and change the project id
         data = dict(self.data)
         data['project_id'] = project0000.project_id
-        serializer = HandoverSerializer(data=data)
+        serializer = DeliverySerializer(data=data)
         self.assertTrue(serializer.is_valid())
         updated_handover = serializer.save()
         self.assertEqual(DukeDSProject.objects.count(), 2, "changing id should not create another project")

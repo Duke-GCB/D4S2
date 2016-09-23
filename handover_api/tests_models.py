@@ -18,33 +18,33 @@ class HandoverTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(HandoverTestCase, self).setUp()
-        Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+        Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
-        handover = Handover.objects.first()
+        handover = Delivery.objects.first()
         self.assertEqual(handover.state, State.NEW, 'New handovers should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(ValueError):
-            Handover.objects.create(project=None, from_user=None, to_user=None)
+            Delivery.objects.create(project=None, from_user=None, to_user=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+            Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_token_autopopulate(self):
-        handover = Handover.objects.first()
+        handover = Delivery.objects.first()
         self.assertIsNotNone(handover.token, 'token should default to a uuid')
 
     def test_mark_notified(self):
-        handover = Handover.objects.first()
+        handover = Delivery.objects.first()
         self.assertEqual(handover.state, State.NEW)
         handover.mark_notified(HandoverTestCase.HANDOVER_EMAIL_TEXT)
         self.assertEqual(handover.state, State.NOTIFIED)
 
     def test_mark_accepted(self):
         performed_by = 'performer'
-        handover = Handover.objects.first()
+        handover = Delivery.objects.first()
         self.assertEqual(handover.state, State.NEW)
         handover.mark_accepted(performed_by, HandoverTestCase.ACCEPT_EMAIL_TEXT)
         self.assertEqual(handover.state, State.ACCEPTED)
@@ -53,7 +53,7 @@ class HandoverTestCase(TransferBaseTestCase):
 
     def test_mark_declined(self):
         performed_by = 'performer'
-        handover = Handover.objects.first()
+        handover = Delivery.objects.first()
         self.assertEqual(handover.state, State.NEW)
         handover.mark_declined(performed_by, 'Wrong person.',  HandoverTestCase.DECLINE_EMAIL_TEXT)
         self.assertEqual(handover.state, State.DECLINED)
@@ -62,7 +62,7 @@ class HandoverTestCase(TransferBaseTestCase):
         self.assertEqual(handover.completion_email_text, HandoverTestCase.DECLINE_EMAIL_TEXT)
 
     def test_is_complete(self):
-        handover = Handover.objects.first()
+        handover = Delivery.objects.first()
         self.assertEqual(handover.is_complete(), False)
         handover.mark_notified('')
         self.assertEqual(handover.is_complete(), False)
@@ -152,33 +152,33 @@ class HandoverRelationsTestCase(TransferBaseTestCase):
         self.project2 = DukeDSProject.objects.create(project_id='project2')
         self.project3 = DukeDSProject.objects.create(project_id='project3')
         self.user3 = DukeDSUser.objects.create(dds_id='user3')
-        self.h1 = Handover.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
-        self.h2 = Handover.objects.create(project=self.project2, from_user=self.user1, to_user=self.user3)
-        self.h3 = Handover.objects.create(project=self.project3, from_user=self.user2, to_user=self.user3)
+        self.h1 = Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+        self.h2 = Delivery.objects.create(project=self.project2, from_user=self.user1, to_user=self.user3)
+        self.h3 = Delivery.objects.create(project=self.project3, from_user=self.user2, to_user=self.user3)
 
-    def test_handovers_from(self):
-        self.assertIn(self.h1, self.user1.handovers_from.all())
-        self.assertIn(self.h2, self.user1.handovers_from.all())
-        self.assertNotIn(self.h3, self.user1.handovers_from.all())
-        self.assertIn(self.h3, self.user2.handovers_from.all())
+    def test_deliveries_from(self):
+        self.assertIn(self.h1, self.user1.deliveries_from.all())
+        self.assertIn(self.h2, self.user1.deliveries_from.all())
+        self.assertNotIn(self.h3, self.user1.deliveries_from.all())
+        self.assertIn(self.h3, self.user2.deliveries_from.all())
 
-    def test_handovers_to(self):
-        self.assertIn(self.h1, self.user2.handovers_to.all())
-        self.assertIn(self.h2, self.user3.handovers_to.all())
-        self.assertIn(self.h3, self.user3.handovers_to.all())
-        self.assertNotIn(self.h2, self.user2.handovers_to.all())
+    def test_deliveries_to(self):
+        self.assertIn(self.h1, self.user2.deliveries_to.all())
+        self.assertIn(self.h2, self.user3.deliveries_to.all())
+        self.assertIn(self.h3, self.user3.deliveries_to.all())
+        self.assertNotIn(self.h2, self.user2.deliveries_to.all())
 
     def test_delete_user_deletes_handovers(self):
-        initial = Handover.objects.count()
+        initial = Delivery.objects.count()
         # Deleting user 3 should delete h1 and h2
         self.user3.delete()
         expected = initial - 2
-        self.assertEqual(Handover.objects.count(), expected)
+        self.assertEqual(Delivery.objects.count(), expected)
 
     def test_delete_handovers_keeps_users_and_projects(self):
         users = DukeDSUser.objects.count()
         projects = DukeDSProject.objects.count()
-        Handover.objects.all().delete()
+        Delivery.objects.all().delete()
         self.assertEqual(DukeDSUser.objects.count(), users)
         self.assertEqual(DukeDSProject.objects.count(), projects)
 
@@ -318,7 +318,7 @@ class EmailTemplateTestCase(TestCase):
 
     def test_for_operation(self):
         # Create an email template
-        handover = Handover.objects.create(project=self.dds_project,
+        handover = Delivery.objects.create(project=self.dds_project,
                                            from_user=self.dds_user1,
                                            to_user=self.dds_user2)
         EmailTemplate.objects.create(group=self.group,

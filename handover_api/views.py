@@ -1,8 +1,8 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
-from handover_api.models import DukeDSUser, Handover, Share
-from handover_api.serializers import UserSerializer, HandoverSerializer, ShareSerializer
+from handover_api.models import DukeDSUser, Delivery, Share
+from handover_api.serializers import UserSerializer, DeliverySerializer, ShareSerializer
 from handover_api.utils import ShareMessage, HandoverMessage
 from switchboard.dds_util import DDSUtil, ModelPopulator
 from django.core.urlresolvers import reverse
@@ -88,18 +88,18 @@ class TransferViewSet(PopulatingAuthenticatedModelViewSet):
             self.populate_user(dds_user)
 
 
-class HandoverViewSet(TransferViewSet):
+class DeliveryViewSet(TransferViewSet):
     """
     API endpoint that allows handovers to be viewed or edited.
     """
-    serializer_class = HandoverSerializer
-    model = Handover
+    serializer_class = DeliverySerializer
+    model = Delivery
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         handover = self.get_object()
         if not handover.is_new():
-            raise AlreadyNotifiedException(detail='Handover already in progress')
+            raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_path = reverse('ownership-prompt') + "?token=" + str(handover.token)
         accept_url = request.build_absolute_uri(accept_path)
         message = HandoverMessage(handover, accept_url)

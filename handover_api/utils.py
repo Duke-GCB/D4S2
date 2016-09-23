@@ -58,7 +58,7 @@ class HandoverMessage(Message):
     def __init__(self, handover, accept_url):
         """
         Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
-        in a models.Handover object. Then calls generate_message with email addresses, subject, and the details to
+        in a models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
         generate an EmailMessage object, which can be .send()ed.
         """
 
@@ -114,7 +114,7 @@ class ProcessedMessage(Message):
 def perform_handover(handover):
     """
     Communicates with DukeDS via DDSUtil to add the to_user to a project
-    :param handover: A Handover object
+    :param handover: A Delivery object
     :return:
     """
     auth_role = 'project_admin'

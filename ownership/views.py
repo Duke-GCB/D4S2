@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
-from handover_api.models import Handover, State
+from handover_api.models import Delivery, State
 from handover_api.utils import perform_handover, ProcessedMessage
 from switchboard.dds_util import HandoverDetails
 from ddsc.core.ddsapi import DataServiceError
@@ -134,7 +134,7 @@ def response_with_handover(request, param_dict, func):
     token = param_dict.get('token', None)
     if token:
         try:
-            handover = Handover.objects.get(token=token)
+            handover = Delivery.objects.get(token=token)
             if handover.is_complete():
                 return render_already_complete(request, handover)
             return func(request, handover)

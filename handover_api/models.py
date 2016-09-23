@@ -89,7 +89,7 @@ class ShareRole(object):
     DEFAULT = DOWNLOAD
 
 
-class Handover(models.Model):
+class Delivery(models.Model):
     """
     Represents a handover of a project from one user to another
     Handovers keep track of the project, sender, and recipient by their DukeDS IDs.
@@ -101,8 +101,8 @@ class Handover(models.Model):
     """
     history = HistoricalRecords()
     project = models.ForeignKey(DukeDSProject)
-    from_user = models.ForeignKey(DukeDSUser, related_name='handovers_from')
-    to_user = models.ForeignKey(DukeDSUser, related_name='handovers_to')
+    from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
+    to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
     state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     decline_reason = models.TextField(null=False, blank=True)
@@ -136,7 +136,7 @@ class Handover(models.Model):
 
 
     def __str__(self):
-        return 'Handover Project: {} State: {} Performed by: {}'.format(
+        return 'Delivery Project: {} State: {} Performed by: {}'.format(
             self.project, State.HANDOVER_CHOICES[self.state][1], self.performed_by
         )
 

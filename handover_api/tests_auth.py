@@ -15,14 +15,14 @@ class APIKeyTokenClientTestCase(TestCase):
     def test_header_auth(self):
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION='Token ' + self.dsuser.api_key)
-        url = reverse('handover-list')
+        url = reverse('delivery-list')
         response = client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_fails_badkey(self):
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION='Token prefix-' + self.dsuser.api_key)
-        url = reverse('handover-list')
+        url = reverse('delivery-list')
         response = client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -31,7 +31,7 @@ class APIKeyTokenClientTestCase(TestCase):
         dsuser = DukeDSUser.objects.create(user=user,dds_id='abcd-1234-5678-0000',api_key='secret-api-key2')
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION='Token ' + dsuser.api_key)
-        url = reverse('handover-list')
+        url = reverse('delivery-list')
         response = client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -46,7 +46,7 @@ class APIKeyTokenAuthenticationTestCase(TestCase):
         self.inactive_django_user.is_active = False;
         self.inactive_django_user.save()
         self.inactive_ds_user = DukeDSUser.objects.create(user=self.inactive_django_user, dds_id='', api_key='inactive-api-key')
-        self.url = reverse('handover-list')
+        self.url = reverse('delivery-list')
 
     def test_no_token(self):
         request = self.factory.get(self.url)
