@@ -18,7 +18,7 @@ Installation - Local
 4. Edit the `settings.py` file to populate the `DDSCLIENT_PROPERTIES` with a the DukeDS API URL and a software agent key, e.g.
 
         DDSCLIENT_PROPERTIES = {
-          'url': 'https://uatest.dataservice.duke.edu/api/v1',
+          'url': 'https://api.dataservice.duke.edu/api/v1',
           'agent_key': '37a9cc3b5ed69bc96081e98478c009bb',
         }
 
@@ -100,11 +100,11 @@ _September 21, 2016: Instructions are WIP due to email templates tied to groups_
           -H "Content-Type: application/json" \
           -d '{"project_id": "project-dds-uuid", "from_user_id": "from-user-uuid", "to_user_id": "to-user-uuid", "role": "file_downloader" } \
           http://127.0.0.1:8000/api/v1/shares/
-          {"id":1,"url":"http://127.0.0.1:8000/api/v1/hsares/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":0}
+          {"id":1,"url":"http://127.0.0.1:8000/api/v1/shares/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":0}
 
 2. Send the email (**Without changing settings.py to activate a real email backend, emails will only be printed to the django console**)
 
         $ curl -X POST http://127.0.0.1:8000/api/v1/shares/1/send/
-            {"id":1,"url":"http://127.0.0.1:8000/api/v1/hsares/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":1}
+            {"id":1,"url":"http://127.0.0.1:8000/api/v1/shares/1/","project_id":"xxxx","from_user_id":"xxxx","to_user_id":"xxxx","state":1}
 
 Notice the state change, and the running django server should print out the email to the console
