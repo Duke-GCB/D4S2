@@ -2,6 +2,7 @@ from mock import patch, Mock, MagicMock
 from django.test import TestCase
 from handover_api.utils import perform_handover, HandoverMessage
 from handover_api.models import Handover, DukeDSProject, DukeDSUser
+from ownership.test_views import setup_mock_handover_details
 from django.contrib.auth.models import User, Group
 
 class UtilsTestCaseHandover(TestCase):
@@ -28,18 +29,11 @@ class UtilsTestCaseHandover(TestCase):
 
     @patch('handover_api.utils.HandoverDetails')
     def test_email_templating(self, MockHandoverDetails):
+        setup_mock_handover_details(MockHandoverDetails)
         mock_details = MockHandoverDetails()
-        mock_details.get_from_user = Mock(return_value=MagicMock(full_name='From User',email='from@host.com'))
-        mock_details.get_to_user = Mock(return_value=MagicMock(full_name='To User', email='to@host.com'))
-        project_mock = Mock(spec='name')
-        project_mock.name = 'Project 123' # Can't make a MagicMock with a name keyword
-        mock_details.get_project = Mock(return_value=project_mock)
-        templates = ('{{ project_name }}','Hi, {{ recipient_name }}. data at {{ url }}')
-        mock_details.get_action_template_text = Mock(return_value=templates)
         message = HandoverMessage(self.h, 'http://localhost/accept')
         self.assertEqual(mock_details.get_project.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
-        self.assertIn('Subject: Project 123', message.email_text)
-        self.assertIn('Hi, To User. data at http://localhost/accept', message.email_text)
-
+        self.assertIn('Subject Template project', message.email_text)
+        self.assertIn('Body Template bob', message.email_text)
