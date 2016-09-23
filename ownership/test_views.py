@@ -140,7 +140,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(State.HANDOVER_CHOICES[State.DECLINED][1], str(response.content))
+        self.assertIn(State.DELIVERY_CHOICES[State.DECLINED][1], str(response.content))
 
     def test_with_already_accepted(self):
         handover = create_handover()
@@ -149,7 +149,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(State.HANDOVER_CHOICES[State.ACCEPTED][1], str(response.content))
+        self.assertIn(State.DELIVERY_CHOICES[State.ACCEPTED][1], str(response.content))
 
     @patch('ownership.views.HandoverDetails')
     @patch('ownership.views.perform_handover')

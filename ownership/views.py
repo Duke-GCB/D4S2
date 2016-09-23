@@ -152,7 +152,7 @@ def render_already_complete(request, handover):
     """
     Users is trying to access a handover that has already been declined or accepted.
     """
-    status = State.HANDOVER_CHOICES[handover.state][1]
+    status = State.DELIVERY_CHOICES[handover.state][1]
     message = "This project has already been processed: {}.".format(status)
     return general_error(request, msg=message, status=400)
 
