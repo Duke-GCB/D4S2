@@ -1,4 +1,4 @@
-from handover_api.models import Delivery, Share, DukeDSUser, DukeDSProject
+from d4s2_api.models import Delivery, Share, DukeDSUser, DukeDSProject
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.encoding import smart_text

@@ -1,6 +1,6 @@
 from django.test import TestCase
-from handover_api.serializers import DeliverySerializer
-from handover_api.models import DukeDSProject, DukeDSUser, Delivery
+from d4s2_api.serializers import DeliverySerializer
+from d4s2_api.models import DukeDSProject, DukeDSUser, Delivery
 
 
 class DeliverySerializerTestCase(TestCase):

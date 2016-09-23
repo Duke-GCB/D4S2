@@ -1,7 +1,7 @@
 from mock import patch, Mock, MagicMock
 from django.test import TestCase
-from handover_api.utils import perform_delivery, DeliveryMessage
-from handover_api.models import Delivery, DukeDSProject, DukeDSUser
+from d4s2_api.utils import perform_delivery, DeliveryMessage
+from d4s2_api.models import Delivery, DukeDSProject, DukeDSUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
 
@@ -18,7 +18,7 @@ class UtilsTestCaseDelivery(TestCase):
         project = DukeDSProject.objects.create(project_id='ghi789')
         self.h = Delivery.objects.create(from_user=from_user, to_user=to_user, project=project)
 
-    @patch('handover_api.utils.DDSUtil')
+    @patch('d4s2_api.utils.DDSUtil')
     def test_perform_delivery(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
         mock_ddsutil.add_user = Mock()
@@ -28,7 +28,7 @@ class UtilsTestCaseDelivery(TestCase):
         MockDDSUtil.assert_any_call(h.from_user.dds_id)
         mock_ddsutil.add_user.assert_called_with(h.to_user.dds_id, h.project.project_id, 'project_admin')
 
-    @patch('handover_api.utils.DeliveryDetails')
+    @patch('d4s2_api.utils.DeliveryDetails')
     def test_email_templating(self, MockDeliveryDetails):
         setup_mock_delivery_details(MockDeliveryDetails)
         mock_details = MockDeliveryDetails()

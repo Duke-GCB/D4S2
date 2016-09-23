@@ -1,6 +1,6 @@
 from django.conf.urls import url, include
 from rest_framework import routers
-from handover_api import views
+from d4s2_api import views
 
 router = routers.DefaultRouter()
 router.register(r'deliveries', views.DeliveryViewSet, 'delivery')

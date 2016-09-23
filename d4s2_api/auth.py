@@ -1,6 +1,6 @@
 from rest_framework import authentication
 from rest_framework import exceptions
-from handover_api.models import DukeDSUser
+from d4s2_api.models import DukeDSUser
 from django.utils.translation import ugettext_lazy as _
 
 class APIKeyTokenAuthentication(authentication.TokenAuthentication):

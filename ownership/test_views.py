@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TOKEN_MSG, INVALID_TOKEN_MSG, TOKEN_NOT_FOUND_MSG, REASON_REQUIRED_MSG
-from handover_api.models import Delivery, State, DukeDSProject, DukeDSUser
+from d4s2_api.models import Delivery, State, DukeDSProject, DukeDSUser
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from django.contrib.auth.models import User as django_user
 from mock import patch, Mock
@@ -93,7 +93,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn('login', response['Location'])
 
-    @patch('handover_api.utils.DDSUtil')
+    @patch('d4s2_api.utils.DDSUtil')
     def test_error_when_no_token(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
         mock_ddsutil.add_user = Mock()
@@ -105,8 +105,8 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertIn(MISSING_TOKEN_MSG, str(response.content))
 
     @patch('ownership.views.DeliveryDetails')
-    @patch('handover_api.utils.DeliveryDetails')
-    @patch('handover_api.utils.DDSUtil')
+    @patch('d4s2_api.utils.DeliveryDetails')
+    @patch('d4s2_api.utils.DDSUtil')
     def test_normal_with_token_is_redirect(self, MockDeliveryDetails, MockDeliveryDetails2, MockDDSUtil):
         setup_mock_delivery_details(MockDeliveryDetails)
         setup_mock_delivery_details(MockDeliveryDetails2)
@@ -183,7 +183,7 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         self.assertIn(expected_url, response.url)
 
     @patch('ownership.views.DeliveryDetails')
-    @patch('handover_api.utils.DeliveryDetails')
+    @patch('d4s2_api.utils.DeliveryDetails')
     @patch('ownership.views.perform_delivery')
     def test_confirm_decline(self, MockDeliveryDetails, MockDeliveryDetails2, mock_perform_delivery):
         setup_mock_delivery_details(MockDeliveryDetails)
@@ -195,7 +195,7 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         self.assertIn('has been declined', str(response.content))
 
     @patch('ownership.views.DeliveryDetails')
-    @patch('handover_api.utils.DeliveryDetails')
+    @patch('d4s2_api.utils.DeliveryDetails')
     @patch('ownership.views.perform_delivery')
     def test_decline_with_blank(self, MockDeliveryDetails, MockDeliveryDetails2, mock_perform_delivery):
         setup_mock_delivery_details(MockDeliveryDetails)

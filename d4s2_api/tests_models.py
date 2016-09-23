@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.test import TestCase
-from handover_api.models import *
+from d4s2_api.models import *
 from django.contrib.auth.models import User, Group
 
 class TransferBaseTestCase(TestCase):

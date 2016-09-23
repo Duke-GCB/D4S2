@@ -1,8 +1,8 @@
 from django.core.urlresolvers import reverse
 from django.test import TestCase
-from handover_api.models import DukeDSUser
+from d4s2_api.models import DukeDSUser
 from django.contrib.auth.models import User as django_user
-from handover_api.auth import APIKeyTokenAuthentication
+from d4s2_api.auth import APIKeyTokenAuthentication
 from rest_framework import status, exceptions
 from rest_framework.test import APIClient, APIRequestFactory
 

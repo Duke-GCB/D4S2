@@ -1,5 +1,5 @@
 from django.test import TestCase
-from handover_api.models import DukeDSUser, DukeDSProject
+from d4s2_api.models import DukeDSUser, DukeDSProject
 from django.core.exceptions import ObjectDoesNotExist
 import mock
 from switchboard.dds_util import DDSUtil, ModelPopulator, DeliveryDetails

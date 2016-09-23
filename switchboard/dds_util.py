@@ -1,7 +1,7 @@
 from ddsc.config import Config
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from handover_api.models import DukeDSUser, EmailTemplate
+from d4s2_api.models import DukeDSUser, EmailTemplate
 
 
 class DDSUtil(object):

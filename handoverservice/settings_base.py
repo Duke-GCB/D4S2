@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'handover_api',
+    'd4s2_api',
     'switchboard',
     'crispy_forms',
     'ownership',
@@ -121,7 +121,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'handover_api.auth.APIKeyTokenAuthentication',
+        'd4s2_api.auth.APIKeyTokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
 }

@@ -2,8 +2,8 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from mock import patch, Mock
-from handover_api.views import *
-from handover_api.models import *
+from d4s2_api.views import *
+from d4s2_api.models import *
 from django.contrib.auth.models import User as django_user
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 
@@ -42,7 +42,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch('handover_api.views.DDSUtil')
+    @patch('d4s2_api.views.DDSUtil')
     def test_create_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('delivery-list')
@@ -78,7 +78,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Delivery.objects.count(), 0)
 
-    @patch('handover_api.views.DDSUtil')
+    @patch('d4s2_api.views.DDSUtil')
     def test_update_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -104,7 +104,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
-    @patch('handover_api.views.DeliveryMessage')
+    @patch('d4s2_api.views.DeliveryMessage')
     def test_send_delivery(self, mock_delivery_message):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
@@ -119,7 +119,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(mock_delivery_message.called)
         self.assertTrue(instance.send.called)
 
-    @patch('handover_api.views.DeliveryMessage')
+    @patch('d4s2_api.views.DeliveryMessage')
     def test_send_delivery_fails(self, mock_delivery_message):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
@@ -160,7 +160,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch('handover_api.views.DDSUtil')
+    @patch('d4s2_api.views.DDSUtil')
     def test_create_share(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('share-list')
@@ -197,7 +197,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Share.objects.count(), 0)
 
-    @patch('handover_api.views.DDSUtil')
+    @patch('d4s2_api.views.DDSUtil')
     def test_update_share(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         d =  Share.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -213,7 +213,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         # get_remote project should be called once
         self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
-    @patch('handover_api.views.ShareMessage')
+    @patch('d4s2_api.views.ShareMessage')
     def test_send_share(self, mock_share_message):
         instance = mock_share_message.return_value
         instance.send = Mock()
@@ -228,7 +228,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(mock_share_message.called)
         self.assertTrue(instance.send.called)
 
-    @patch('handover_api.views.ShareMessage')
+    @patch('d4s2_api.views.ShareMessage')
     def test_send_share_fails(self, mock_share_message):
         instance = mock_share_message.return_value
         instance.send = Mock()
@@ -241,7 +241,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertFalse(mock_share_message.called)
         self.assertFalse(instance.send.called)
 
-    @patch('handover_api.views.ShareMessage')
+    @patch('d4s2_api.views.ShareMessage')
     def test_force_send_share(self, mock_share_message):
         instance = mock_share_message.return_value
         instance.send = Mock()
@@ -281,7 +281,7 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch('handover_api.views.DDSUtil')
+    @patch('d4s2_api.views.DDSUtil')
     def test_create_user(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         initial_count = DukeDSUser.objects.count()
@@ -314,7 +314,7 @@ class UserViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['dds_id'],'abcd-1234-efgh-5678')
 
-    @patch('handover_api.views.DDSUtil')
+    @patch('d4s2_api.views.DDSUtil')
     def test_update_user(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         # Initially with no django user attached

@@ -6,7 +6,7 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^ownership/', include('ownership.urls')),
-    url(r'^api/v1/', include('handover_api.urls')),
+    url(r'^api/v1/', include('d4s2_api.urls')),
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
     # login view is only used with local authentication. With production shibboleth config,

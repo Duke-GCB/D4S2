@@ -4,5 +4,5 @@ from django.apps import AppConfig
 
 
 class HandoverApiConfig(AppConfig):
-    name = 'handover_api'
+    name = 'd4s2_api'
     verbose_name = 'DukeDS Delivery API'

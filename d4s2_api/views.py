@@ -1,9 +1,9 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
-from handover_api.models import DukeDSUser, Delivery, Share
-from handover_api.serializers import UserSerializer, DeliverySerializer, ShareSerializer
-from handover_api.utils import ShareMessage, DeliveryMessage
+from d4s2_api.models import DukeDSUser, Delivery, Share
+from d4s2_api.serializers import UserSerializer, DeliverySerializer, ShareSerializer
+from d4s2_api.utils import ShareMessage, DeliveryMessage
 from switchboard.dds_util import DDSUtil, ModelPopulator
 from django.core.urlresolvers import reverse
 

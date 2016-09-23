@@ -76,7 +76,7 @@ Usage
 
 The Handover Service communicates with the Duke Data Service API as a software agent. For this to work, DukeDS users must register their UDID and user key in the handover service. This can be done from the admin interface:
 
-1. Visit http://127.0.0.1:8000/admin/handover_api/dukedsuser/
+1. Visit http://127.0.0.1:8000/admin/d4s2_api/dukedsuser/
 2. Login with your superuser account
 3. Click **Add Duke DS User**
   1. Select or add a User (e.g. the superuser you created)

@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
-from handover_api.models import Delivery, State
-from handover_api.utils import perform_delivery, ProcessedMessage
+from d4s2_api.models import Delivery, State
+from d4s2_api.utils import perform_delivery, ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
