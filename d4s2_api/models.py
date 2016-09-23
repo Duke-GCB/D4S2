@@ -187,7 +187,7 @@ class EmailTemplateType(models.Model):
     name = models.CharField(max_length=64, null=False, blank=False, unique=True)
 
     def __str__(self):
-        return self.template_type
+        return self.name
 
     @classmethod
     def from_share_role(cls, role):
