@@ -18,7 +18,7 @@ class DukeDSUser(models.Model):
     """
     Represents a DukeDS user. Keeps track of their API key. The API key
     is used when the corresponding user invokes an action that requires
-    communication with DukeDS (e.g. sharing a project or performing handover)
+    communication with DukeDS (e.g. sharing a project or performing delivery)
 
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
@@ -54,7 +54,7 @@ class DukeDSProject(models.Model):
 
 class State(object):
     """
-    States for handover and share objects
+    States for delivery and share objects
     """
     NEW = 0
     NOTIFIED = 1
@@ -67,7 +67,7 @@ class State(object):
         (ACCEPTED, 'Accepted'),
         (DECLINED, 'Declined'),
     )
-    HANDOVER_CHOICES = STATES
+    DELIVERY_CHOICES = STATES
     SHARE_CHOICES = (
         (NEW, 'New'),
         (NOTIFIED, 'Notified'),
@@ -91,23 +91,23 @@ class ShareRole(object):
 
 class Delivery(models.Model):
     """
-    Represents a handover of a project from one user to another
-    Handovers keep track of the project, sender, and recipient by their DukeDS IDs.
-    When a handover is notified, an email is sent to the recipient with an acceptance
-    link. The recipient can accept or decline the handover. On acceptance, the DukeDS
+    Represents a delivery of a project from one user to another
+    Deliveries keep track of the project, sender, and recipient by their DukeDS IDs.
+    When a delivery is notified, an email is sent to the recipient with an acceptance
+    link. The recipient can accept or decline the delivery. On acceptance, the DukeDS
     API is contacted to transfer ownership from the sender to the receiver.
-    The state indicates the current progress of the handover, and are enumerated
+    The state indicates the current progress of the delivery, and are enumerated
     above.
     """
     history = HistoricalRecords()
     project = models.ForeignKey(DukeDSProject)
     from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
     to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
-    state = models.IntegerField(choices=State.HANDOVER_CHOICES, default=State.NEW, null=False)
+    state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     decline_reason = models.TextField(null=False, blank=True)
-    performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or declined the handover
-    handover_email_text = models.TextField(null=False, blank=True)
+    performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or declined the delivery
+    delivery_email_text = models.TextField(null=False, blank=True)
     completion_email_text = models.TextField(null=False, blank=True)
 
     def is_new(self):
@@ -118,7 +118,7 @@ class Delivery(models.Model):
 
     def mark_notified(self, email_text, save=True):
         self.state = State.NOTIFIED
-        self.handover_email_text = email_text
+        self.delivery_email_text = email_text
         if save: self.save()
 
     def mark_accepted(self, performed_by, accept_email_text, save=True):
@@ -137,7 +137,7 @@ class Delivery(models.Model):
 
     def __str__(self):
         return 'Delivery Project: {} State: {} Performed by: {}'.format(
-            self.project, State.HANDOVER_CHOICES[self.state][1], self.performed_by
+            self.project, State.DELIVERY_CHOICES[self.state][1], self.performed_by
         )
 
     class Meta:
@@ -170,7 +170,7 @@ class Share(models.Model):
 
     def __str__(self):
         return 'Share of Project: {} State: {}'.format(
-            self.project, State.HANDOVER_CHOICES[self.state][1]
+            self.project, State.DELIVERY_CHOICES[self.state][1]
         )
 
     class Meta:
