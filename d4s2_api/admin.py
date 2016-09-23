@@ -4,6 +4,7 @@ from simple_history.admin import SimpleHistoryAdmin
 
 admin.site.register(DukeDSUser)
 admin.site.register(DukeDSProject)
+admin.site.register(EmailTemplate)
 
 class ShareAdmin(SimpleHistoryAdmin):
     pass
