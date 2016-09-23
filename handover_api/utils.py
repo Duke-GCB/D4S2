@@ -1,5 +1,5 @@
 from switchboard.mailer import generate_message
-from switchboard.dds_util import HandoverDetails, DDSUtil
+from switchboard.dds_util import DeliveryDetails, DDSUtil
 
 
 class Message(object):
@@ -31,14 +31,14 @@ class ShareMessage(Message):
         generate an EmailMessage object, which can be .send()ed.
         """
         try:
-            handover_details = HandoverDetails(share)
-            sender = handover_details.get_from_user()
-            receiver = handover_details.get_to_user()
-            project = handover_details.get_project()
-            url = handover_details.get_project_url()
+            delivery_details = DeliveryDetails(share)
+            sender = delivery_details.get_from_user()
+            receiver = delivery_details.get_to_user()
+            project = delivery_details.get_project()
+            url = delivery_details.get_project_url()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = handover_details.get_share_template_text()
+        template_subject, template_body = delivery_details.get_share_template_text()
         context = {
             'project_name': project.name,
             'status': 'Draft',
@@ -53,9 +53,9 @@ class ShareMessage(Message):
         super(ShareMessage, self).__init__(message)
 
 
-class HandoverMessage(Message):
+class DeliveryMessage(Message):
 
-    def __init__(self, handover, accept_url):
+    def __init__(self, delivery, accept_url):
         """
         Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
         in a models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
@@ -63,13 +63,13 @@ class HandoverMessage(Message):
         """
 
         try:
-            handover_details = HandoverDetails(handover)
-            sender = handover_details.get_from_user()
-            receiver = handover_details.get_to_user()
-            project = handover_details.get_project()
+            delivery_details = DeliveryDetails(delivery)
+            sender = delivery_details.get_from_user()
+            receiver = delivery_details.get_to_user()
+            project = delivery_details.get_project()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = handover_details.get_action_template_text('delivery')
+        template_subject, template_body = delivery_details.get_action_template_text('delivery')
         context = {
             'project_name': project.name,
             'status': 'Final',
@@ -81,23 +81,23 @@ class HandoverMessage(Message):
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
         message = generate_message(sender.email, receiver.email, template_subject, template_body, context)
-        super(HandoverMessage, self).__init__(message)
+        super(DeliveryMessage, self).__init__(message)
 
 
 class ProcessedMessage(Message):
 
-    def __init__(self, handover, process_type, reason=''):
+    def __init__(self, delivery, process_type, reason=''):
         """
-        Generates an EmailMessage reporting whether or not the recipient accepted the handover
+        Generates an EmailMessage reporting whether or not the recipient accepted the delivery
         """
         try:
-            handover_details = HandoverDetails(handover)
-            sender = handover_details.get_from_user()
-            receiver = handover_details.get_to_user()
-            project = handover_details.get_project()
+            delivery_details = DeliveryDetails(delivery)
+            sender = delivery_details.get_from_user()
+            receiver = delivery_details.get_to_user()
+            project = delivery_details.get_project()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = handover_details.get_action_template_text(process_type)
+        template_subject, template_body = delivery_details.get_action_template_text(process_type)
         context = {
             'project_name': project.name,
             'recipient_name': receiver.full_name,
@@ -111,17 +111,17 @@ class ProcessedMessage(Message):
         super(ProcessedMessage, self).__init__(message)
 
 
-def perform_handover(handover):
+def perform_delivery(delivery):
     """
     Communicates with DukeDS via DDSUtil to add the to_user to a project
-    :param handover: A Delivery object
+    :param delivery: A Delivery object
     :return:
     """
     auth_role = 'project_admin'
     try:
         # Add the to_user to the project, acting as the from_user
-        ddsutil_from = DDSUtil(handover.from_user.dds_id)
-        ddsutil_from.add_user(handover.to_user.dds_id, handover.project.project_id, auth_role)
+        ddsutil_from = DDSUtil(delivery.from_user.dds_id)
+        ddsutil_from.add_user(delivery.to_user.dds_id, delivery.project.project_id, auth_role)
         # At this point, We'd like to remove the from_user from the project, changing ownership
         # However, we cannot remove the from_user if we are authenticated as that user
         # We experimented with authenticating as the to_user, but this was not practical

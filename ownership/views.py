@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from handover_api.models import Delivery, State
-from handover_api.utils import perform_handover, ProcessedMessage
-from switchboard.dds_util import HandoverDetails
+from handover_api.utils import perform_delivery, ProcessedMessage
+from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
@@ -27,7 +27,7 @@ def build_handover_context(handover):
     """
     Return dictionary of commonly needed handover data for use with templates.
     """
-    handover_details = HandoverDetails(handover)
+    handover_details = DeliveryDetails(handover)
     from_user = handover_details.get_from_user()
     to_user = handover_details.get_to_user()
     project = handover_details.get_project()
@@ -64,13 +64,13 @@ def accept_project_redirect(request, handover):
     Perform handover and redirect user to look at the project.
     """
     try:
-        perform_handover(handover)
+        perform_delivery(handover)
         message = ProcessedMessage(handover, "accepted")
         message.send()
         handover.mark_accepted(request.user.get_username(), message.email_text)
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
-    handover_details = HandoverDetails(handover)
+    handover_details = DeliveryDetails(handover)
     url = handover_details.get_project_url()
     return redirect(url)
 

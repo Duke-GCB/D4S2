@@ -1,11 +1,12 @@
 from mock import patch, Mock, MagicMock
 from django.test import TestCase
-from handover_api.utils import perform_handover, HandoverMessage
+from handover_api.utils import perform_delivery, DeliveryMessage
 from handover_api.models import Delivery, DukeDSProject, DukeDSUser
-from ownership.test_views import setup_mock_handover_details
+from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
 
-class UtilsTestCaseHandover(TestCase):
+
+class UtilsTestCaseDelivery(TestCase):
 
     def setUp(self):
         # Email templates are tied to groups and users
@@ -18,20 +19,20 @@ class UtilsTestCaseHandover(TestCase):
         self.h = Delivery.objects.create(from_user=from_user, to_user=to_user, project=project)
 
     @patch('handover_api.utils.DDSUtil')
-    def test_perform_handover(self, MockDDSUtil):
+    def test_perform_delivery(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
         h = self.h
-        perform_handover(h)
+        perform_delivery(h)
         MockDDSUtil.assert_any_call(h.from_user.dds_id)
         mock_ddsutil.add_user.assert_called_with(h.to_user.dds_id, h.project.project_id, 'project_admin')
 
-    @patch('handover_api.utils.HandoverDetails')
-    def test_email_templating(self, MockHandoverDetails):
-        setup_mock_handover_details(MockHandoverDetails)
-        mock_details = MockHandoverDetails()
-        message = HandoverMessage(self.h, 'http://localhost/accept')
+    @patch('handover_api.utils.DeliveryDetails')
+    def test_email_templating(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        mock_details = MockDeliveryDetails()
+        message = DeliveryMessage(self.h, 'http://localhost/accept')
         self.assertEqual(mock_details.get_project.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)

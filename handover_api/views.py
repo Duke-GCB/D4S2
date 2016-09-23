@@ -3,7 +3,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.decorators import detail_route
 from handover_api.models import DukeDSUser, Delivery, Share
 from handover_api.serializers import UserSerializer, DeliverySerializer, ShareSerializer
-from handover_api.utils import ShareMessage, HandoverMessage
+from handover_api.utils import ShareMessage, DeliveryMessage
 from switchboard.dds_util import DDSUtil, ModelPopulator
 from django.core.urlresolvers import reverse
 
@@ -57,7 +57,7 @@ class UserViewSet(PopulatingAuthenticatedModelViewSet):
 
 class TransferViewSet(PopulatingAuthenticatedModelViewSet):
     """
-    Base view set for handovers and shares, both of which can be filtered by
+    Base view set for deliveries and shares, both of which can be filtered by
     project_id, from_user_id, to_user_id
 
     """
@@ -90,21 +90,21 @@ class TransferViewSet(PopulatingAuthenticatedModelViewSet):
 
 class DeliveryViewSet(TransferViewSet):
     """
-    API endpoint that allows handovers to be viewed or edited.
+    API endpoint that allows deliveries to be viewed or edited.
     """
     serializer_class = DeliverySerializer
     model = Delivery
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
-        handover = self.get_object()
-        if not handover.is_new():
+        delivery = self.get_object()
+        if not delivery.is_new():
             raise AlreadyNotifiedException(detail='Delivery already in progress')
-        accept_path = reverse('ownership-prompt') + "?token=" + str(handover.token)
+        accept_path = reverse('ownership-prompt') + "?token=" + str(delivery.token)
         accept_url = request.build_absolute_uri(accept_path)
-        message = HandoverMessage(handover, accept_url)
+        message = DeliveryMessage(delivery, accept_url)
         message.send()
-        handover.mark_notified(message.email_text)
+        delivery.mark_notified(message.email_text)
         return self.retrieve(request)
 
 class AlreadyNotifiedException(APIException):

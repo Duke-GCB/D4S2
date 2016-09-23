@@ -22,7 +22,7 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_initial_state(self):
         delivery = Delivery.objects.first()
-        self.assertEqual(delivery.state, State.NEW, 'New handovers should be in initiated state')
+        self.assertEqual(delivery.state, State.NEW, 'New deliveries should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(ValueError):
@@ -168,14 +168,14 @@ class DeliveryRelationsTestCase(TransferBaseTestCase):
         self.assertIn(self.h3, self.user3.deliveries_to.all())
         self.assertNotIn(self.h2, self.user2.deliveries_to.all())
 
-    def test_delete_user_deletes_handovers(self):
+    def test_delete_user_deletes_deliveries(self):
         initial = Delivery.objects.count()
         # Deleting user 3 should delete h1 and h2
         self.user3.delete()
         expected = initial - 2
         self.assertEqual(Delivery.objects.count(), expected)
 
-    def test_delete_handovers_keeps_users_and_projects(self):
+    def test_delete_deliveries_keeps_users_and_projects(self):
         users = DukeDSUser.objects.count()
         projects = DukeDSProject.objects.count()
         Delivery.objects.all().delete()
@@ -211,7 +211,7 @@ class ShareRelationsTestCase(TransferBaseTestCase):
         expected = initial - 2
         self.assertEqual(Share.objects.count(), expected)
 
-    def test_delete_handovers_keeps_users_and_projects(self):
+    def test_delete_deliveries_keeps_users_and_projects(self):
         users = DukeDSUser.objects.count()
         projects = DukeDSProject.objects.count()
         Share.objects.all().delete()

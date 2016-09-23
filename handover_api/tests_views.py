@@ -43,7 +43,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch('handover_api.views.DDSUtil')
-    def test_create_handover(self, mock_ddsutil):
+    def test_create_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('delivery-list')
         data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
@@ -56,7 +56,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         # get_remote project should be called once
         self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
-    def test_list_handovers(self):
+    def test_list_deliveries(self):
         Delivery.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
         Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('delivery-list')
@@ -64,14 +64,14 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
-    def test_get_handover(self):
+    def test_get_delivery(self):
         h = Delivery.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('delivery-detail', args=(h.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['project_id'], 'project1')
 
-    def test_delete_handover(self):
+    def test_delete_delivery(self):
         h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('delivery-detail', args=(h.pk,))
         response = self.client.delete(url, format='json')
@@ -79,7 +79,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Delivery.objects.count(), 0)
 
     @patch('handover_api.views.DDSUtil')
-    def test_update_handover(self, mock_ddsutil):
+    def test_update_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         DukeDSProject.objects.create(project_id='project3')
@@ -94,7 +94,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         # get_remote project should be called once
         self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
-    def test_filter_handovers(self):
+    def test_filter_deliveries(self):
         h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
         url = reverse('delivery-list')
         response=self.client.get(url, {'project_id': 'project2'}, format='json')
@@ -104,9 +104,9 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
-    @patch('handover_api.views.HandoverMessage')
-    def test_send_handover(self, mock_handover_message):
-        instance = mock_handover_message.return_value
+    @patch('handover_api.views.DeliveryMessage')
+    def test_send_delivery(self, mock_delivery_message):
+        instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -116,12 +116,12 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         h = Delivery.objects.get(pk=h.pk)
         self.assertFalse(h.is_new())
-        self.assertTrue(mock_handover_message.called)
+        self.assertTrue(mock_delivery_message.called)
         self.assertTrue(instance.send.called)
 
-    @patch('handover_api.views.HandoverMessage')
-    def test_send_handover_fails(self, mock_handover_message):
-        instance = mock_handover_message.return_value
+    @patch('handover_api.views.DeliveryMessage')
+    def test_send_delivery_fails(self, mock_delivery_message):
+        instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
@@ -130,7 +130,7 @@ class HandoverViewTestCase(AuthenticatedResourceTestCase):
         url = reverse('delivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(mock_handover_message.called)
+        self.assertFalse(mock_delivery_message.called)
         self.assertFalse(instance.send.called)
 
 
