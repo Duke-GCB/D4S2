@@ -11,18 +11,18 @@ class TransferBaseTestCase(TestCase):
         self.user2 = DukeDSUser.objects.create(dds_id='user2')
 
 
-class HandoverTestCase(TransferBaseTestCase):
-    HANDOVER_EMAIL_TEXT = 'handover email message'
-    ACCEPT_EMAIL_TEXT = 'handover accepted'
-    DECLINE_EMAIL_TEXT = 'handover declined'
+class DeliveryTestCase(TransferBaseTestCase):
+    DELIVERY_EMAIL_TEXT = 'delivery email message'
+    ACCEPT_EMAIL_TEXT = 'delivery accepted'
+    DECLINE_EMAIL_TEXT = 'delivery declined'
 
     def setUp(self):
-        super(HandoverTestCase, self).setUp()
+        super(DeliveryTestCase, self).setUp()
         Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_initial_state(self):
-        handover = Delivery.objects.first()
-        self.assertEqual(handover.state, State.NEW, 'New handovers should be in initiated state')
+        delivery = Delivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW, 'New handovers should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(ValueError):
@@ -33,43 +33,43 @@ class HandoverTestCase(TransferBaseTestCase):
             Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
 
     def test_token_autopopulate(self):
-        handover = Delivery.objects.first()
-        self.assertIsNotNone(handover.token, 'token should default to a uuid')
+        delivery = Delivery.objects.first()
+        self.assertIsNotNone(delivery.token, 'token should default to a uuid')
 
     def test_mark_notified(self):
-        handover = Delivery.objects.first()
-        self.assertEqual(handover.state, State.NEW)
-        handover.mark_notified(HandoverTestCase.HANDOVER_EMAIL_TEXT)
-        self.assertEqual(handover.state, State.NOTIFIED)
+        delivery = Delivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_notified(DeliveryTestCase.DELIVERY_EMAIL_TEXT)
+        self.assertEqual(delivery.state, State.NOTIFIED)
 
     def test_mark_accepted(self):
         performed_by = 'performer'
-        handover = Delivery.objects.first()
-        self.assertEqual(handover.state, State.NEW)
-        handover.mark_accepted(performed_by, HandoverTestCase.ACCEPT_EMAIL_TEXT)
-        self.assertEqual(handover.state, State.ACCEPTED)
-        self.assertEqual(handover.performed_by, performed_by)
-        self.assertEqual(handover.completion_email_text, HandoverTestCase.ACCEPT_EMAIL_TEXT)
+        delivery = Delivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_accepted(performed_by, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
+        self.assertEqual(delivery.state, State.ACCEPTED)
+        self.assertEqual(delivery.performed_by, performed_by)
+        self.assertEqual(delivery.completion_email_text, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
 
     def test_mark_declined(self):
         performed_by = 'performer'
-        handover = Delivery.objects.first()
-        self.assertEqual(handover.state, State.NEW)
-        handover.mark_declined(performed_by, 'Wrong person.',  HandoverTestCase.DECLINE_EMAIL_TEXT)
-        self.assertEqual(handover.state, State.DECLINED)
-        self.assertEqual(handover.decline_reason, 'Wrong person.')
-        self.assertEqual(handover.performed_by, performed_by)
-        self.assertEqual(handover.completion_email_text, HandoverTestCase.DECLINE_EMAIL_TEXT)
+        delivery = Delivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_declined(performed_by, 'Wrong person.',  DeliveryTestCase.DECLINE_EMAIL_TEXT)
+        self.assertEqual(delivery.state, State.DECLINED)
+        self.assertEqual(delivery.decline_reason, 'Wrong person.')
+        self.assertEqual(delivery.performed_by, performed_by)
+        self.assertEqual(delivery.completion_email_text, DeliveryTestCase.DECLINE_EMAIL_TEXT)
 
     def test_is_complete(self):
-        handover = Delivery.objects.first()
-        self.assertEqual(handover.is_complete(), False)
-        handover.mark_notified('')
-        self.assertEqual(handover.is_complete(), False)
-        handover.mark_accepted('','')
-        self.assertEqual(handover.is_complete(), True)
-        handover.mark_declined('','','')
-        self.assertEqual(handover.is_complete(), True)
+        delivery = Delivery.objects.first()
+        self.assertEqual(delivery.is_complete(), False)
+        delivery.mark_notified('')
+        self.assertEqual(delivery.is_complete(), False)
+        delivery.mark_accepted('','')
+        self.assertEqual(delivery.is_complete(), True)
+        delivery.mark_declined('','','')
+        self.assertEqual(delivery.is_complete(), True)
 
 
 class ShareTestCase(TransferBaseTestCase):
@@ -146,9 +146,9 @@ class UserTestCase(TestCase):
         self.assertTrue(u.populated())
 
 
-class HandoverRelationsTestCase(TransferBaseTestCase):
+class DeliveryRelationsTestCase(TransferBaseTestCase):
     def setUp(self):
-        super(HandoverRelationsTestCase, self).setUp()
+        super(DeliveryRelationsTestCase, self).setUp()
         self.project2 = DukeDSProject.objects.create(project_id='project2')
         self.project3 = DukeDSProject.objects.create(project_id='project3')
         self.user3 = DukeDSUser.objects.create(dds_id='user3')
@@ -318,7 +318,7 @@ class EmailTemplateTestCase(TestCase):
 
     def test_for_operation(self):
         # Create an email template
-        handover = Delivery.objects.create(project=self.dds_project,
+        delivery = Delivery.objects.create(project=self.dds_project,
                                            from_user=self.dds_user1,
                                            to_user=self.dds_user2)
         EmailTemplate.objects.create(group=self.group,
@@ -326,7 +326,7 @@ class EmailTemplateTestCase(TestCase):
                                      template_type=EmailTemplateType.objects.get(name='accepted'),
                                      subject='Acceptance Email Subject',
                                      body='Acceptance Email Body')
-        t = EmailTemplate.for_operation(handover, 'accepted')
+        t = EmailTemplate.for_operation(delivery, 'accepted')
         self.assertIsNotNone(t)
         self.assertEqual(t.subject, 'Acceptance Email Subject')
 
