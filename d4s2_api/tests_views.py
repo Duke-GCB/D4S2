@@ -27,7 +27,7 @@ class AuthenticatedResourceTestCase(APITestCase):
         self.project2 = DukeDSProject.objects.create(project_id='project2', name='Project 2')
 
 
-class HandoverViewTestCase(AuthenticatedResourceTestCase):
+class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
         self.client.logout()

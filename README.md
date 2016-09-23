@@ -1,5 +1,5 @@
-DukeDS Handover Service
-=======================
+D4S2: DukeDS Data Delivery Service
+==================================
 
 Web service to facilitate notification and transfer of projects in DukeDS
 
@@ -13,7 +13,7 @@ Installation - Local
 
 3. Create a `settings.py` file:
 
-        cp handoverservice/settings.template handoverservice/settings.py
+        cp d4s2/settings.template d4s2/settings.py
 
 4. Edit the `settings.py` file to populate the `DDSCLIENT_PROPERTIES` with a the DukeDS API URL and a software agent key, e.g.
 
@@ -41,18 +41,18 @@ Installation - Docker Compose
 =============================
 
 1. Clone the repository
-2. Create a `handoverservice.env` file
+2. Create a `d4s2.env` file
 
-        cp handoverservice.env.sample handoverservice.env
+        cp d4s2.env.sample d4s2.env
 
-3. Edit the `handoverservice.env` file to populate the your DukeDS API details, a django key, and a database username/password to use:
+3. Edit the `d4s2.env` file to populate the your DukeDS API details, a django key, and a database username/password to use:
 
-        HANDOVERSERVICE_SECRET_KEY=some-random-string
-        HANDOVERSERVICE_DDSCLIENT_URL=https://dataservice-host/api/v1
-        HANDOVERSERVICE_DDSCLIENT_AGENT_KEY=your-agent-key
-        POSTGRES_USER=handover_user
+        D4S2_SECRET_KEY=some-random-string
+        D4S2_DDSCLIENT_URL=https://dataservice-host/api/v1
+        D4S2_DDSCLIENT_AGENT_KEY=your-agent-key
+        POSTGRES_USER=d4s2_user
         POSTGRES_PASSWORD=some-random-password
-        POSTGRES_DB=handover
+        POSTGRES_DB=d4s2_db
 
 4. Create the database schema:
 
@@ -74,7 +74,7 @@ Usage
 
 ## Register a DukeDS user
 
-The Handover Service communicates with the Duke Data Service API as a software agent. For this to work, DukeDS users must register their UDID and user key in the handover service. This can be done from the admin interface:
+D4S2 communicates with the Duke Data Service API as a software agent. For this to work, DukeDS users must register their UDID and user key with D4S2. This can be done from the admin interface:
 
 1. Visit http://127.0.0.1:8000/admin/d4s2_api/dukedsuser/
 2. Login with your superuser account

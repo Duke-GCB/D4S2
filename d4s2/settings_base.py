@@ -1,5 +1,5 @@
 """
-Base settings for handoverservice project.
+Base settings for d4s2 project.
 
 Deployments should write a minimal settings.py that imports * from this file
 See settings.template for an example
@@ -50,7 +50,7 @@ MIDDLEWARE_CLASSES = [
     'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
-ROOT_URLCONF = 'handoverservice.urls'
+ROOT_URLCONF = 'd4s2.urls'
 
 TEMPLATES = [
     {
@@ -68,7 +68,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'handoverservice.wsgi.application'
+WSGI_APPLICATION = 'd4s2.wsgi.application'
 
 
 # Password validation

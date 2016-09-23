@@ -1,4 +1,4 @@
-FROM dukegcb/dukedshandoverservice
+FROM dukegcb/d4s2
 MAINTAINER dan.leehr@duke.edu
 
 # apache2 / supervisor
@@ -11,9 +11,9 @@ RUN pip install supervisor supervisor-stdout
 ADD supervisord.conf /etc/supervisord.conf
 
 # Configure Apache
-ADD handoverservice.conf /etc/apache2/sites-available/handoverservice.conf
+ADD d4s2.conf /etc/apache2/sites-available/d4s2.conf
 RUN a2enmod ssl
-RUN a2ensite handoverservice
+RUN a2ensite d4s2
 # Configure Shibboleth
 RUN mkdir -p /var/run/shibboleth
 
@@ -31,15 +31,15 @@ COPY requirements-production.txt /usr/src/app/
 RUN pip install --no-cache-dir -r requirements-production.txt
 
 # Replace settings with production-specific
-COPY settings.docker-production /usr/src/app/handoverservice/settings.py
+COPY settings.docker-production /usr/src/app/d4s2/settings.py
 
 # Place static files using manage.py
 # Running any manage.py commands require a secret key to be present
 # in the django app's settings.py.
-ENV HANDOVERSERVICE_SECRET_KEY=secret
+ENV D4S2_SECRET_KEY=secret
 RUN python manage.py collectstatic --noinput
 # Reset the variable to an empty string, requiring it to be provided at runtime
-ENV HANDOVERSERVICE_SECRET_KEY=''
+ENV D4S2_SERVICE_SECRET_KEY=''
 
 # Volume for certificates
 
