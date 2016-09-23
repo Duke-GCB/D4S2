@@ -1,4 +1,4 @@
-FROM dukegcb/d4s2
+FROM quay.io/dukegcb/d4s2
 MAINTAINER dan.leehr@duke.edu
 
 # apache2 / supervisor

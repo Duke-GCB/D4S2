@@ -10,6 +10,6 @@ Django's included webserver is [not suitable for production deployments](https:/
 
 Our apache configuration includes https transport and [Shibboleth](https://shibboleth.net) authentication, which enable secure connections and single-sign-on in our application.
 
-The [Dockerfile](Dockerfile) here is based on `dukegcb/d4s2`, but installs the necessary local configurations (shibboleth, apache) and services to host d4s2.
+The [Dockerfile](Dockerfile) here is based on `quay.io/dukegcb/d4s2`, but installs the necessary local configurations (shibboleth, apache) and services to host d4s2.
 
 It also runs `manage.py collectstatic`, which places static files (JavaScript, CSS, Images) into a directory served by Apache. This is baked into the image, and ready for deployment.

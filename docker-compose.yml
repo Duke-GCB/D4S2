@@ -7,7 +7,7 @@ services:
       - /var/lib/postgresql/data:/var/lib/postgresql/data
   web:
     build: .
-    image: dukegcb/d4s2
+    image: quay.io/dukegcb/d4s2
     env_file: d4s2.env
     ports:
       - "8000:8000"
