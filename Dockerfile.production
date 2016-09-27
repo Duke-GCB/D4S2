@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /usr/src/app
 COPY d4s2/settings.docker /usr/src/app/d4s2/settings.py
 
-# Above is copied from ../Dockerfile.
+# Above is copied from Dockerfile.
 # Below is apache/shibboleth specific
 
 # apache2 / supervisor
@@ -31,18 +31,18 @@ RUN apt-get update \
 RUN pip install supervisor supervisor-stdout
 
 # Configure supervisor
-ADD supervisord.conf /etc/supervisord.conf
+ADD production/supervisord.conf /etc/supervisord.conf
 
 # Configure Apache
-ADD d4s2.conf /etc/apache2/sites-available/d4s2.conf
+ADD production/d4s2.conf /etc/apache2/sites-available/d4s2.conf
 RUN a2enmod ssl
 RUN a2ensite d4s2
 # Configure Shibboleth
 RUN mkdir -p /var/run/shibboleth
 
 # Place shibboleth config, duke cert, and customized attribute map
-ADD shibboleth2.xml /etc/shibboleth/shibboleth2.xml
-ADD attribute-map.xml /etc/shibboleth/attribute-map.xml
+ADD production/shibboleth2.xml /etc/shibboleth/shibboleth2.xml
+ADD production/attribute-map.xml /etc/shibboleth/attribute-map.xml
 ADD https://shib.oit.duke.edu/idp_signing.crt /etc/shibboleth/idp_signing.crt
 
 # Ensure services are stopped so that supervisor can run them
@@ -50,11 +50,11 @@ RUN service apache2 stop
 RUN service shibd stop
 
 # Additional requirements for production instance
-COPY requirements-production.txt /usr/src/app/
+COPY production/requirements-production.txt /usr/src/app/
 RUN pip install --no-cache-dir -r requirements-production.txt
 
 # Replace settings with production-specific
-COPY settings.docker-production /usr/src/app/d4s2/settings.py
+COPY production/settings.docker-production /usr/src/app/d4s2/settings.py
 
 # Place static files using manage.py
 # Running any manage.py commands require a secret key to be present
