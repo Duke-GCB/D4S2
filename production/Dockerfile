@@ -1,28 +1,5 @@
-FROM python:2.7
+FROM quay.io/dukegcb/d4s2
 MAINTAINER dan.leehr@duke.edu
-
-ENV TZ=US/Eastern
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN apt-get update && apt-get install -y \
-		gcc \
-		gettext \
-		mysql-client libmysqlclient-dev \
-		postgresql-client libpq-dev \
-		sqlite3 \
-	--no-install-recommends && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
-
-COPY requirements.txt /usr/src/app/
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . /usr/src/app
-COPY d4s2/settings.docker /usr/src/app/d4s2/settings.py
-
-# Above is copied from Dockerfile.
-# Below is apache/shibboleth specific
 
 # apache2 / supervisor
 RUN apt-get update \
@@ -31,18 +8,18 @@ RUN apt-get update \
 RUN pip install supervisor supervisor-stdout
 
 # Configure supervisor
-ADD production/supervisord.conf /etc/supervisord.conf
+ADD supervisord.conf /etc/supervisord.conf
 
 # Configure Apache
-ADD production/d4s2.conf /etc/apache2/sites-available/d4s2.conf
+ADD d4s2.conf /etc/apache2/sites-available/d4s2.conf
 RUN a2enmod ssl
 RUN a2ensite d4s2
 # Configure Shibboleth
 RUN mkdir -p /var/run/shibboleth
 
 # Place shibboleth config, duke cert, and customized attribute map
-ADD production/shibboleth2.xml /etc/shibboleth/shibboleth2.xml
-ADD production/attribute-map.xml /etc/shibboleth/attribute-map.xml
+ADD shibboleth2.xml /etc/shibboleth/shibboleth2.xml
+ADD attribute-map.xml /etc/shibboleth/attribute-map.xml
 ADD https://shib.oit.duke.edu/idp_signing.crt /etc/shibboleth/idp_signing.crt
 
 # Ensure services are stopped so that supervisor can run them
@@ -50,11 +27,11 @@ RUN service apache2 stop
 RUN service shibd stop
 
 # Additional requirements for production instance
-COPY production/requirements-production.txt /usr/src/app/
+COPY requirements-production.txt /usr/src/app/
 RUN pip install --no-cache-dir -r requirements-production.txt
 
 # Replace settings with production-specific
-COPY production/settings.docker-production /usr/src/app/d4s2/settings.py
+COPY settings.docker-production /usr/src/app/d4s2/settings.py
 
 # Place static files using manage.py
 # Running any manage.py commands require a secret key to be present
