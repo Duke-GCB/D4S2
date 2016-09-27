@@ -130,3 +130,26 @@ class TestModelPopulator(TestCase):
         m.populate_project(p)
         self.assertTrue(p.populated())
         self.assertFalse(dds_util.get_remote_project.called)
+
+
+class TestDeliveryDetails(TestCase):
+
+    @mock.patch('switchboard.dds_util.EmailTemplate')
+    def test_gets_share_template(self, MockEmailTemplate):
+        MockEmailTemplate.for_share = mock.Mock(return_value=mock.MagicMock(subject='share subject', body='share body'))
+        delivery = mock.Mock()
+        details = DeliveryDetails(delivery)
+        subject, body = details.get_share_template_text()
+        self.assertTrue(MockEmailTemplate.for_share.called_with(delivery))
+        self.assertEqual(subject, 'share subject')
+        self.assertEqual(body, 'share body')
+
+    @mock.patch('switchboard.dds_util.EmailTemplate')
+    def test_gets_action_template(self, MockEmailTemplate):
+        MockEmailTemplate.for_operation = mock.Mock(return_value=mock.MagicMock(subject='action subject', body='action body'))
+        delivery = mock.Mock()
+        details = DeliveryDetails(delivery)
+        subject, body = details.get_action_template_text('accepted')
+        self.assertEqual(subject, 'action subject')
+        self.assertEqual(body, 'action body')
+        self.assertTrue(MockEmailTemplate.for_operation.called_with(delivery, 'accepted'))

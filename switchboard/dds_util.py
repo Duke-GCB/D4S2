@@ -104,7 +104,7 @@ class DeliveryDetails(object):
             raise RuntimeError('No email template found')
 
     def get_action_template_text(self, action_name):
-        email_template = EmailTemplate.by_action(self.delivery, action_name)
+        email_template = EmailTemplate.for_operation(self.delivery, action_name)
         if email_template:
             return email_template.subject, email_template.body
         else:
