@@ -1,4 +1,4 @@
-from mock import patch, Mock, MagicMock
+from mock import patch, Mock
 from django.test import TestCase
 from d4s2_api.utils import perform_delivery, DeliveryMessage
 from d4s2_api.models import Delivery, DukeDSProject, DukeDSUser
