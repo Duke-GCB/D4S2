@@ -7,7 +7,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /etc/external/:/etc/external/
+      - './certdata:/etc/external/'
     # docker-compose doesn't allow specifying the entrypoint while preserving the
     # Dockerfile's command. Since the base docker-compose file specifies an entrypoint
     # we must provide the command here.

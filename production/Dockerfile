@@ -3,9 +3,9 @@ MAINTAINER dan.leehr@duke.edu
 
 # apache2 / supervisor
 RUN apt-get update \
-  && apt-get install -y apache2 libapache2-mod-shib2 libapache2-mod-wsgi\
+  && apt-get install -y apache2 libapache2-mod-shib2 libapache2-mod-wsgi vim\
   && apt-get clean
-RUN pip install supervisor supervisor-stdout
+RUN pip install supervisor
 
 # Configure supervisor
 ADD supervisord.conf /etc/supervisord.conf
@@ -28,6 +28,7 @@ RUN service shibd stop
 
 # Additional requirements for production instance
 COPY requirements-production.txt /usr/src/app/
+ADD start-apache.sh /usr/src/app/
 RUN pip install --no-cache-dir -r requirements-production.txt
 
 # Replace settings with production-specific
