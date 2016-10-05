@@ -4,7 +4,7 @@ services:
     image: postgres
     env_file: d4s2.env
     volumes:
-      - /var/lib/postgresql/data:/var/lib/postgresql/data
+      - ./dbdata:/var/lib/postgresql/data
   web:
     build: .
     image: quay.io/dukegcb/d4s2
