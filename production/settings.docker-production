@@ -71,16 +71,16 @@ SHIBBOLETH_ATTRIBUTE_LIST = [
     {
         'shibboleth_key': 'givenName',
         'user_attribute': 'first_name',
-        'required': True
+        'required': False
     },
     {
         'shibboleth_key': 'sn',
         'user_attribute': 'last_name',
-        'required': True
+        'required': False
     },
         {
         'shibboleth_key': 'mail',
         'user_attribute': 'email',
-        'required': True
+        'required': False
     },
 ]
