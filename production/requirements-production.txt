@@ -1,1 +1,1 @@
--e git+https://github.com/Duke-GCB/django-shibboleth-adapter@3de247a9a9f726a3f8cf054d58b8cdb6295eb700#egg=django_shibboleth_adapter
+-e git+https://github.com/Duke-GCB/django-shibboleth-adapter@8b2c11022fa9291e738209f655aaa977dcadee0d#egg=django_shibboleth_adapter
