@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'd4s2_api',
+    'd4s2_auth',
     'switchboard',
     'crispy_forms',
     'ownership',
