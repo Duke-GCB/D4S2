@@ -1,8 +1,11 @@
 from __future__ import print_function
 import requests
 from requests_oauthlib import OAuth2Session
-from .models import OAuthService
+from .models import OAuthService, OAuthToken
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 
+USERNAME_KEY = 'eppn'
 
 def make_oauth(oauth_service):
     return OAuth2Session(oauth_service.client_id,
@@ -40,6 +43,26 @@ def get_resource(oauth_service, token_dict):
     response.raise_for_status()
     return response.json()
 
+
+class OAuthException(BaseException):
+    pass
+
+
+def save_token(oauth_service, token_dict, user):
+    token = OAuthToken(user=user, service=oauth_service)
+    token.token_dict = token_dict
+    token.save()
+
+
+def user_from_token(oauth_service, token_dict):
+    resource = get_resource()
+    if not USERNAME_KEY in resource:
+        raise OAuthException('Did not find username key in resource')
+    user, created = get_user_model().objects.get_or_create(username=resource.get(USERNAME_KEY))
+    if created:
+        pass
+        # TODO: Look up some details
+    return user
 
 def main():
     duke_service = OAuthService.objects.first()

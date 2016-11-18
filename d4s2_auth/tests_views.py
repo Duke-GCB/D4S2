@@ -18,13 +18,16 @@ class OAuthViewsTest(TestCase):
         self.assertEqual(response.status_code, 302, 'Should redirect')
         self.assertIn('https://authorize/', response.get('Location'), 'Should redirect to authorization_uri')
 
-    @patch('d4s2_auth.views.get_resource')
+    @patch('d4s2_auth.views.user_from_token')
+    @patch('d4s2_auth.views.save_token')
     @patch('d4s2_auth.views.get_token_dict')
-    def test_authorize_callback(self, mock_get_token_dict, mock_get_resource):
+    def test_authorize_callback(self, mock_get_token_dict, mock_save_token, mock_user_from_token):
         token_dict = {'access_token': 'foo-bar'}
+        user = 'USER'
         mock_get_token_dict.return_value = token_dict
-        mock_get_resource.return_value = {'eppn': 'netid'}
+        mock_user_from_token.return_value = user
         response = self.client.get('/auth/code/')
-        self.assertTrue(mock_get_token_dict.called)
-        self.assertTrue(mock_get_resource.called_with(self.service, token_dict))
-        self.assertContains(response, 'Welcome netid')
+        self.assertTrue(mock_user_from_token.called_with(user, token_dict), 'User from token called')
+        self.assertTrue(mock_save_token.called_with(self.service, token_dict), 'Save token called')
+        self.assertTrue(mock_get_token_dict.called, 'Get token called')
+        self.assertContains(response, 'Welcome USER', msg_prefix='Rendered response contains welcome message')

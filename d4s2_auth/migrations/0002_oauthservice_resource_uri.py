@@ -7,8 +7,6 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    replaces = [(b'd4s2_auth', '0002_oauthservice_resource_uri'), (b'd4s2_auth', '0003_delete_oauthstate')]
-
     dependencies = [
         ('d4s2_auth', '0001_initial'),
     ]
