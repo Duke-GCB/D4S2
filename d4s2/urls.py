@@ -6,6 +6,7 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^ownership/', include('ownership.urls')),
+    url(r'^auth/', include('d4s2_auth.urls')),
     url(r'^api/v1/', include('d4s2_api.urls')),
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
