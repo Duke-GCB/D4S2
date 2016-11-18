@@ -2,7 +2,6 @@ from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
 from .oauth_utils import *
 
-
 def mock_oauth_service():
     return MagicMock(client_id='id123',
                      client_secret='secret456',
