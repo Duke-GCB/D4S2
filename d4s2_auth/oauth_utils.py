@@ -1,3 +1,4 @@
+from __future__ import print_function
 import requests
 from requests_oauthlib import OAuth2Session
 from models import OAuthService
@@ -5,8 +6,8 @@ from models import OAuthService
 
 def make_oauth(oauth_service):
     return OAuth2Session(oauth_service.client_id,
-                          redirect_uri=oauth_service.redirect_uri,
-                          scope=oauth_service.scope.split())
+                         redirect_uri=oauth_service.redirect_uri,
+                         scope=oauth_service.scope.split())
 
 def authorization_url(oauth_service):
     oauth = make_oauth(oauth_service)
@@ -22,8 +23,8 @@ def get_token_dict(oauth_service, authorization_response):
     oauth = make_oauth(oauth_service)
     # Use code or authorization_response
     token = oauth.fetch_token(oauth_service.token_uri,
-                      authorization_response=authorization_response,
-                      client_secret=oauth_service.client_secret)
+                              authorization_response=authorization_response,
+                              client_secret=oauth_service.client_secret)
     return token
 
 
@@ -43,13 +44,13 @@ def get_resource(oauth_service, token_dict):
 def main():
     duke_service = OAuthService.objects.first()
     auth_url, state = authorization_url(duke_service)
-    print 'Please go to {} and authorize access'.format(auth_url)
+    print('Please go to {} and authorize access'.format(auth_url))
     authorization_response = raw_input('Enter the full callback URL: ')
     # Probably need the state?
     token = get_token_dict(duke_service, authorization_response)
-    print 'Token: {}'.format(token)
+    print('Token: {}'.format(token))
     resource = get_resource(duke_service, token)
-    print resource
+    print(resource)
 
 if __name__ == '__main__':
     main()
