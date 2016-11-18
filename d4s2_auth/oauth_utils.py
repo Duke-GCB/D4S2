@@ -42,12 +42,11 @@ def get_resource(oauth_service, token_dict):
 
 def main():
     duke_service = OAuthService.objects.first()
-    state = OAuthState.generate()
     auth_url, state = authorization_url(duke_service)
     print 'Please go to {} and authorize access'.format(auth_url)
     authorization_response = raw_input('Enter the full callback URL: ')
     # Probably need the state?
-    token = get_token(duke_service, authorization_response)
+    token = get_token_dict(duke_service, authorization_response)
     print 'Token: {}'.format(token)
     resource = get_resource(duke_service, token)
     print resource
