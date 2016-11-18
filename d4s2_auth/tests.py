@@ -1,6 +1,6 @@
 from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
-from d4s2_auth.oauth_utils import *
+from .oauth_utils import *
 
 
 def mock_oauth_service():

@@ -1,7 +1,7 @@
 from __future__ import print_function
 import requests
 from requests_oauthlib import OAuth2Session
-from models import OAuthService
+from .models import OAuthService
 
 
 def make_oauth(oauth_service):
