@@ -19,7 +19,8 @@ def authorize(request):
 def authorize_callback(request):
     service = get_service(request)
     # This gets the token dictionary from the callback URL
-    token_dict = get_token_dict(service, request.build_absolute_uri())
+    code = request.GET.get('code')
+    token_dict = get_token_dict(service, code)
     # Determine identity of the user, using the token
     user = user_from_token(service, token_dict)
     save_token(service, token_dict, user)

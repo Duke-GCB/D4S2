@@ -4,8 +4,9 @@ from requests_oauthlib import OAuth2Session
 from .models import OAuthService, OAuthToken
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from logging import Logger
 
-USERNAME_KEY = 'eppn'
+USERNAME_KEY = 'sub'
 
 def make_oauth(oauth_service):
     return OAuth2Session(oauth_service.client_id,
@@ -17,16 +18,19 @@ def authorization_url(oauth_service):
     return oauth.authorization_url(oauth_service.authorization_uri) # url, state
 
 
-def get_token_dict(oauth_service, authorization_response):
+def get_token_dict(oauth_service, code):
     """
     :param oauth_service: An OAuthService model object
-    :param authorization_response: the auth response redirect URI
+    :param code: the auth code
     :return: A token dictionary, containing access_token and refresh_token
     """
     oauth = make_oauth(oauth_service)
     # Use code or authorization_response
+    if oauth_service.token_uri[-1] == '/':
+        Logger.warn("Token URI '{}' ends with '/', this has been a problem with Duke OAuth".format(oauth_service.token_uri))
+
     token = oauth.fetch_token(oauth_service.token_uri,
-                              authorization_response=authorization_response,
+                              code=code,
                               client_secret=oauth_service.client_secret)
     return token
 
@@ -49,20 +53,29 @@ class OAuthException(BaseException):
 
 
 def save_token(oauth_service, token_dict, user):
+    # TODO: Replace token if exists for user/service
     token = OAuthToken(user=user, service=oauth_service)
     token.token_dict = token_dict
     token.save()
 
 
 def user_from_token(oauth_service, token_dict):
-    resource = get_resource()
-    if not USERNAME_KEY in resource:
-        raise OAuthException('Did not find username key in resource')
+    resource = get_resource(oauth_service, token_dict)
+    if USERNAME_KEY not in resource:
+        raise OAuthException('Did not find username key in resource: {}'.format(resource),)
     user, created = get_user_model().objects.get_or_create(username=resource.get(USERNAME_KEY))
     if created:
+        # TODO: Fetch user details
         pass
-        # TODO: Look up some details
     return user
+
+
+def extract_code(url):
+    import urlparse
+    parsed = urlparse.urlparse(url)
+    query = urlparse.parse_qs(parsed.query)
+    return query.get('code')[0]
+
 
 def main():
     duke_service = OAuthService.objects.first()
@@ -70,7 +83,8 @@ def main():
     print('Please go to {} and authorize access'.format(auth_url))
     authorization_response = raw_input('Enter the full callback URL: ')
     # Probably need the state?
-    token = get_token_dict(duke_service, authorization_response)
+    code = extract_code(authorization_response)
+    token = get_token_dict(duke_service, code)
     print('Token: {}'.format(token))
     resource = get_resource(duke_service, token)
     print(resource)
