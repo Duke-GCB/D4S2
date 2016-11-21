@@ -61,9 +61,9 @@ class OAuthUtilsTest(TestCase):
         self.assertEqual(token, {'access_token': 'abcxyz'}, 'Returns expected token')
 
     @patch('d4s2_auth.oauth_utils.requests')
-    def test_get_resource(self, mock_requests):
+    def test_get_user_details(self, mock_requests):
         configure_mock_requests(mock_requests)
         token_dict = {'access_token': 'abcxyz'}
-        resource = get_resource(self.service, token_dict)
+        resource = get_user_details(self.service, token_dict)
         self.assertEqual(resource, {'key':'value'}, 'Returns expected resource')
         self.assertTrue(mock_requests.post.called_with(self.service.resource_uri, token_dict), 'Posts to resource URI with token')

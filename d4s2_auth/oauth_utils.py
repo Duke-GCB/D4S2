@@ -18,10 +18,10 @@ def authorization_url(oauth_service):
     return oauth.authorization_url(oauth_service.authorization_uri) # url, state
 
 
-def get_token_dict(oauth_service, code):
+def get_token_dict(oauth_service, authorization_response):
     """
     :param oauth_service: An OAuthService model object
-    :param code: the auth code
+    :param authorization_response: the full URL containing code and state parameters
     :return: A token dictionary, containing access_token and refresh_token
     """
     oauth = make_oauth(oauth_service)
@@ -30,12 +30,12 @@ def get_token_dict(oauth_service, code):
         Logger.warn("Token URI '{}' ends with '/', this has been a problem with Duke OAuth".format(oauth_service.token_uri))
 
     token = oauth.fetch_token(oauth_service.token_uri,
-                              code=code,
+                              authorization_response=authorization_response,
                               client_secret=oauth_service.client_secret)
     return token
 
 
-def get_resource(oauth_service, token_dict):
+def get_user_details(oauth_service, token_dict):
     """
     :param oauth_service: An OAuthService model object
     :param token_dict: a dict containing the access_token
@@ -60,21 +60,14 @@ def save_token(oauth_service, token_dict, user):
 
 
 def user_from_token(oauth_service, token_dict):
-    resource = get_resource(oauth_service, token_dict)
-    if USERNAME_KEY not in resource:
-        raise OAuthException('Did not find username key in resource: {}'.format(resource),)
-    user, created = get_user_model().objects.get_or_create(username=resource.get(USERNAME_KEY))
+    user_details = get_user_details(oauth_service, token_dict)
+    if USERNAME_KEY not in user_details:
+        raise OAuthException('Did not find username key in resource: {}'.format(user_details),)
+    user, created = get_user_model().objects.get_or_create(username=user_details.get(USERNAME_KEY))
     if created:
         # TODO: Fetch user details
         pass
     return user
-
-
-def extract_code(url):
-    import urlparse
-    parsed = urlparse.urlparse(url)
-    query = urlparse.parse_qs(parsed.query)
-    return query.get('code')[0]
 
 
 def main():
@@ -82,12 +75,10 @@ def main():
     auth_url, state = authorization_url(duke_service)
     print('Please go to {} and authorize access'.format(auth_url))
     authorization_response = raw_input('Enter the full callback URL: ')
-    # Probably need the state?
-    code = extract_code(authorization_response)
-    token = get_token_dict(duke_service, code)
+    token = get_token_dict(duke_service, authorization_response)
     print('Token: {}'.format(token))
-    resource = get_resource(duke_service, token)
-    print(resource)
+    user_details = get_user_details(duke_service, token)
+    print(user_details)
 
 if __name__ == '__main__':
     main()

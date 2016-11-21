@@ -26,8 +26,8 @@ class OAuthViewsTest(TestCase):
         user = 'USER'
         mock_get_token_dict.return_value = token_dict
         mock_user_from_token.return_value = user
-        response = self.client.get('/auth/code/')
+        response = self.client.get('/auth/code_callback/')
         self.assertTrue(mock_user_from_token.called_with(user, token_dict), 'User from token called')
         self.assertTrue(mock_save_token.called_with(self.service, token_dict), 'Save token called')
-        self.assertTrue(mock_get_token_dict.called, 'Get token called')
+        self.assertTrue(mock_get_token_dict.called, 'Get token dict called')
         self.assertContains(response, 'Welcome USER', msg_prefix='Rendered response contains welcome message')
