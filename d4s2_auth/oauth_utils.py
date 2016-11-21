@@ -3,7 +3,6 @@ import requests
 from requests_oauthlib import OAuth2Session
 from .models import OAuthService, OAuthToken
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
 from logging import Logger
 
 USERNAME_KEY = 'sub'
@@ -53,10 +52,13 @@ class OAuthException(BaseException):
 
 
 def save_token(oauth_service, token_dict, user):
-    # TODO: Replace token if exists for user/service
-    token = OAuthToken(user=user, service=oauth_service)
+    token, _ = OAuthToken.objects.get_or_create(user=user,
+                                                      service=oauth_service)
+    # If we created the token we need to set its dict here so that it serializes to JSON
+    # If we didn't create the token we need to set the dict here to update it
     token.token_dict = token_dict
     token.save()
+    return token
 
 
 def user_from_token(oauth_service, token_dict):

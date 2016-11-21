@@ -1,9 +1,17 @@
 from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
+
 from .oauth_utils import *
 
-def mock_oauth_service():
-    return MagicMock(client_id='id123',
+
+def make_oauth_service(cls=MagicMock):
+    """
+    Helper method that can make a mock service with the parameters
+    or a full database-backed object if the OAuthService class is passed
+    :param cls: Class to instantiate
+    :return: a mocked object or database backed (ready for save())
+    """
+    return cls(client_id='id123',
                      client_secret='secret456',
                      redirect_uri='redirect',
                      scope='scope1',
@@ -34,7 +42,7 @@ def configure_mock_requests(mock_requests):
 class OAuthUtilsTest(TestCase):
 
     def setUp(self):
-        self.service = mock_oauth_service()
+        self.service = make_oauth_service(cls=MagicMock)
 
     @patch('d4s2_auth.oauth_utils.OAuth2Session')
     def test_make_oauth(self, mock_session):
@@ -67,3 +75,16 @@ class OAuthUtilsTest(TestCase):
         resource = get_user_details(self.service, token_dict)
         self.assertEqual(resource, {'key':'value'}, 'Returns expected resource')
         self.assertTrue(mock_requests.post.called_with(self.service.resource_uri, token_dict), 'Posts to resource URI with token')
+
+    def test_updates_existing_token(self):
+        service = make_oauth_service(OAuthService)
+        service.save()
+        user = get_user_model().objects.create(username='user123')
+        token_dict1 = {'access_token': 'aaaaa1'}
+        token_dict2 = {'access_token': 'bbbbb2'}
+        t1 = save_token(service, token_dict1, user)
+        t1_id, t1_token = t1.id, t1.token_dict
+        t2 = save_token(service, token_dict2, user)
+        t2_id, t2_token = t2.id, t2.token_dict
+        self.assertEqual(t1_id, t2_id, 'Token should be updated with same id')
+        self.assertNotEqual(t1_token, t2_token, 'Token data have been updated')
