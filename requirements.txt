@@ -2,6 +2,7 @@ Django==1.9.4
 django-crispy-forms==1.6.0
 django-filter==0.13.0
 django-simple-history==1.8.1
+django-sslserver==0.19
 djangorestframework==3.3.3
 DukeDSClient==0.2.12
 funcsigs==0.4

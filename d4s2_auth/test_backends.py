@@ -1,7 +1,7 @@
 from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
 from .backends import OAuth2Backend, USERNAME_KEY
-from tests_oauth_utils import make_oauth_service
+from .tests_oauth_utils import make_oauth_service
 
 
 class OAuth2BackendTestCase(TestCase):

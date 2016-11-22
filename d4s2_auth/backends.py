@@ -1,4 +1,4 @@
-from oauth_utils import *
+from .oauth_utils import *
 import logging
 
 USERNAME_KEY = 'sub'
