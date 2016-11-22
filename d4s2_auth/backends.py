@@ -40,10 +40,10 @@ class OAuth2Backend(object):
         if 'username' not in details:
             logger.error('Did not find username key in user details: {}'.format(details), )
             return None
-        user, created = get_user_model().objects.get_or_create(**details)
-        if created:
-            # TODO: Fetch other details
-            pass
+        user, created = get_user_model().objects.get_or_create(username=details.get('username'))
+        # Update the keys
+        for attr, value in details.items():
+            setattr(user, attr, value)
         return user
 
     def get_user(self, user_id):
