@@ -16,6 +16,15 @@ class StateException(BaseException):
 
 
 def push_state(request, state_string, destination_param='next'):
+    """
+    Saves the OAuth state parameter from a request along with a redirect location
+    :param request: A request object that may contain the destination param as a query param
+    :param state_string: The state to store
+    :param destination_param: the parameter name in the URL that contains the destination to store
+    :return: The persisted OAuthState object
+    """
+    if not state_string:
+        raise StateException('State string must be present')
     saved_state = OAuthState.objects.create(state=state_string)
     if destination_param in request.GET:
         saved_state.destination = request.GET[destination_param]
@@ -24,6 +33,12 @@ def push_state(request, state_string, destination_param='next'):
 
 
 def pop_state(request):
+    """
+    Utility function to validate OAuth state and restore destination redirect param
+    If the request does not specify state or it does not match a recent state, an exception is raised
+    :param request: a request object that must have 'state=' in the GET parameters
+    :return: The value of the stored destination
+    """
     if 'state' in request.GET:
         state_string = request.GET['state']
         try:

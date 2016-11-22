@@ -81,9 +81,14 @@ class OAuthStateViewsTestCase(TestCase):
     def test_push_state(self):
         state_string = 'state123'
         destination = '/next/path'
-        request = self.request_factory.get('/',data={'next':destination, 'state': state_string})
+        request = self.request_factory.get('/',data={'next':destination})
         state = push_state(request, state_string)
         self.assertEqual(state.destination, destination, 'saved state should include destination')
+
+    def test_push_state_raises_witout_state(self):
+        request = self.request_factory.get('/',data={'next':'blah'})
+        with self.assertRaises(StateException):
+            push_state(request, None) # Should raise if state is empty
 
     def test_pop_state(self):
         state_string = 'state456'
