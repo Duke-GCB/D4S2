@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 import json
 
+
 class OAuthService(models.Model):
     name = models.CharField(max_length=64, null=False, blank=False, unique=True)
     client_id = models.CharField(max_length=64, null=False, blank=False)

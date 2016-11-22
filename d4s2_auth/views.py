@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from .oauth_utils import *
 from .models import OAuthService
-from d4s2_api.models import User
 from django.shortcuts import redirect
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
 
 
 def get_service(request):
@@ -21,8 +22,19 @@ def authorize_callback(request):
     # This gets the token dictionary from the callback URL
     token_dict = get_token_dict(service, request.build_absolute_uri())
     # Determine identity of the user, using the token
-    user = user_from_token(service, token_dict)
-    save_token(service, token_dict, user)
-    # user = User.objects.get(username=eppn)
-    return render(request, 'd4s2_auth/callback.html', {'user': user})
+    user = authenticate(service=service, token_dict=token_dict)
+    if user :
+        save_token(service, token_dict, user)
+        login(request, user)
+        return redirect('home')
+    else:
+        return redirect('login')
 
+
+def login_page(request):
+    return render(request, 'd4s2_auth/login.html')
+
+
+@login_required
+def user_details(request):
+    return render(request, 'd4s2_auth/user_details.html', {'user': request.user})

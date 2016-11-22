@@ -3,9 +3,9 @@ import requests
 from requests_oauthlib import OAuth2Session
 from .models import OAuthService, OAuthToken
 from django.contrib.auth import get_user_model
-from logging import Logger
+import logging
 
-USERNAME_KEY = 'sub'
+logger = logging.getLogger(__name__)
 
 def make_oauth(oauth_service):
     return OAuth2Session(oauth_service.client_id,
@@ -26,7 +26,7 @@ def get_token_dict(oauth_service, authorization_response):
     oauth = make_oauth(oauth_service)
     # Use code or authorization_response
     if oauth_service.token_uri[-1] == '/':
-        Logger.warn("Token URI '{}' ends with '/', this has been a problem with Duke OAuth".format(oauth_service.token_uri))
+        logger.warn("Token URI '{}' ends with '/', this has been a problem with Duke OAuth".format(oauth_service.token_uri))
 
     token = oauth.fetch_token(oauth_service.token_uri,
                               authorization_response=authorization_response,
@@ -43,8 +43,11 @@ def get_user_details(oauth_service, token_dict):
     # Only post the access token_dict
     post_data = dict((k, token_dict[k]) for k in ('access_token',))
     response = requests.post(oauth_service.resource_uri, post_data)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response.raise_for_status()
+        return response.json()
+    except requests.HTTPError as e:
+        raise OAuthException(e)
 
 
 class OAuthException(BaseException):
@@ -59,17 +62,6 @@ def save_token(oauth_service, token_dict, user):
     token.token_dict = token_dict
     token.save()
     return token
-
-
-def user_from_token(oauth_service, token_dict):
-    user_details = get_user_details(oauth_service, token_dict)
-    if USERNAME_KEY not in user_details:
-        raise OAuthException('Did not find username key in resource: {}'.format(user_details),)
-    user, created = get_user_model().objects.get_or_create(username=user_details.get(USERNAME_KEY))
-    if created:
-        # TODO: Fetch user details
-        pass
-    return user
 
 
 def main():

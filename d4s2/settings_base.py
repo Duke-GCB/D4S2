@@ -90,6 +90,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'd4s2_auth.backends.OAuth2Backend'
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
