@@ -1,8 +1,11 @@
 from django.test import TestCase
-from .models import OAuthService
+from .models import OAuthService, OAuthState
 from mock.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
+from .views import push_state, pop_state, StateException
+from django.test.client import RequestFactory
+
 
 class OAuthViewsTest(TestCase):
     def setUp(self):
@@ -68,3 +71,32 @@ class OAuthViewsTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertRedirects(response, '/accounts/login/?next=/auth/home/', fetch_redirect_response=False,
                              msg_prefix='Should redirect to login when accessing home while logged out')
+
+
+class OAuthStateViewsTestCase(TestCase):
+
+    def setUp(self):
+        self.request_factory = RequestFactory()
+
+    def test_push_state(self):
+        state_string = 'state123'
+        destination = '/next/path'
+        request = self.request_factory.get('/',data={'next':destination, 'state': state_string})
+        state = push_state(request, state_string)
+        self.assertEqual(state.destination, destination, 'saved state should include destination')
+
+    def test_pop_state(self):
+        state_string = 'state456'
+        destination = '/protected-resource'
+        OAuthState.objects.create(state=state_string, destination=destination)
+        self.assertEqual(OAuthState.objects.count(), 1, 'One state should exist')
+        request = self.request_factory.get('/', data={'state': state_string})
+        popped_destination = pop_state(request)
+        self.assertEqual(destination, popped_destination, 'Restored state should return destination')
+        self.assertEqual(OAuthState.objects.count(), 0, 'State should be deleted')
+
+    def test_pop_state_raises_without_state(self):
+        destination = '/next/path'
+        request = self.request_factory.get('/',data={'next':destination}) # a request without a state param
+        with self.assertRaises(StateException):
+            pop_state(request) # Should raise an exception when no state in the request
