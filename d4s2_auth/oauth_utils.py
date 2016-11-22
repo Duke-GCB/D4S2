@@ -19,6 +19,7 @@ def make_refreshing_oauth_session(oauth_service, token, user):
         'client_id': oauth_service.client_id,
         'client_secret': oauth_service.client_secret,
     }
+
     def token_saver(updated_token):
         save_token(oauth_service, updated_token, user)
 

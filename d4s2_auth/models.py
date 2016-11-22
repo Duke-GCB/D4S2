@@ -37,3 +37,9 @@ class OAuthToken(models.Model):
             ('service', 'token_json'),   # Token+service unique ensures only one user per token/service pair
         ]
         # But we must allow user+token to be the same when the service is different
+
+
+class OAuthState(models.Model):
+    state = models.CharField(max_length=64, null=False, blank=False, unique=True)
+    created = models.DateTimeField(auto_now_add=True)
+    destination = models.CharField(max_length=200, blank=True)
