@@ -44,6 +44,7 @@ class OAuth2Backend(object):
         # Update the keys
         for attr, value in details.items():
             setattr(user, attr, value)
+        user.save()
         return user
 
     def get_user(self, user_id):

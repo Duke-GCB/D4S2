@@ -28,14 +28,14 @@ def configure_mock_session(mock_session):
     mock_session.return_value.fetch_token = mock_fetch_token
 
 
-def configure_mock_requests(mock_requests):
+def configure_mock_client(mock_client):
     # requests.post() -> obj w/ .json()
     mock_post = Mock()
     mock_response = Mock()
-    mock_post.return_value= mock_response
+    mock_post.return_value = mock_response
     mock_response.json = Mock()
     mock_response.json.return_value = {'key':'value'}
-    mock_requests.post = mock_post
+    mock_client.post = mock_post
 
 
 # Create your tests here.
@@ -46,8 +46,9 @@ class OAuthUtilsTest(TestCase):
 
     @patch('d4s2_auth.oauth_utils.OAuth2Session')
     def test_make_oauth(self, mock_session):
-        oauth = make_oauth(self.service)
+        oauth = make_oauth_session(self.service)
         self.assertTrue(mock_session.called, 'instantiates an oauth session')
+        self.assertIsNotNone(oauth, 'Returns an OAuth session')
 
     @patch('d4s2_auth.oauth_utils.OAuth2Session')
     def test_authorization_url(self, mock_session):
@@ -68,13 +69,15 @@ class OAuthUtilsTest(TestCase):
                         'Fetches token with expected arguments')
         self.assertEqual(token, {'access_token': 'abcxyz'}, 'Returns expected token')
 
-    @patch('d4s2_auth.oauth_utils.requests')
-    def test_get_user_details(self, mock_requests):
-        configure_mock_requests(mock_requests)
+    @patch('d4s2_auth.oauth_utils.make_oauth_session')
+    def test_get_user_details(self, mock_make_oauth_session):
+        mock_client = Mock()
+        mock_make_oauth_session.return_value = mock_client
+        configure_mock_client(mock_client)
         token_dict = {'access_token': 'abcxyz'}
         resource = get_user_details(self.service, token_dict)
         self.assertEqual(resource, {'key':'value'}, 'Returns expected resource')
-        self.assertTrue(mock_requests.post.called_with(self.service.resource_uri, token_dict), 'Posts to resource URI with token')
+        self.assertTrue(mock_make_oauth_session.post.called_with(self.service.resource_uri), 'Posts to resource URI')
 
     def test_updates_existing_token(self):
         service = make_oauth_service(OAuthService)
