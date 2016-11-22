@@ -1,6 +1,7 @@
 from django.test import TestCase
-from mock.mock import patch, MagicMock, Mock
-from .backends import OAuth2Backend, USERNAME_KEY
+from mock.mock import patch, MagicMock
+
+from .backends import OAuth2Backend, USERNAME_KEY, USER_DETAILS_MAP
 from .tests_oauth_utils import make_oauth_service
 
 
@@ -28,3 +29,18 @@ class OAuth2BackendTestCase(TestCase):
         user = self.backend.authenticate(service, token_dict)
         self.assertTrue(mock_get_user_details.called, 'shouild call to get user details')
         self.assertIsNone(user, 'should not authenticate a user with no details')
+
+    def tests_map_user_details(self):
+        details = {
+            'dukeNetID': 'ab1756',
+            'dukeUniqueID': '01234567',
+            'email': 'aaron.burr@duke.edu',
+            'email_verified': False,
+            'family_name': 'Burr',
+            'given_name': 'Aaron',
+            'name': 'Aaron Burr',
+            'sub': 'ab1756@duke.edu'
+        }
+        mapped = OAuth2Backend.map_user_details(details)
+        self.assertEqual(set(mapped.keys()), set(USER_DETAILS_MAP.keys()), 'Maps user details to only safe keys')
+        self.assertEqual(mapped.get('username'), 'ab1756@duke.edu', 'Maps username from sub')
