@@ -46,6 +46,7 @@ class DukeDSAuthBackend(BaseBackend):
             user_dict = response.json()
         except HTTPError as e:
             return None
-        user = self.save_user(user_dict)
-        # Also record a duke DS User!
+        # DukeDS shouldn't stomp over existing user details
+        user = self.save_user(user_dict, False)
+        # TODO: Also record a duke DS User!
         return user
