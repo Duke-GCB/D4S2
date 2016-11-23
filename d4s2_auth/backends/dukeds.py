@@ -12,14 +12,16 @@ class DukeDSAuthBackend(BaseBackend):
     """
 
     @staticmethod
-    def make_config():
+    def make_config(token):
         """
         Returns a DukeDS config object populated with URL and such
         from this application's django settings
+        :param token: The authorization token for DukeDS
         :return: a ddsc.config.Config
         """
         config = Config()
         config.update_properties(settings.DDSCLIENT_PROPERTIES)
+        config.values[Config.AUTH] = token
         return config
 
     def map_user_details(self, details):
@@ -35,9 +37,8 @@ class DukeDSAuthBackend(BaseBackend):
         :param token: presented as Authorization: <token>
         :return: an authenticated, populated user if found, or None if not.
         """
-        config = self.make_config()
+        config = self.make_config(token)
         auth = DataServiceAuth(config)
-        auth.set_auth_data((token, None)) # Set expires to None to force 'legacy' auth
         api = DataServiceApi(auth, config.url)
         try:
             response = api.get_current_user()
