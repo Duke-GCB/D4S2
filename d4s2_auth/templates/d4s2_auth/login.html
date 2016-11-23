@@ -1,10 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Please Login</title>
-</head>
-<body>
-    <a href="{% url 'authorize' %}">Login</a>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<p><a href="{% url 'authorize' %}?next={{ next }}">Login with OAuth</a></p>
+{% endblock %}
