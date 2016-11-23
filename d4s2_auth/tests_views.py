@@ -72,6 +72,17 @@ class OAuthViewsTest(TestCase):
         self.assertRedirects(response, '/accounts/login/?next=/auth/home/', fetch_redirect_response=False,
                              msg_prefix='Should redirect to login when accessing home while logged out')
 
+    def test_redirects_unconfigured(self):
+        self.service.delete()
+        self.assertEqual(OAuthService.objects.count(), 0)
+        response = self.client.get(reverse('authorize'))
+        self.assertRedirects(response, reverse('unconfigured'), fetch_redirect_response=False,
+                             msg_prefix='Should redirect to unconfigured page when no oauth services present')
+
+    def test_unconfigured(self):
+        response = self.client.get(reverse('unconfigured'))
+        self.assertContains(response, 'Error', msg_prefix='Should render unconfigured page with Error text')
+
 
 class OAuthStateViewsTestCase(TestCase):
 

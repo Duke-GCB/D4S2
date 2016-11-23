@@ -55,10 +55,16 @@ def pop_state(request):
 
 def authorize(request):
     service = get_service(request)
+    if service is None:
+        return redirect('unconfigured')
     auth_url, state_string = authorization_url(service)
     # Save the state with the next parameter if provided
     push_state(request, state_string)
     return redirect(auth_url)
+
+
+def unconfigured(request):
+    return render(request, 'd4s2_auth/unconfigured.html')
 
 
 def authorize_callback(request):
