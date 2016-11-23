@@ -1,4 +1,5 @@
 from ..oauth_utils import *
+from .base import BaseBackend
 import logging
 
 # Maps django User attributes to OIDC userinfo keys
@@ -15,7 +16,7 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
-class OAuth2Backend(object):
+class OAuth2Backend(BaseBackend):
 
     @staticmethod
     def map_user_details(details):
@@ -37,19 +38,5 @@ class OAuth2Backend(object):
             logger.error('Exception getting user details', e)
             return None
         details = self.map_user_details(details)
-        if 'username' not in details:
-            logger.error('Did not find username key in user details: {}'.format(details), )
-            return None
-        user, created = get_user_model().objects.get_or_create(username=details.get('username'))
-        # Update the keys
-        for attr, value in details.items():
-            setattr(user, attr, value)
-        user.save()
+        user = self.save_user(details)
         return user
-
-    def get_user(self, user_id):
-        user_model = get_user_model()
-        try:
-            return user_model.objects.get(pk=user_id)
-        except user_model.DoesNotExist:
-            return None

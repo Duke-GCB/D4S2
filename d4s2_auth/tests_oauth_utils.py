@@ -1,6 +1,6 @@
 from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
-
+from django.contrib.auth import get_user_model
 from .oauth_utils import *
 
 
