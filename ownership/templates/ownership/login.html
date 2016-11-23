@@ -1,5 +1,5 @@
-{% extends "ownership/base.html" %}
-
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
 {% block content %}
 <h4>Login</h4>
 {% if form.errors %}
@@ -31,5 +31,5 @@
 <input type="submit" value="login" />
 <input type="hidden" name="next" value="{{ next }}" />
 </form>
-
+<p>Or, <a href="{% url 'authorize' %}?next={{ next }}">Login with OAuth</a></p>
 {% endblock %}

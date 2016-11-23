@@ -31,7 +31,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'd4s2_api',
+    'd4s2_auth',
     'switchboard',
     'crispy_forms',
     'ownership',
@@ -55,7 +57,7 @@ ROOT_URLCONF = 'd4s2.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -89,6 +91,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'd4s2_auth.backends.OAuth2Backend'
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/

@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<p><a href="{% url 'authorize' %}?next={{ next }}">Login with OAuth</a></p>
+{% endblock %}
