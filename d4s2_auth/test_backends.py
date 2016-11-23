@@ -1,7 +1,7 @@
 from django.test import TestCase
 from mock.mock import patch, MagicMock
 
-from .backends import OAuth2Backend, USERNAME_KEY, USER_DETAILS_MAP
+from .backends.oauth import OAuth2Backend, USERNAME_KEY, USER_DETAILS_MAP
 from .tests_oauth_utils import make_oauth_service
 from django.contrib.auth import get_user_model
 
@@ -20,7 +20,7 @@ class OAuth2BackendTestCase(TestCase):
             'sub': 'ab1756@duke.edu'
         }
 
-    @patch('d4s2_auth.backends.get_user_details')
+    @patch('d4s2_auth.backends.oauth.get_user_details')
     def tests_authenticate(self, mock_get_user_details):
         username = 'user123'
         mock_get_user_details.return_value = {USERNAME_KEY: username}
@@ -31,7 +31,7 @@ class OAuth2BackendTestCase(TestCase):
         self.assertIsNotNone(user, 'Should have user')
         self.assertEqual(user.username, username)
 
-    @patch('d4s2_auth.backends.get_user_details')
+    @patch('d4s2_auth.backends.oauth.get_user_details')
     def tests_authenticate_failure(self, mock_get_user_details):
         mock_get_user_details.return_value = {}
         service = make_oauth_service(MagicMock)
@@ -45,7 +45,7 @@ class OAuth2BackendTestCase(TestCase):
         self.assertEqual(set(mapped.keys()), set(USER_DETAILS_MAP.keys()), 'Maps user details to only safe keys')
         self.assertEqual(mapped.get('username'), self.details.get('sub'), 'Maps username from sub')
 
-    @patch('d4s2_auth.backends.get_user_details')
+    @patch('d4s2_auth.backends.oauth.get_user_details')
     def tests_update_user(self, mock_get_user_details):
         mock_get_user_details.return_value = self.details
         user_model = get_user_model()
