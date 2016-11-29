@@ -82,12 +82,7 @@ def authorize_callback(request):
         else:
             return redirect(destination)
     else:
-        return redirect('auth-login')
-
-
-def login_page(request):
-    return render(request, 'd4s2_auth/oauth-login.html')
-
+        return redirect('login')
 
 @login_required
 def home(request):

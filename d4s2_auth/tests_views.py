@@ -58,12 +58,12 @@ class OAuthViewsTest(TestCase):
         self.assertTrue(mock_pop_state.called, 'Should attempt to lookup the state')
         self.assertFalse(mock_login.called, 'Login should not be called when no user')
         self.assertFalse(mock_save_token.called, 'save token should not be called when no user returned')
-        self.assertRedirects(response, reverse('auth-login'), fetch_redirect_response=False,
+        self.assertRedirects(response, reverse('login'), fetch_redirect_response=False,
                              msg_prefix='Should redirect to login after authorize failure')
 
     def test_login_page(self):
         self.client.logout()
-        response = self.client.get(reverse('auth-login'))
+        response = self.client.get(reverse('login'))
         self.assertContains(response, 'Login', msg_prefix='Login page should be reachable while logged out')
 
     def test_home_requires_login(self):

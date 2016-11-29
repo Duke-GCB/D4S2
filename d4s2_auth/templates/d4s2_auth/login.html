@@ -14,8 +14,9 @@
     <p>Please login to see this page.</p>
     {% endif %}
 {% endif %}
-
-<form method="post" action="{% url 'django.contrib.auth.views.login' %}">
+<p><a href="{% url 'auth-authorize' %}?next={{ next }}">Login with Duke OAuth</a></p>
+<p>Or, if you have a local account, log in here.</p>
+<form method="post" action="{% url 'login' %}">
 {% csrf_token %}
 <table>
 <tr>
@@ -31,5 +32,4 @@
 <input type="submit" value="login" />
 <input type="hidden" name="next" value="{{ next }}" />
 </form>
-<p>Or, <a href="{% url 'auth-authorize' %}?next={{ next }}">Login with OAuth</a></p>
 {% endblock %}

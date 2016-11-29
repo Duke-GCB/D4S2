@@ -13,7 +13,6 @@ urlpatterns = [
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
     url(r'^api-token-auth/', authtoken_views.obtain_auth_token),
-    # ownership-themed login/logout pages
     url(r'^accounts/login/$', auth_views.login, {'template_name': 'd4s2_auth/login.html' }, name='login'),
     url(r'^accounts/logout/$', auth_views.logout, {'template_name': 'd4s2_auth/logged_out.html' }, name='logout'),
     # Redirect / to /accounts/login
