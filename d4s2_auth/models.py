@@ -12,6 +12,7 @@ class OAuthService(models.Model):
     token_uri = models.URLField(null=False, blank=False)
     resource_uri = models.URLField(null=False, blank=False)
     redirect_uri = models.URLField(null=False, blank=False)
+    revoke_uri = models.URLField(null=False, blank=False)
     scope = models.CharField(max_length=64, null=False, blank=False)
 
     def __unicode__(self):
