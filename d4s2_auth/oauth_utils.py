@@ -75,13 +75,33 @@ class OAuthException(BaseException):
 
 
 def save_token(oauth_service, token_dict, user):
-    token, _ = OAuthToken.objects.get_or_create(user=user,
+    token, created = OAuthToken.objects.get_or_create(user=user,
                                                       service=oauth_service)
-    # If we created the token we need to set its dict here so that it serializes to JSON
-    # If we didn't create the token we need to set the dict here to update it
+    # If a token already existed we must revoke the old one
+    if not created:
+        revoke_token(token)
+        token.token_dict = {}
+        token.save()
+    # Either way, save the current token
     token.token_dict = token_dict
     token.save()
     return token
+
+
+def revoke_token(token):
+    """
+    Revokes a token using it's service's revoke_uri
+    :param token: an OAuthToken object
+    :return:
+    """
+    session = make_oauth_session(token.service)
+    session.token = token.token_dict
+    response = session.post(token.service.revoke_uri)
+    try:
+        response.raise_for_status()
+        return response.json()
+    except requests.HTTPError as e:
+        raise OAuthException(e)
 
 
 def main():
