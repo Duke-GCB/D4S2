@@ -63,10 +63,6 @@ def authorize(request):
     return redirect(auth_url)
 
 
-def unconfigured(request):
-    return render(request, 'd4s2_auth/unconfigured.html')
-
-
 def authorize_callback(request):
     destination = pop_state(request)
     service = get_service(request)
@@ -84,6 +80,7 @@ def authorize_callback(request):
     else:
         return redirect('login')
 
+
 @login_required
 def home(request):
-    return render(request, 'd4s2_auth/home.html', {'user': request.user})
+    return render(request, 'd4s2_auth/home.html')
