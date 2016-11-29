@@ -79,7 +79,10 @@ def save_token(oauth_service, token_dict, user):
                                                       service=oauth_service)
     # If a token already existed we must revoke the old one
     if not created:
-        revoke_token(token)
+        try:
+            revoke_token(token)
+        except OAuthException as e:
+            logger.warn('Unable to revoke token, proceeding to save: {}'.format(e))
         token.token_dict = {}
         token.save()
     # Either way, save the current token
@@ -90,16 +93,17 @@ def save_token(oauth_service, token_dict, user):
 
 def revoke_token(token):
     """
-    Revokes a token using it's service's revoke_uri
+    Revokes a token using it's service's revoke_uri and the refresh_token
     :param token: an OAuthToken object
-    :return:
+    :return: JSON response of the revoke status
     """
-    session = make_oauth_session(token.service)
-    session.token = token.token_dict
-    response = session.post(token.service.revoke_uri)
+    service = token.service
+    auth = (service.client_id, service.client_secret,)
+    # Revoking the refresh token will revoke its parents too
+    data = {'token': token.token_dict.get('refresh_token')}
+    response = requests.post(service.revoke_uri, auth=auth, data=data)
     try:
         response.raise_for_status()
-        return response.json()
     except requests.HTTPError as e:
         raise OAuthException(e)
 

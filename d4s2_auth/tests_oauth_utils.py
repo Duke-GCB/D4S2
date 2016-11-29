@@ -98,20 +98,16 @@ class OAuthUtilsTest(TestCase):
         self.assertTrue(mock_revoke_token.called_with(t1), 'Should have revoked t1')
         self.assertEqual(mock_revoke_token.call_count, 1, 'Should revoke once')
 
-    @patch('d4s2_auth.oauth_utils.make_oauth_session')
-    def test_revoke_token(self, mock_make_oauth_session):
-        mock_client = Mock()
-        mock_make_oauth_session.return_value = mock_client
-        response = {'revoked':True}
-        configure_mock_client(mock_client, response)
+    @patch('d4s2_auth.oauth_utils.requests')
+    def test_revoke_token(self, mock_client):
+        configure_mock_client(mock_client)
         service = make_oauth_service(OAuthService, save=True)
         user = get_user_model().objects.create(username='user123')
         token = OAuthToken.objects.create(user=user, service=service)
         token.token_dict = {'access_token': 'aaaaa1'}
         token.save()
-        revoked = revoke_token(token)
-        self.assertEqual(response, revoked, 'Returns expected response')
-        self.assertTrue(mock_make_oauth_session.post.called_with(self.service.revoke_uri), 'Posts to revoke URI')
+        revoke_token(token) # Will raise exception if not passed correct data
+        self.assertTrue(mock_client.post.called_with(self.service.revoke_uri), 'Posts to revoke URI')
 
     @patch('d4s2_auth.oauth_utils.revoke_token')
     def test_no_revoke_token_on_save_new(self, mock_revoke_token):
