@@ -1,4 +1,5 @@
 from django.conf.urls import url, include
+
 from django.contrib import admin
 from django.views.generic.base import RedirectView
 from django.contrib.auth import views as auth_views
@@ -13,8 +14,8 @@ urlpatterns = [
                                namespace='rest_framework')),
     url(r'^api-token-auth/', authtoken_views.obtain_auth_token),
     # ownership-themed login/logout pages
-    url(r'^accounts/login/$', auth_views.login, {'template_name': 'ownership/login.html' }),
-    url(r'^accounts/logout/$', auth_views.logout, {'template_name': 'ownership/logged_out.html' }),
+    url(r'^accounts/login/$', auth_views.login, {'template_name': 'ownership/login.html' }, name='login'),
+    url(r'^accounts/logout/$', auth_views.logout, {'template_name': 'ownership/logged_out.html' }, name='logout'),
     # Redirect / to /accounts/login
-    url(r'^$', RedirectView.as_view(url='/accounts/login/'))
+    url(r'^$', RedirectView.as_view(pattern_name='auth-home', permanent=False)),
 ]

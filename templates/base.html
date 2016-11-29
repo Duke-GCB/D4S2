@@ -18,6 +18,9 @@
                 <span class="mdl-layout-title">D4S2: Duke Data Service Data Delivery System</span>
                 <!-- Add spacer, to align navigation to the right -->
                 <div class="mdl-layout-spacer"></div>
+                {% if user.is_authenticated %}
+                    <p>Logged in as {{ user.username }} <a href="{% url 'logout' %}">Logout</a>
+                {% endif %}
             </div>
         </header>
         <main class="mdl-layout__content">

@@ -19,7 +19,7 @@ class OAuthViewsTest(TestCase):
 
     def test_redirects_to_authorize(self):
         self.client.logout()
-        response = self.client.get(reverse('authorize'), follow=False)
+        response = self.client.get(reverse('auth-authorize'), follow=False)
         self.assertEqual(response.status_code, 302, 'Should redirect')
         self.assertIn('https://authorize/', response.get('Location'), 'Should redirect to authorization_uri')
 
@@ -34,13 +34,13 @@ class OAuthViewsTest(TestCase):
         mock_get_token_dict.return_value = token_dict
         mock_authenticate.return_value = user
         mock_pop_state.return_value = ''
-        response = self.client.get(reverse('callback'))
+        response = self.client.get(reverse('auth-callback'))
         self.assertTrue(mock_get_token_dict.called, 'Get token dict called')
         self.assertTrue(mock_authenticate.called_with(self.service, token_dict), 'authenticate called')
         self.assertTrue(mock_pop_state.called, 'Should attempt to lookup the state')
         self.assertTrue(mock_save_token.called_with(self.service, token_dict), 'Save token called')
         self.assertTrue(mock_login.called, 'Login called')
-        self.assertRedirects(response, reverse('home'), fetch_redirect_response=False,
+        self.assertRedirects(response, reverse('auth-home'), fetch_redirect_response=False,
                              msg_prefix='Should redirect to home after authorize success')
 
     @patch('d4s2_auth.views.pop_state')
@@ -52,35 +52,35 @@ class OAuthViewsTest(TestCase):
         token_dict = {'access_token': 'foo-bar'}
         mock_get_token_dict.return_value = token_dict
         mock_authenticate.return_value = None
-        response = self.client.get(reverse('callback'))
+        response = self.client.get(reverse('auth-callback'))
         self.assertTrue(mock_get_token_dict.called, 'Get token dict called')
         self.assertTrue(mock_authenticate.called_with(self.service, token_dict), 'authenticate called')
         self.assertTrue(mock_pop_state.called, 'Should attempt to lookup the state')
         self.assertFalse(mock_login.called, 'Login should not be called when no user')
         self.assertFalse(mock_save_token.called, 'save token should not be called when no user returned')
-        self.assertRedirects(response, reverse('login'), fetch_redirect_response=False,
+        self.assertRedirects(response, reverse('auth-login'), fetch_redirect_response=False,
                              msg_prefix='Should redirect to login after authorize failure')
 
     def test_login_page(self):
         self.client.logout()
-        response = self.client.get(reverse('login'))
+        response = self.client.get(reverse('auth-login'))
         self.assertContains(response, 'Login', msg_prefix='Login page should be reachable while logged out')
 
     def test_home_requires_login(self):
         self.client.logout()
-        response = self.client.get(reverse('home'))
+        response = self.client.get(reverse('auth-home'))
         self.assertRedirects(response, '/accounts/login/?next=/auth/home/', fetch_redirect_response=False,
                              msg_prefix='Should redirect to login when accessing home while logged out')
 
     def test_redirects_unconfigured(self):
         self.service.delete()
         self.assertEqual(OAuthService.objects.count(), 0)
-        response = self.client.get(reverse('authorize'))
-        self.assertRedirects(response, reverse('unconfigured'), fetch_redirect_response=False,
+        response = self.client.get(reverse('auth-authorize'))
+        self.assertRedirects(response, reverse('auth-unconfigured'), fetch_redirect_response=False,
                              msg_prefix='Should redirect to unconfigured page when no oauth services present')
 
     def test_unconfigured(self):
-        response = self.client.get(reverse('unconfigured'))
+        response = self.client.get(reverse('auth-unconfigured'))
         self.assertContains(response, 'Error', msg_prefix='Should render unconfigured page with Error text')
 
 

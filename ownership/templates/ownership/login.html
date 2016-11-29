@@ -31,5 +31,5 @@
 <input type="submit" value="login" />
 <input type="hidden" name="next" value="{{ next }}" />
 </form>
-<p>Or, <a href="{% url 'authorize' %}?next={{ next }}">Login with OAuth</a></p>
+<p>Or, <a href="{% url 'auth-authorize' %}?next={{ next }}">Login with OAuth</a></p>
 {% endblock %}
