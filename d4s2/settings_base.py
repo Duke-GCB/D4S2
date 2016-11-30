@@ -131,7 +131,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'd4s2_api.auth.APIKeyTokenAuthentication',
+        'd4s2_api.auth.DukeDSTokenAuthentication', # Allows users to authenticate with a DukeDS token
+        'rest_framework.authentication.TokenAuthentication', # Allows users to authenticate with D4S2 rest_framework authtoken
         'rest_framework.authentication.SessionAuthentication',
     ),
 }

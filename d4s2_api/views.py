@@ -62,6 +62,8 @@ class TransferViewSet(PopulatingAuthenticatedModelViewSet):
 
     """
     model = None
+    permission_classes = (permissions.IsAuthenticated,)
+
     def get_queryset(self):
         """
         Optionally filters on project_id, from_user_id, or to_user_id

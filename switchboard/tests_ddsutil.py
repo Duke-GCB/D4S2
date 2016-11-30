@@ -18,7 +18,7 @@ class DDSUtilTestCase(TestCase):
         remote_user.email = email
         instance = mockRemoteStore.return_value
         instance.fetch_user.return_value = remote_user
-        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        DukeDSUser.objects.create(dds_id=self.user_id)
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
             ddsutil = DDSUtil(self.user_id)
@@ -33,7 +33,7 @@ class DDSUtilTestCase(TestCase):
         remote_project.name = project_name
         instance = mockRemoteStore.return_value
         instance.fetch_remote_project_by_id.return_value = remote_project
-        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        DukeDSUser.objects.create(dds_id=self.user_id)
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
             ddsutil = DDSUtil(self.user_id)
@@ -44,7 +44,7 @@ class DDSUtilTestCase(TestCase):
     def testAddUser(self, mockRemoteStore):
         instance = mockRemoteStore.return_value
         instance.set_user_project_permission = mock.Mock()
-        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        DukeDSUser.objects.create(dds_id=self.user_id)
         with self.settings(DDSCLIENT_PROPERTIES={}):
             ddsutil = DDSUtil(self.user_id)
             ddsutil.add_user('userid','projectid','auth_role')
@@ -54,7 +54,7 @@ class DDSUtilTestCase(TestCase):
     def testRemoveUser(self, mockRemoteStore):
         instance = mockRemoteStore.return_value
         instance.set_user_project_permission = mock.Mock()
-        DukeDSUser.objects.create(dds_id=self.user_id, api_key='uhn3wk7h24ighg8i2')
+        DukeDSUser.objects.create(dds_id=self.user_id)
         with self.settings(DDSCLIENT_PROPERTIES={}):
             ddsutil = DDSUtil(self.user_id)
             ddsutil.remove_user('userid','projectid')

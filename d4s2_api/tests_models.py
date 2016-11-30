@@ -122,20 +122,15 @@ class ProjectTestCase(TestCase):
 
 class UserTestCase(TestCase):
     def setUp(self):
-        DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='zxxsdvasv//aga')
+        DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678')
 
     def test_required_fields_dds_id(self):
         with self.assertRaises(IntegrityError):
-            DukeDSUser.objects.create(dds_id=None, api_key='gwegwg')
-
-    def test_requires_api_key(self):
-        api_user_count = DukeDSUser.api_users.count()
-        DukeDSUser.objects.create(dds_id='fewfwef')
-        self.assertEqual(api_user_count, DukeDSUser.api_users.count())
+            DukeDSUser.objects.create(dds_id=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678', api_key='fwmp2392')
+            DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678')
 
     def test_populated(self):
         u = DukeDSUser.objects.create(dds_id='1234-abcd-fghi-5678')

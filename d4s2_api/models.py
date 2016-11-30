@@ -6,13 +6,6 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.contrib.auth.models import User, Group
 from simple_history.models import HistoricalRecords
 
-class APIUserManager(models.Manager):
-    """
-    Manager to return API users - those with API keys
-    """
-    def get_queryset(self):
-        return super(APIUserManager, self).get_queryset().exclude(api_key__isnull=True)
-
 
 class DukeDSUser(models.Model):
     """
@@ -23,12 +16,10 @@ class DukeDSUser(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    api_key = models.CharField(max_length=36, null=True, unique=True)
     full_name = models.TextField(null=True)
     email = models.EmailField(null=True)
 
     objects = models.Manager()
-    api_users = APIUserManager()
 
     def populated(self):
         if self.full_name and self.email:

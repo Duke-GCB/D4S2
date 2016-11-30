@@ -12,10 +12,10 @@ class DDSUtil(object):
     @property
     def remote_store(self):
         if self._remote_store is None:
-            user = DukeDSUser.api_users.get(dds_id=self.sender_user_id)
+            user = DukeDSUser.objects.get(dds_id=self.sender_user_id)
             config = Config()
             config.update_properties(settings.DDSCLIENT_PROPERTIES)
-            config.update_properties({'user_key': user.api_key})
+            raise Exception('TODO: load DukeDS credentials for this user')
             self._remote_store = RemoteStore(config)
         return self._remote_store
 
