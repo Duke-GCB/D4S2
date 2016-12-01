@@ -105,7 +105,7 @@ class DukeDSAuthBackend(BaseBackend):
         """
         user_dict = DukeDSAuthBackend.harmonize_dukeds_user_details(raw_user_dict)
         dukeds_user, created = DukeDSUser.objects.get_or_create(user=user,
-                                                                dds_id=user_dict.get('id'))
+                                                                dds_id=raw_user_dict.get('id'))
         if created:
             BaseBackend.update_model(dukeds_user, user_dict)
         return dukeds_user

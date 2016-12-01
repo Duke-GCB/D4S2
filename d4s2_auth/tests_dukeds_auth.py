@@ -8,6 +8,7 @@ from d4s2_auth.dukeds_auth import DukeDSTokenAuthentication
 from d4s2_auth.models import DukeDSAPIToken
 from mock.mock import patch, Mock
 
+
 class ResponseStatusCodeTestCase(object):
     def assertUnauthorized(self, response):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
@@ -20,7 +21,6 @@ class ResponseStatusCodeTestCase(object):
                          .format(response.status_code))
 
 
-# TODO: Update these tests after writing DukeDSToken
 class DukeDSTokenAuthenticationClientTestCase(APITestCase, ResponseStatusCodeTestCase):
 
     def setUp(self):
@@ -110,8 +110,3 @@ class DukeDSTokenAuthenticationTestCase(TestCase):
         self.set_auth_header('')
         with self.assertRaises(exceptions.AuthenticationFailed):
             self.authenticate()
-
-# Additional tests
-# looks up for existing DukeDS Token and uses (does not fetch new)
-# Checks expiration of token and fetches new if needed
-# fetches new token if none present
