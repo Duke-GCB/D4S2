@@ -41,8 +41,8 @@ class OAuth2BackendTestCase(TestCase):
         self.assertTrue(mock_get_user_details.called, 'shouild call to get user details')
         self.assertIsNone(user, 'should not authenticate a user with no details')
 
-    def tests_map_user_details(self):
-        mapped = self.oauth_backend.map_user_details(self.details)
+    def tests_harmonize_user_details(self):
+        mapped = self.oauth_backend.harmonize_user_details(self.details)
         self.assertEqual(set(mapped.keys()), set(self.oauth_backend.get_user_details_map().keys()), 'Maps user details to only safe keys')
         self.assertEqual(mapped.get('username'), self.details.get('sub'), 'Maps username from sub')
 

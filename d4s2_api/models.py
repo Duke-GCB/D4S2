@@ -9,7 +9,7 @@ from simple_history.models import HistoricalRecords
 
 class DukeDSUser(models.Model):
     """
-    Represents a DukeDS user. Keeps track of their API key. The API key
+    Represents a DukeDS user.
     is used when the corresponding user invokes an action that requires
     communication with DukeDS (e.g. sharing a project or performing delivery)
 

@@ -20,8 +20,8 @@ class OAuthService(models.Model):
 
 
 class OAuthToken(models.Model):
-    user = models.ForeignKey(User)
-    service = models.ForeignKey(OAuthService)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    service = models.ForeignKey(OAuthService, on_delete=models.CASCADE)
     token_json = models.TextField()
 
     @property
@@ -44,3 +44,11 @@ class OAuthState(models.Model):
     state = models.CharField(max_length=64, null=False, blank=False, unique=True)
     created = models.DateTimeField(auto_now_add=True)
     destination = models.CharField(max_length=200, blank=True)
+
+
+class DukeDSAPIToken(models.Model):
+    """
+    A token for a user that can be used for authentication with Duke DS
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    key = models.TextField(unique=True, blank=False, null=False) # Opaque here, but JWT in practice
