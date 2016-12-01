@@ -64,7 +64,7 @@ def accept_project_redirect(request, delivery):
     Perform delivery and redirect user to look at the project.
     """
     try:
-        perform_delivery(delivery)
+        perform_delivery(user, delivery)
         message = ProcessedMessage(delivery, "accepted")
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)

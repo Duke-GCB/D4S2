@@ -111,15 +111,18 @@ class ProcessedMessage(Message):
         super(ProcessedMessage, self).__init__(message)
 
 
-def perform_delivery(delivery):
+def perform_delivery(user, delivery):
     """
     Communicates with DukeDS via DDSUtil to add the to_user to a project
+    :param user: The user with a DukeDS authentication credential
     :param delivery: A Delivery object
     :return:
     """
-    auth_role = 'project_admin'
     try:
         raise Exception('TODO: call he transfer API here, as the currently authenticated user')
+        dds_util = DDSUtil(user)
+        dds_util.accept_project_transfer(delivery.token)
+
         # At this point, We'd like to remove the from_user from the project, changing ownership
         # However, we cannot remove the from_user if we are authenticated as that user
         # We experimented with authenticating as the to_user, but this was not practical

@@ -125,6 +125,10 @@ class DDSUtil(object):
         user = self.remote_store.fetch_user(user_id)
         self.remote_store.revoke_user_project_permission(project, user)
 
+    def accept_project_transfer(self, token):
+        # TODO: Implement this in the client and come back!
+        # self.remote_store.data_service.accept_project_transfer(token)
+        pass
 
 class ModelPopulator(object):
     """
@@ -159,9 +163,8 @@ class ModelPopulator(object):
 
 class DeliveryDetails(object):
     def __init__(self, delivery_or_share):
-        raise Exception('TODO: DeliveryDetails must construct DDSUtil with a user')
         self.delivery = delivery_or_share
-        self.ddsutil = DDSUtil(self.delivery.from_user.dds_id)
+        self.ddsutil = DDSUtil(self.delivery.from_user.user)
         self.model_populator = ModelPopulator(self.ddsutil)
 
     def get_from_user(self):

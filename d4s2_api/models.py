@@ -95,7 +95,7 @@ class Delivery(models.Model):
     from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
     to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
-    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    token = models.TextField(unique=True)
     decline_reason = models.TextField(null=False, blank=True)
     performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or declined the delivery
     delivery_email_text = models.TextField(null=False, blank=True)

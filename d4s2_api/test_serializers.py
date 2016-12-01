@@ -9,6 +9,7 @@ class DeliverySerializerTestCase(TestCase):
             'project_id': 'project-1234',
             'from_user_id': 'user-5678',
             'to_user_id': 'user-9999',
+            'token': 'abc-1234-5678'
         }
 
     def test_serializes_delivery(self):
