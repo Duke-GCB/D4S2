@@ -1,14 +1,23 @@
 from django.test import TestCase
 from d4s2_api.models import DukeDSUser, DukeDSProject
-from django.core.exceptions import ObjectDoesNotExist
 import mock
 from switchboard.dds_util import DDSUtil, ModelPopulator, DeliveryDetails
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
-
+from d4s2_api.models import User
+from d4s2_auth.tests_oauth_utils import make_oauth_service
+from d4s2_auth.models import OAuthService
 
 class DDSUtilTestCase(TestCase):
+
     def setUp(self):
+        self.user = User.objects.create(username='ddsutil_user')
         self.user_id = 'abcd-1234-efgh-8876'
+
+        patcher = mock.patch('switchboard.dds_util.get_dds_token')
+        mock_get_dds_token = patcher.start()
+        mock_get_dds_token.return_value = mock.MagicMock(key='sometoken')
+        self.addCleanup(patcher.stop)
+
 
     @mock.patch('switchboard.dds_util.RemoteStore')
     def testGetEmail(self, mockRemoteStore):
@@ -18,10 +27,10 @@ class DDSUtilTestCase(TestCase):
         remote_user.email = email
         instance = mockRemoteStore.return_value
         instance.fetch_user.return_value = remote_user
-        DukeDSUser.objects.create(dds_id=self.user_id)
+        # DukeDSUser.objects.create(dds_id=self.user_id)
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user_id)
+            ddsutil = DDSUtil(self.user)
             self.assertEqual(email, ddsutil.get_remote_user(self.user_id).email)
             self.assertTrue(instance.fetch_user.called)
 
@@ -36,7 +45,7 @@ class DDSUtilTestCase(TestCase):
         DukeDSUser.objects.create(dds_id=self.user_id)
         # DDSUtil reads settings from django settings, so inject some here
         with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user_id)
+            ddsutil = DDSUtil(self.user)
             self.assertEqual(ddsutil.get_remote_project(project_id).name, project_name)
             self.assertTrue(instance.fetch_remote_project_by_id.called)
 
@@ -46,7 +55,7 @@ class DDSUtilTestCase(TestCase):
         instance.set_user_project_permission = mock.Mock()
         DukeDSUser.objects.create(dds_id=self.user_id)
         with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user_id)
+            ddsutil = DDSUtil(self.user)
             ddsutil.add_user('userid','projectid','auth_role')
             self.assertTrue(instance.set_user_project_permission.called)
 
@@ -56,16 +65,26 @@ class DDSUtilTestCase(TestCase):
         instance.set_user_project_permission = mock.Mock()
         DukeDSUser.objects.create(dds_id=self.user_id)
         with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user_id)
+            ddsutil = DDSUtil(self.user)
             ddsutil.remove_user('userid','projectid')
             self.assertTrue(instance.revoke_user_project_permission.called)
 
-    def testFailsWithoutAPIKeyUser(self):
+    def testFailsWithoutUser(self):
         with self.settings(DDSCLIENT_PROPERTIES={}):
             self.assertEqual(len(DukeDSUser.objects.all()), 0)
-            with self.assertRaises(ObjectDoesNotExist):
-                ddsutil = DDSUtil('abcd-efgh-1234-5678')
+            with self.assertRaises(ValueError):
+                ddsutil = DDSUtil('')
                 ddsutil.remote_store
+
+
+class DDSUtilAuthTestCase(TestCase):
+
+    def test_reads_local_token(self):
+        pass
+
+    def test_exchanges_oauth_token(self):
+        pass
+
 
 class MockDetails(object):
     full_name='Test User'

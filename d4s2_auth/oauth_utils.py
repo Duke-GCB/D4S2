@@ -13,7 +13,7 @@ def make_oauth_session(oauth_service):
                          scope=oauth_service.scope.split())
 
 
-def make_refreshing_oauth_session(oauth_service, token, user):
+def make_refreshing_oauth_session(oauth_service, user):
     extra = { # Extra arguments required by refresh
         'client_id': oauth_service.client_id,
         'client_secret': oauth_service.client_secret,
@@ -21,7 +21,7 @@ def make_refreshing_oauth_session(oauth_service, token, user):
 
     def token_saver(updated_token):
         save_token(oauth_service, updated_token, user)
-
+    token = OAuthToken.objects.get(user=user, service=oauth_service)
     client = OAuth2Session(client_id=oauth_service.client_id,
                            token=token.token_dict,
                            auto_refresh_kwargs=extra,
@@ -53,14 +53,30 @@ def get_token_dict(oauth_service, authorization_response):
     return token
 
 
-def get_user_details(oauth_service, token_dict):
+def current_user_details(oauth_service, user):
     """
+    A simple method to make an OAuth request to the user details endpoint, that will automatically refresh the token
+    :param oauth_service: An OAuthService model object
+    :param user: a django model user
+    :return:
+    """
+    session = make_refreshing_oauth_session(oauth_service, user)
+    return fetch_user_details(oauth_service, session)
+
+
+def user_details_from_token(oauth_service, token_dict):
+    """
+    Fetches user details from the oauth_service's resource URI, using only a token dict
     :param oauth_service: An OAuthService model object
     :param token_dict: a dict containing the access_token
     :return:
     """
     session = make_oauth_session(oauth_service)
     session.token = token_dict
+    return fetch_user_details(oauth_service, session)
+
+
+def fetch_user_details(oauth_service, session):
     response = session.post(oauth_service.resource_uri)
     try:
         response.raise_for_status()
@@ -114,7 +130,7 @@ def main():
     authorization_response = raw_input('Enter the full callback URL: ')
     token = get_token_dict(duke_service, authorization_response)
     print('Token: {}'.format(token))
-    user_details = get_user_details(duke_service, token)
+    user_details = user_details_from_token(duke_service, token)
     print(user_details)
 
 if __name__ == '__main__':

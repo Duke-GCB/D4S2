@@ -20,8 +20,7 @@ class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
     @property
     def model_populator(self):
         if self._lazy_model_populator is None:
-            request_dds_user = DukeDSUser.objects.get(user=self.request.user)
-            dds_util = DDSUtil(user_id=request_dds_user.dds_id)
+            dds_util = DDSUtil(self.request.user)
             self._lazy_model_populator = ModelPopulator(dds_util)
         return self._lazy_model_populator
 

@@ -24,7 +24,7 @@ class OAuth2Backend(BaseBackend):
 
     def authenticate(self, service=None, token_dict=None):
         try:
-            details = get_user_details(service, token_dict)
+            details = user_details_from_token(service, token_dict)
         except OAuthException as e:
             logger.error('Exception getting user details', e)
             return None

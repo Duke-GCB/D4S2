@@ -30,7 +30,7 @@ class DukeDSTokenAuthenticationClientTestCase(APITestCase, ResponseStatusCodeTes
         headers = {DukeDSTokenAuthentication.request_auth_header: key}
         self.client.credentials(**headers)
 
-    @patch('d4s2_auth.backends.dukeds.jwt.decode')
+    @patch('d4s2_auth.backends.dukeds.decode')
     def test_header_auth(self, mock_jwt_decode):
         token = DukeDSAPIToken.objects.create(user=self.user, key='2mma0c3')
         self.set_request_token(token.key)
@@ -89,7 +89,7 @@ class DukeDSTokenAuthenticationTestCase(TestCase):
 
     def test_valid_token(self):
         self.mock_authenticate.return_value = self.active_django_user
-        self.set_auth_header('valid_token')
+        self.set_auth_header('active_token')
         authenticated_user, token = self.authenticate()
         self.assertEqual(self.active_django_user, authenticated_user)
 

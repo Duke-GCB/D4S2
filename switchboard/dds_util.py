@@ -1,21 +1,103 @@
-from ddsc.config import Config
 from django.conf import settings
+from ddsc.core.ddsapi import ContentType
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import DukeDSUser, EmailTemplate
+from d4s2_auth.backends.dukeds import check_jwt_token, InvalidTokenError, make_auth_config, save_dukeds_token
+from d4s2_auth.models import OAuthToken, OAuthService, User
+from d4s2_auth.oauth_utils import current_user_details, OAuthException
+import requests
+
+
+class NoTokenException(BaseException):
+    pass
+
+
+def get_oauth_token(user):
+    """
+    Gets the OAuth token object for the specified user, and refreshes if needed
+    :param user:
+    :return:
+    """
+    service = OAuthService.objects.first()
+    try:
+        current_user_details(service, user)
+    except OAuthException as e:
+        raise NoTokenException(e)
+    return OAuthToken.objects.get(user=user, service=service)
+
+
+def get_local_dds_token(user):
+    """
+    Gets a user's DukeDSAPIToken object if they have one
+    :param user: A django user
+    :return: The DukeDSAPIToken for the user, or None if invalid or not present
+    """
+    try:
+        # If user has an existing token, check to see if it's valid
+        try:
+            checked = check_jwt_token(user.dukedsapitoken.key)
+            if checked:
+                return user.ddsapitoken
+        except InvalidTokenError:
+            pass
+    except User.dukedsapitoken.RelatedObjectDoesNotExist:
+        pass
+    return None
+
+
+def get_dds_token_from_oauth(oauth_token):
+    """
+    Presents an OAuth token to DukeDS, obtaining an api_token
+    :param oauth_token: An OAuthToken object
+    :return: The dictionary from JSON returned by the /user/api_token endpoint
+    """
+    authentication_service_id = '??'
+    headers = {
+        'Content-Type': ContentType.json,
+    }
+    data = {
+        "access_token": oauth_token.token_json,
+        "authentication_service_id": authentication_service_id,
+    }
+    base_url = settings.DDSCLIENT_PROPERTIES['url']
+    url = base_url + "/user/api_token"
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    try:
+        response.raise_for_status()
+        return response.json()
+    except requests.HTTPError as e:
+        raise NoTokenException(e)
+
+
+def get_dds_token(user):
+    """
+    Returns a DukeDS api_token for the specified user, provided one can be found locally or obtained from DukeDS via OAuth.
+    Raises NoTokenException on error
+    :param user: A django user
+    :return: A DukeDSAPI token object
+    """
+    dds_token = get_local_dds_token(user)
+    if dds_token:
+        return dds_token
+    # No local token, now get from OAuth
+    oauth_token = get_oauth_token(user)
+    dds_token_json = get_dds_token_from_oauth(oauth_token)
+    dds_token = save_dukeds_token(user, dds_token_json['api_token'])
+    return dds_token
 
 
 class DDSUtil(object):
-    def __init__(self, user_id):
-        self.sender_user_id = user_id
+    def __init__(self, user):
+        if not user:
+            raise ValueError('DDSUtil requires a user')
+        self.user = user
         self._remote_store = None
 
     @property
     def remote_store(self):
         if self._remote_store is None:
-            user = DukeDSUser.objects.get(dds_id=self.sender_user_id)
-            config = Config()
-            config.update_properties(settings.DDSCLIENT_PROPERTIES)
-            raise Exception('TODO: load DukeDS credentials for this user')
+            dds_token = get_dds_token(self.user)
+            config = make_auth_config(dds_token.key)
             self._remote_store = RemoteStore(config)
         return self._remote_store
 
@@ -77,6 +159,7 @@ class ModelPopulator(object):
 
 class DeliveryDetails(object):
     def __init__(self, delivery_or_share):
+        raise Exception('TODO: DeliveryDetails must construct DDSUtil with a user')
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(self.delivery.from_user.dds_id)
         self.model_populator = ModelPopulator(self.ddsutil)

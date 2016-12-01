@@ -3,7 +3,7 @@ from rest_framework import exceptions
 from d4s2_api.models import DukeDSUser
 from d4s2_auth.models import DukeDSAPIToken
 from django.utils.translation import ugettext_lazy as _
-from .backends import DukeDSAuthBackend
+from .backends.dukeds import get_local_token, DukeDSAuthBackend
 
 
 class DukeDSTokenAuthentication(authentication.BaseAuthentication):
@@ -52,7 +52,7 @@ class DukeDSTokenAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed(_('User inactive or deleted.'))
         else:
             # authenticate should return a tuple of user and their token
-            token = self.backend.get_local_token(key)
+            token = get_local_token(key)
             return (user, token)
 
     def authenticate_header(self, request):

@@ -22,24 +22,24 @@ class OAuth2BackendTestCase(TestCase):
             'sub': 'ab1756@duke.edu'
         }
 
-    @patch('d4s2_auth.backends.oauth.get_user_details')
-    def tests_authenticate(self, mock_get_user_details):
+    @patch('d4s2_auth.backends.oauth.user_details_from_token')
+    def tests_authenticate(self, mock_user_details_from_token):
         username = 'user123'
-        mock_get_user_details.return_value = {self.username_key: username}
+        mock_user_details_from_token.return_value = {self.username_key: username}
         service = make_oauth_service(MagicMock)
-        token_dict = {'access_token', 'foo-bar-baz'}
+        token_dict = {'access_token': 'foo-bar-baz'}
         user = self.oauth_backend.authenticate(service, token_dict)
-        self.assertTrue(mock_get_user_details.called, 'shouild call to get user details')
+        self.assertTrue(mock_user_details_from_token.called, 'should call to get user details')
         self.assertIsNotNone(user, 'Should have user')
         self.assertEqual(user.username, username)
 
-    @patch('d4s2_auth.backends.oauth.get_user_details')
-    def tests_authenticate_failure(self, mock_get_user_details):
-        mock_get_user_details.return_value = {}
+    @patch('d4s2_auth.backends.oauth.user_details_from_token')
+    def tests_authenticate_failure(self, mock_user_details_from_token):
+        mock_user_details_from_token.return_value = {}
         service = make_oauth_service(MagicMock)
         token_dict = {'access_token', 'foo-bar-baz'}
         user = self.oauth_backend.authenticate(service, token_dict)
-        self.assertTrue(mock_get_user_details.called, 'shouild call to get user details')
+        self.assertTrue(mock_user_details_from_token.called, 'shouild call to get user details')
         self.assertIsNone(user, 'should not authenticate a user with no details')
 
     def tests_harmonize_user_details(self):
@@ -47,9 +47,9 @@ class OAuth2BackendTestCase(TestCase):
         self.assertEqual(set(mapped.keys()), set(self.oauth_backend.get_user_details_map().keys()), 'Maps user details to only safe keys')
         self.assertEqual(mapped.get('username'), self.details.get('sub'), 'Maps username from sub')
 
-    @patch('d4s2_auth.backends.oauth.get_user_details')
-    def tests_update_user(self, mock_get_user_details):
-        mock_get_user_details.return_value = self.details
+    @patch('d4s2_auth.backends.oauth.user_details_from_token')
+    def tests_update_user(self, mock_user_details_from_token):
+        mock_user_details_from_token.return_value = self.details
         user_model = get_user_model()
         user = user_model.objects.create(username=self.details.get('sub'))
         orig_user_pk = user.pk
@@ -71,7 +71,7 @@ class DukeDSAuthBackendTestCase(TestCase):
 
     def setUp(self):
         # Patch the jwt decode function everwherywhere
-        jwt_decode_patcher = patch('d4s2_auth.backends.dukeds.jwt.decode')
+        jwt_decode_patcher = patch('d4s2_auth.backends.dukeds.decode')
         self.mock_jwt_decode = jwt_decode_patcher.start()
         self.addCleanup(jwt_decode_patcher.stop)
 
@@ -96,7 +96,6 @@ class DukeDSAuthBackendTestCase(TestCase):
             'last_name': 'Burr',
             'email': 'aaron.burr@duke.edu',
         }
-
 
     def test_uses_local_without_calling_dukeds(self):
         authenticated_user = self.dukeds_backend.authenticate(self.key)
