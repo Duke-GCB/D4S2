@@ -25,6 +25,9 @@ class DukeDSTokenAuthentication(authentication.BaseAuthentication):
         self.backend = DukeDSAuthBackend()
 
     def authenticate(self, request):
+        if self.request_auth_header not in request.META:
+            # Our header is not present, don't try to authenticate
+            return None
         auth = request.META.get(self.request_auth_header)
         if not auth:
             msg = _('Invalid token header. No credentials provided.')

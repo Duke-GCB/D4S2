@@ -6,7 +6,8 @@ from d4s2_api.views import *
 from d4s2_api.models import *
 from django.contrib.auth.models import User as django_user
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
-from .tests_auth import ResponseStatusCodeTestCase
+from d4s2_auth.tests_dukeds_auth import ResponseStatusCodeTestCase
+
 
 def setup_mock_ddsutil(mock_ddsutil):
     mock_ddsutil.return_value = Mock()
