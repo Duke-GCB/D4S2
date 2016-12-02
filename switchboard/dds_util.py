@@ -6,6 +6,7 @@ from d4s2_auth.backends.dukeds import check_jwt_token, InvalidTokenError, make_a
 from d4s2_auth.models import OAuthToken, OAuthService, User
 from d4s2_auth.oauth_utils import current_user_details, OAuthException
 import requests
+import json
 
 
 class NoTokenException(BaseException):
