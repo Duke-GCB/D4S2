@@ -15,20 +15,23 @@ class DukeDSTokenAuthentication(authentication.BaseAuthentication):
 
     For example:
 
-        X_DukeDS_Authorization: abcd.ef123.4567
+        X-DukeDS-Authorization: abcd.ef123.4567
 
         Can change the expected header, should probably do that
     """
-    request_auth_header = 'X_DukeDS_Authorization'
+    request_auth_header = 'X-DukeDS-Authorization'
+
+    def internal_request_auth_header(self):
+        return 'HTTP_{}'.format(self.request_auth_header.replace('-','_').upper())
 
     def __init__(self):
         self.backend = DukeDSAuthBackend()
 
     def authenticate(self, request):
-        if self.request_auth_header not in request.META:
+        if self.internal_request_auth_header() not in request.META:
             # Our header is not present, don't try to authenticate
             return None
-        token = request.META.get(self.request_auth_header)
+        token = request.META.get(self.internal_request_auth_header())
         if not token:
             msg = _('Invalid token header. No credentials provided.')
             raise exceptions.AuthenticationFailed(msg)
