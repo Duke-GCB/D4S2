@@ -99,6 +99,12 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         # get_remote project should be called once
         self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
+    def test_create_delivery_fails_with_transfer_id(self):
+        url = reverse('delivery-list')
+        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'transfer_id': 'transfer123'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_filter_deliveries(self):
         h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2,
                                     transfer_id=self.transfer_id1)
