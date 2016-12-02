@@ -38,7 +38,7 @@ def get_local_dds_token(user):
         try:
             checked = check_jwt_token(user.dukedsapitoken.key)
             if checked:
-                return user.ddsapitoken
+                return user.dukedsapitoken
         except InvalidTokenError:
             pass
     except User.dukedsapitoken.RelatedObjectDoesNotExist:
