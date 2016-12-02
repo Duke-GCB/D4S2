@@ -56,15 +56,11 @@ def pop_state(request):
 def authorize(request):
     service = get_service(request)
     if service is None:
-        return redirect('unconfigured')
+        return redirect('auth-unconfigured')
     auth_url, state_string = authorization_url(service)
     # Save the state with the next parameter if provided
     push_state(request, state_string)
     return redirect(auth_url)
-
-
-def unconfigured(request):
-    return render(request, 'd4s2_auth/unconfigured.html')
 
 
 def authorize_callback(request):
@@ -78,17 +74,13 @@ def authorize_callback(request):
         save_token(service, token_dict, user)
         login(request, user)
         if not destination:
-            return redirect('home')
+            return redirect('auth-home')
         else:
             return redirect(destination)
     else:
         return redirect('login')
 
 
-def login_page(request):
-    return render(request, 'd4s2_auth/login.html')
-
-
 @login_required
-def user_details(request):
-    return render(request, 'd4s2_auth/user_details.html', {'user': request.user})
+def home(request):
+    return render(request, 'd4s2_auth/home.html')
