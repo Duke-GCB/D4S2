@@ -28,14 +28,9 @@ class DukeDSTokenAuthentication(authentication.BaseAuthentication):
         if self.request_auth_header not in request.META:
             # Our header is not present, don't try to authenticate
             return None
-        auth = request.META.get(self.request_auth_header)
-        if not auth:
+        token = request.META.get(self.request_auth_header)
+        if not token:
             msg = _('Invalid token header. No credentials provided.')
-            raise exceptions.AuthenticationFailed(msg)
-        try:
-            token = auth.decode()
-        except UnicodeError:
-            msg = _('Invalid token header. Token string should not contain invalid characters.')
             raise exceptions.AuthenticationFailed(msg)
         return self.authenticate_credentials(token)
 
