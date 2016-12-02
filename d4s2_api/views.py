@@ -7,6 +7,7 @@ from d4s2_api.utils import ShareMessage, DeliveryMessage
 from switchboard.dds_util import DDSUtil, ModelPopulator
 from django.core.urlresolvers import reverse
 
+
 class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
     """
     Base class for requiring authentication for access
@@ -101,7 +102,7 @@ class DeliveryViewSet(TransferViewSet):
         delivery = self.get_object()
         if not delivery.is_new():
             raise AlreadyNotifiedException(detail='Delivery already in progress')
-        accept_path = reverse('ownership-prompt') + "?token=" + str(delivery.token)
+        accept_path = reverse('ownership-prompt') + "?token=" + str(delivery.transfer_id)
         accept_url = request.build_absolute_uri(accept_path)
         message = DeliveryMessage(delivery, accept_url)
         message.send()

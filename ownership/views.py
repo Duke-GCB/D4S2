@@ -32,7 +32,7 @@ def build_delivery_context(delivery):
     to_user = delivery_details.get_to_user()
     project = delivery_details.get_project()
     return {
-        'token': str(delivery.token),
+        'token': str(delivery.transfer_id),
         'from_name': from_user.full_name,
         'from_email': from_user.email,
         'to_name': to_user.full_name,
@@ -64,7 +64,7 @@ def accept_project_redirect(request, delivery):
     Perform delivery and redirect user to look at the project.
     """
     try:
-        perform_delivery(user, delivery)
+        perform_delivery(delivery, request.user)
         message = ProcessedMessage(delivery, "accepted")
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)
@@ -134,12 +134,10 @@ def response_with_delivery(request, param_dict, func):
     token = param_dict.get('token', None)
     if token:
         try:
-            delivery = Delivery.objects.get(token=token)
+            delivery = Delivery.objects.get(transfer_id=token)
             if delivery.is_complete():
                 return render_already_complete(request, delivery)
             return func(request, delivery)
-        except ValueError as err:
-            return general_error(request, msg=INVALID_TOKEN_MSG, status=400)
         except ObjectDoesNotExist:
             return general_error(request, msg=TOKEN_NOT_FOUND_MSG, status=404)
         except DataServiceError as err:

@@ -13,6 +13,6 @@ admin.site.register(Share, ShareAdmin)
 
 
 class DeliveryAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('token',)
+    pass
 
 admin.site.register(Delivery, DeliveryAdmin)

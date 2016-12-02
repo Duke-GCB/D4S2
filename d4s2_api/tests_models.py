@@ -9,6 +9,7 @@ class TransferBaseTestCase(TestCase):
         self.project1 = DukeDSProject.objects.create(project_id='project1')
         self.user1 = DukeDSUser.objects.create(dds_id='user1')
         self.user2 = DukeDSUser.objects.create(dds_id='user2')
+        self.transfer_id = 'abcd-1234-efgh-6789'
 
 
 class DeliveryTestCase(TransferBaseTestCase):
@@ -18,7 +19,10 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(DeliveryTestCase, self).setUp()
-        Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+        Delivery.objects.create(project=self.project1,
+                                from_user=self.user1,
+                                to_user=self.user2,
+                                transfer_id=self.transfer_id)
 
     def test_initial_state(self):
         delivery = Delivery.objects.first()
@@ -26,15 +30,14 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_required_fields(self):
         with self.assertRaises(ValueError):
-            Delivery.objects.create(project=None, from_user=None, to_user=None)
+            Delivery.objects.create(project=None, from_user=None, to_user=None, transfer_id=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
-
-    def test_token_autopopulate(self):
-        delivery = Delivery.objects.first()
-        self.assertIsNotNone(delivery.token, 'token should default to a uuid')
+            Delivery.objects.create(project=self.project1,
+                                    from_user=self.user1,
+                                    to_user=self.user2,
+                                    transfer_id=self.transfer_id)
 
     def test_mark_notified(self):
         delivery = Delivery.objects.first()
@@ -147,9 +150,9 @@ class DeliveryRelationsTestCase(TransferBaseTestCase):
         self.project2 = DukeDSProject.objects.create(project_id='project2')
         self.project3 = DukeDSProject.objects.create(project_id='project3')
         self.user3 = DukeDSUser.objects.create(dds_id='user3')
-        self.h1 = Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
-        self.h2 = Delivery.objects.create(project=self.project2, from_user=self.user1, to_user=self.user3)
-        self.h3 = Delivery.objects.create(project=self.project3, from_user=self.user2, to_user=self.user3)
+        self.h1 = Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2, transfer_id='1')
+        self.h2 = Delivery.objects.create(project=self.project2, from_user=self.user1, to_user=self.user3, transfer_id='2')
+        self.h3 = Delivery.objects.create(project=self.project3, from_user=self.user2, to_user=self.user3, transfer_id='3')
 
     def test_deliveries_from(self):
         self.assertIn(self.h1, self.user1.deliveries_from.all())
@@ -251,6 +254,7 @@ class EmailTemplateTestCase(TestCase):
         self.default_type = EmailTemplateType.from_share_role(ShareRole.DEFAULT)
         self.download_type = EmailTemplateType.from_share_role(ShareRole.DOWNLOAD)
         self.view_type = EmailTemplateType.from_share_role(ShareRole.VIEW)
+        self.transfer_id = 'abc-123'
 
     def test_create_email_template(self):
         template = EmailTemplate.objects.create(group=self.group,
@@ -315,7 +319,8 @@ class EmailTemplateTestCase(TestCase):
         # Create an email template
         delivery = Delivery.objects.create(project=self.dds_project,
                                            from_user=self.dds_user1,
-                                           to_user=self.dds_user2)
+                                           to_user=self.dds_user2,
+                                           transfer_id=self.transfer_id)
         EmailTemplate.objects.create(group=self.group,
                                      owner=self.user,
                                      template_type=EmailTemplateType.objects.get(name='accepted'),

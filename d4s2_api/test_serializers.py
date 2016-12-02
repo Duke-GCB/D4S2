@@ -9,7 +9,7 @@ class DeliverySerializerTestCase(TestCase):
             'project_id': 'project-1234',
             'from_user_id': 'user-5678',
             'to_user_id': 'user-9999',
-            'token': 'abc-1234-5678'
+            'transfer_id': 'abcd-1234-efgh-5678',
         }
 
     def test_serializes_delivery(self):
@@ -51,7 +51,7 @@ class DeliverySerializerTestCase(TestCase):
         # Update the serialized instance and change the project id
         data = dict(self.data)
         data['project_id'] = 'project0000'
-        serializer = DeliverySerializer(data=data)
+        serializer = DeliverySerializer(delivery, data=data) # Updates the existing instance
         self.assertTrue(serializer.is_valid())
         updated_delivery = serializer.save()
         self.assertEqual(DukeDSProject.objects.count(), 2, "changing id should create another project")
@@ -80,8 +80,9 @@ class DeliverySerializerTestCase(TestCase):
         # Update the serialized instance and change the project id
         data = dict(self.data)
         data['project_id'] = project0000.project_id
-        serializer = DeliverySerializer(data=data)
-        self.assertTrue(serializer.is_valid())
+        serializer = DeliverySerializer(delivery, data=data) # Updates the existing instance
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
         updated_delivery = serializer.save()
         self.assertEqual(DukeDSProject.objects.count(), 2, "changing id should not create another project")
 

@@ -20,12 +20,12 @@ def create_delivery():
     project1 = DukeDSProject.objects.create(project_id='project1')
     fromuser1 = DukeDSUser.objects.create(dds_id='fromuser1')
     touser1= DukeDSUser.objects.create(dds_id='touser1')
-    return Delivery.objects.create(project=project1, from_user=fromuser1, to_user=touser1)
+    return Delivery.objects.create(project=project1, from_user=fromuser1, to_user=touser1, transfer_id='abc123')
 
 
 def create_delivery_get_token():
     delivery = create_delivery()
-    return str(delivery.token)
+    return str(delivery.transfer_id)
 
 
 def setup_mock_delivery_details(MockDeliveryDetails):
@@ -68,13 +68,6 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn(MISSING_TOKEN_MSG, str(response.content))
         self.assertIn(token, str(response.content))
-
-    def test_with_bad_token(self):
-        token = create_delivery_get_token() + "a"
-        url = url_with_token('ownership-prompt', token)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(INVALID_TOKEN_MSG, str(response.content))
 
     def test_with_token_not_found(self):
         token = str(uuid.uuid4())
@@ -123,20 +116,13 @@ class ProcessTestCase(AuthenticatedTestCase):
         token = create_delivery_get_token() + "a"
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(INVALID_TOKEN_MSG, str(response.content))
-
-    def test_with_token_not_found(self):
-        token = str(uuid.uuid4())
-        url = reverse('ownership-process')
-        response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn(TOKEN_NOT_FOUND_MSG, str(response.content))
 
     def test_with_already_declined(self):
         delivery = create_delivery()
         delivery.mark_declined('user', 'Done', 'email text')
-        token = delivery.token
+        token = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -145,7 +131,7 @@ class ProcessTestCase(AuthenticatedTestCase):
     def test_with_already_accepted(self):
         delivery = create_delivery()
         delivery.mark_accepted('user', 'email text')
-        token = delivery.token
+        token = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

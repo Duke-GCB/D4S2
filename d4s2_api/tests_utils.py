@@ -25,8 +25,8 @@ class UtilsTestCaseDelivery(TestCase):
         mock_ddsutil.remove_user = Mock()
         h = self.h
         perform_delivery(h, self.user)
-        MockDDSUtil.assert_any_call(h.from_user.dds_id)
-        mock_ddsutil.add_user.assert_called_with(h.to_user.dds_id, h.project.project_id, 'project_admin')
+        MockDDSUtil.assert_any_call(self.user)
+        mock_ddsutil.accept_project_transfer.assert_called_with(h.transfer_id)
 
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_email_templating(self, MockDeliveryDetails):
