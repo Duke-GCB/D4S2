@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from d4s2_api.models import Delivery, State
-from d4s2_api.utils import perform_delivery, ProcessedMessage
+from d4s2_api.utils import accept_delivery, decline_delivery, ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
@@ -61,10 +61,10 @@ def ownership_process(request):
 
 def accept_project_redirect(request, delivery):
     """
-    Perform delivery and redirect user to look at the project.
+    Accept delivery and redirect user to look at the project.
     """
     try:
-        perform_delivery(delivery, request.user)
+        accept_delivery(delivery, request.user)
         message = ProcessedMessage(delivery, "accepted")
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)
@@ -92,10 +92,14 @@ def decline_project(request, delivery):
         context['error_message'] = REASON_REQUIRED_MSG
         return render(request, 'ownership/decline_reason.html', context, status=400)
 
-    message = ProcessedMessage(delivery, "declined", "Reason: {}".format(reason))
-    message.send()
-    delivery.mark_declined(request.user.get_username(), reason, message.email_text)
-    return render(request, 'ownership/decline_done.html', build_delivery_context(delivery))
+    try:
+        decline_delivery(delivery, request.user, reason)
+        message = ProcessedMessage(delivery, "declined", "Reason: {}".format(reason))
+        message.send()
+        delivery.mark_declined(request.user.get_username(), reason, message.email_text)
+        return render(request, 'ownership/decline_done.html', build_delivery_context(delivery))
+    except Exception as e:
+        return general_error(request, msg=str(e), status=500)
 
 
 @login_required

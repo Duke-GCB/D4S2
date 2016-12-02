@@ -126,8 +126,15 @@ class DDSUtil(object):
         user = self.remote_store.fetch_user(user_id)
         self.remote_store.revoke_user_project_permission(project, user)
 
+    def create_project_transfer(self, project_id, to_user_ids):
+        return self.remote_store.data_service.create_project_transfer(project_id, to_user_ids).json()
+
     def accept_project_transfer(self, transfer_id):
-        self.remote_store.data_service.accept_project_transfer(transfer_id)
+        return self.remote_store.data_service.accept_project_transfer(transfer_id).json()
+
+    def decline_project_transfer(self, transfer_id):
+        return self.remote_store.data_service.reject_project_transfer(transfer_id).json()
+
 
 class ModelPopulator(object):
     """

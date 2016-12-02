@@ -109,6 +109,15 @@ class DeliveryViewSet(TransferViewSet):
         delivery.mark_notified(message.email_text)
         return self.retrieve(request)
 
+    # Overriding create so that we attempt to create a transfer before saving to database
+    def create(self, request, *args, **kwargs):
+        dds_util = DDSUtil(request.user)
+        project_transfer = dds_util.create_project_transfer(request.data['project_id'],
+                                                            request.data['to_user_id'])
+        request.data['transfer_id'] = project_transfer['id']
+        return super(DeliveryViewSet, self).create(request, args, kwargs)
+
+
 class AlreadyNotifiedException(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'Already notified'

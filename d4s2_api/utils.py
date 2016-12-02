@@ -111,7 +111,20 @@ class ProcessedMessage(Message):
         super(ProcessedMessage, self).__init__(message)
 
 
-def perform_delivery(delivery, user):
+def accept_delivery(delivery, user):
+    """
+    Communicates with DukeDS via DDSUtil to accept the project transfer
+    :param user: The user with a DukeDS authentication credential
+    :param delivery: A Delivery object
+    :return:
+    """
+    try:
+        dds_util = DDSUtil(user)
+        dds_util.accept_project_transfer(delivery.transfer_id)
+    except ValueError as e:
+        raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+
+def decline_delivery(delivery, user, reason):
     """
     Communicates with DukeDS via DDSUtil to add the to_user to a project
     :param user: The user with a DukeDS authentication credential
@@ -120,6 +133,6 @@ def perform_delivery(delivery, user):
     """
     try:
         dds_util = DDSUtil(user)
-        dds_util.accept_project_transfer(delivery.transfer_id)
+        dds_util.reject_project_transfer(delivery.transfer_id, reason)
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))

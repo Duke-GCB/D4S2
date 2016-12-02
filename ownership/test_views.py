@@ -138,14 +138,15 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertIn(State.DELIVERY_CHOICES[State.ACCEPTED][1], str(response.content))
 
     @patch('ownership.views.DeliveryDetails')
-    @patch('ownership.views.perform_delivery')
-    def test_normal_with_decline(self, MockDeliveryDetails, mock_perform_delivery):
+    @patch('ownership.views.decline_delivery')
+    def test_normal_with_decline(self, MockDeliveryDetails, mock_decline_delivery):
         setup_mock_delivery_details(MockDeliveryDetails)
         token = create_delivery_get_token()
         url = reverse('ownership-process')
         response = self.client.post(url, {'token': token, 'decline':'decline'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('reason for declining project', str(response.content))
+        self.assertTrue(mock_decline_delivery.called)
 
 
 class DeclineReasonTestCase(AuthenticatedTestCase):
@@ -158,8 +159,8 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         self.assertIn('login', response['Location'])
 
     @patch('ownership.views.DeliveryDetails')
-    @patch('ownership.views.perform_delivery')
-    def test_cancel_decline(self, MockDeliveryDetails, mock_perform_delivery):
+    @patch('ownership.views.accept_delivery')
+    def test_cancel_decline(self, MockDeliveryDetails, mock_accept_delivery):
         setup_mock_delivery_details(MockDeliveryDetails)
         token = create_delivery_get_token()
         url = reverse('ownership-decline')
@@ -167,11 +168,12 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         expected_url = reverse('ownership-prompt')
         self.assertIn(expected_url, response.url)
+        self.assertFalse(mock_accept_delivery.called)
 
     @patch('ownership.views.DeliveryDetails')
     @patch('d4s2_api.utils.DeliveryDetails')
-    @patch('ownership.views.perform_delivery')
-    def test_confirm_decline(self, MockDeliveryDetails, MockDeliveryDetails2, mock_perform_delivery):
+    @patch('ownership.views.decline_delivery')
+    def test_confirm_decline(self, MockDeliveryDetails, MockDeliveryDetails2, mock_decline_delivery):
         setup_mock_delivery_details(MockDeliveryDetails)
         setup_mock_delivery_details(MockDeliveryDetails2)
         token = create_delivery_get_token()
@@ -179,11 +181,11 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'token': token, 'decline_reason':'Wrong person.'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('has been declined', str(response.content))
+        self.assertTrue(mock_decline_delivery.called)
 
     @patch('ownership.views.DeliveryDetails')
     @patch('d4s2_api.utils.DeliveryDetails')
-    @patch('ownership.views.perform_delivery')
-    def test_decline_with_blank(self, MockDeliveryDetails, MockDeliveryDetails2, mock_perform_delivery):
+    def test_decline_with_blank(self, MockDeliveryDetails, MockDeliveryDetails2):
         setup_mock_delivery_details(MockDeliveryDetails)
         setup_mock_delivery_details(MockDeliveryDetails2)
         token = create_delivery_get_token()

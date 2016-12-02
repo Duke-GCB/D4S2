@@ -14,6 +14,7 @@ def setup_mock_ddsutil(mock_ddsutil):
     mock_ddsutil.return_value.get_remote_user = Mock()
     mock_ddsutil.return_value.get_remote_user.return_value = MockDDSUser('Test User', 'test@example.com')
     mock_ddsutil.return_value.get_remote_project.return_value = MockDDSProject('My Project')
+    mock_ddsutil.return_value.create_project_transfer.return_value = {'id': 'mock_ddsutil_transfer_id'}
 
 
 class AuthenticatedResourceTestCase(APITestCase, ResponseStatusCodeTestCase):
@@ -42,7 +43,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
     def test_create_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('delivery-list')
-        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'transfer_id': 'transfer123'}
+        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Delivery.objects.count(), 1)
@@ -51,6 +52,9 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
         # get_remote project should be called once
         self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
+        # create_project_transfer should be called once
+        self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
+        self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
     def test_list_deliveries(self):
         Delivery.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2,

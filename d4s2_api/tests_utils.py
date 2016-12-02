@@ -1,6 +1,6 @@
 from mock import patch, Mock
 from django.test import TestCase
-from d4s2_api.utils import perform_delivery, DeliveryMessage
+from d4s2_api.utils import accept_delivery, decline_delivery, DeliveryMessage
 from d4s2_api.models import Delivery, DukeDSProject, DukeDSUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
@@ -19,14 +19,22 @@ class UtilsTestCaseDelivery(TestCase):
         self.h = Delivery.objects.create(from_user=from_user, to_user=to_user, project=project)
 
     @patch('d4s2_api.utils.DDSUtil')
-    def test_perform_delivery(self, MockDDSUtil):
+    def test_accept_delivery(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
-        mock_ddsutil.add_user = Mock()
-        mock_ddsutil.remove_user = Mock()
+        mock_ddsutil.accept_project_transfer = Mock()
         h = self.h
-        perform_delivery(h, self.user)
+        accept_delivery(h, self.user)
         MockDDSUtil.assert_any_call(self.user)
         mock_ddsutil.accept_project_transfer.assert_called_with(h.transfer_id)
+
+    @patch('d4s2_api.utils.DDSUtil')
+    def test_decline_delivery(self, MockDDSUtil):
+        mock_ddsutil = MockDDSUtil()
+        mock_ddsutil.reject_project_transfer = Mock()
+        h = self.h
+        decline_delivery(h, self.user, 'reason')
+        MockDDSUtil.assert_any_call(self.user)
+        mock_ddsutil.reject_project_transfer.assert_called_with(h.transfer_id, 'reason')
 
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_email_templating(self, MockDeliveryDetails):
@@ -38,3 +46,4 @@ class UtilsTestCaseDelivery(TestCase):
         self.assertEqual(mock_details.get_to_user.call_count, 1)
         self.assertIn('Subject Template project', message.email_text)
         self.assertIn('Body Template bob', message.email_text)
+
