@@ -74,9 +74,13 @@ Usage
 D4S2 sends emails on behalf of users. To do this, the email templates must be registered and linked to a user's group.
 
 1. Login to admin at http://127.0.0.1:8000/admin (using your superuser account)
-2. Create a group (e.g. gcb-informatics or gcb-gaab)
+2. Create a group
 3. Add users to the group
-4. Create an email template for each action (share, accept, decline) and link it to the group
+4. Either create email templates manually for each action and group or load the samples:
+
+        python manage.py loaddata emailtemplates.json
+
+The sample templates here are linked to the group with id 1 and the user with id 1, but
 
 When a user sends a delivery or share with the API, D4S2 will determine the email template to use based on their group membership.
 

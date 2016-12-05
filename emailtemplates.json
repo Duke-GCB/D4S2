@@ -1,0 +1,57 @@
+[
+    {
+        "fields": {
+            "body": "Hello {{ recipient_name }},\r\n\r\n{{ sender_name }} has shared a data set with you via the Duke Data Service. Please click the link below to preview the data set.\r\n\r\nDescription: {{ project_name }}\r\nPreview URL: {{ url }}\r\n\r\nAfter you have reviewed the data set, contact {{ sender_email }} or reply to this message to request a finalized copy.\r\n\r\nRegards,\r\n\r\nComputational Solutions\r\nDuke Center for Genomic and Computational Biology\r\ngcb-help@duke.edu\r\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions",
+            "group": 1,
+            "owner": 1,
+            "subject": "Duke Data Service share for {{ project_name }}",
+            "template_type": 1
+        },
+        "model": "d4s2_api.emailtemplate",
+        "pk": 1
+    },
+    {
+        "fields": {
+            "body": "Hello {{ recipient_name }},\r\n\r\n{{ sender_name }} has sent you a data set via the Duke Data Service. Please click the link below to accept or decline the data set.\r\n\r\nDescription: {{ project_name }}\r\nAcceptance URL: {{ url }}\r\n\r\nRegards,\r\n\r\nComputational Solutions\r\nDuke Center for Genomic and Computational Biology\r\ngcb-help@duke.edu\r\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions",
+            "group": 1,
+            "owner": 1,
+            "subject": "Duke Data Service delivery for {{ project_name }}",
+            "template_type": 6
+        },
+        "model": "d4s2_api.emailtemplate",
+        "pk": 2
+    },
+    {
+        "fields": {
+            "body": "Hello {{ sender_name }},\r\n\r\n{{ recipient_name }} has {{ type }} project {{ project_name }}.\r\n\r\n{{ message }}\r\n\r\nRegards,\r\n\r\n{{ signature }}",
+            "group": 1,
+            "owner": 1,
+            "subject": "Duke Data Service Acceptance for {{ project_name }}",
+            "template_type": 7
+        },
+        "model": "d4s2_api.emailtemplate",
+        "pk": 3
+    },
+    {
+        "fields": {
+            "body": "Hello {{ sender_name }},\r\n\r\n{{ recipient_name }} has {{ type }} project {{ project_name }}.\r\n\r\n{{ message }}\r\n\r\nRegards,\r\n\r\n{{ signature }}",
+            "group": 1,
+            "owner": 1,
+            "subject": "Duke Data Service Decline for {{ project_name }}",
+            "template_type": 8
+        },
+        "model": "d4s2_api.emailtemplate",
+        "pk": 4
+    },
+    {
+        "fields": {
+            "body": "Hello {{ recipient_name }},\r\n\r\n{{ sender_name }} has shared a data set with you via the Duke Data Service. Please click the link below to preview the data set. \r\n\r\n\r\nDescription: {{ project_name }}\r\nPreview URL: {{ url }}\r\n\r\nOnly the file metadata is visible at this time. Please contact us at {{ sender_email }} to schedule a data review appointment, at which time you will be granted download access and ultimately data ownership.\r\n\r\nRegards,\r\n\r\nComputational Solutions\r\nDuke Center for Genomic and Computational Biology\r\ngcb-help@duke.edu\r\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions",
+            "group": 1,
+            "owner": 1,
+            "subject": "Duke Data Service preview for {{ project_name }}",
+            "template_type": 2
+        },
+        "model": "d4s2_api.emailtemplate",
+        "pk": 5
+    }
+]
