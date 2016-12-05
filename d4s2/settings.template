@@ -33,5 +33,4 @@ DATABASES = {
 DDSCLIENT_PROPERTIES = {
   'url': '',
   'portal_root': '',
-  'agent_key': '',
 }

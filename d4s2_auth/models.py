@@ -50,5 +50,7 @@ class DukeDSAPIToken(models.Model):
     """
     A token for a user that can be used for authentication with Duke DS
     """
+    # This should be foreign key so it need not be unique
+    # Will need to loop over the tokens until we find a valid one, discarding expireds
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     key = models.TextField(unique=True, blank=False, null=False) # Opaque here, but JWT in practice
