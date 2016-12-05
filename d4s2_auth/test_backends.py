@@ -2,9 +2,12 @@ from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
 
 from .backends import OAuth2Backend, DukeDSAuthBackend
+from .backends.dukeds import remove_invalid_dukeds_tokens
 from .tests_oauth_utils import make_oauth_service
 from django.contrib.auth import get_user_model
 from .models import DukeDSAPIToken
+from jwt import InvalidTokenError
+
 
 class OAuth2BackendTestCase(TestCase):
 
@@ -117,10 +120,17 @@ class DukeDSAuthBackendTestCase(TestCase):
         self.assertTrue(mock_get_current_user.called, 'Should call get_current_user to get user details')
 
     def test_fails_bad_token(self):
-        from jwt import InvalidTokenError
         error = InvalidTokenError()
         self.mock_jwt_decode.side_effect = error
         authenticated_user = self.dukeds_backend.authenticate(self.key)
         self.assertIsNone(authenticated_user, 'Should not authenticate user with bad token')
         self.assertTrue(self.mock_jwt_decode.called, 'Should call jwt decode')
         self.assertEqual(self.dukeds_backend.failure_reason, error, 'should fail because of our invalid token error')
+
+    def test_removes_invalid_tokens(self):
+        error = InvalidTokenError()
+        self.mock_jwt_decode.side_effect = error
+        self.assertEqual(DukeDSAPIToken.objects.count(), 1, 'Should have one token in database')
+        remove_invalid_dukeds_tokens(self.user)
+        self.assertTrue(self.mock_jwt_decode.called, 'Should call jwt decode')
+        self.assertEqual(DukeDSAPIToken.objects.count(), 0, 'Should have removed token')

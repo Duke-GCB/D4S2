@@ -58,14 +58,25 @@ def make_auth_config(token):
 def save_dukeds_token(user, token):
     """
     Saves a DukeDSAPIToken object containing the provided token for the specified user
-    Removes existing tokens for this user
     :param user: A django User
     :param token: the token text to save
     :return: The newly created token
     """
-    # Delete any existing tokens for this user
-    DukeDSAPIToken.objects.filter(user=user).delete()
+    remove_invalid_dukeds_tokens(user)
     return DukeDSAPIToken.objects.create(user=user, key=token)
+
+
+def remove_invalid_dukeds_tokens(user):
+    """
+    Examines a user's DukeDSAPITokens, removing any that are invalid JWTs (e.g. expired)
+    :param user: a django User
+    :return: None
+    """
+    for token in DukeDSAPIToken.objects.filter(user=user):
+        try:
+            check_jwt_token(token.key)
+        except InvalidTokenError as e:
+            token.delete()
 
 
 def load_dukeds_token(user):
