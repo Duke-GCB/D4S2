@@ -22,6 +22,12 @@ class DukeDSTokenAuthentication(authentication.BaseAuthentication):
     request_auth_header = 'X-DukeDS-Authorization'
 
     def internal_request_auth_header(self):
+        """
+        Transforms the header that clients will specify into the META key
+        that the server here will see. Header fields are prefixed with 'HTTP_',
+        uppercased, and '-' is replaced with '_'
+        :return:
+        """
         return 'HTTP_{}'.format(self.request_auth_header.replace('-','_').upper())
 
     def __init__(self):

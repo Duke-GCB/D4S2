@@ -27,7 +27,10 @@ class DukeDSTokenAuthenticationClientTestCase(APITestCase, ResponseStatusCodeTes
         self.user = django_user.objects.create_user('user1', is_staff=True)
 
     def set_request_token(self, key):
-        headers = {DukeDSTokenAuthentication.request_auth_header: key}
+        # This is how we set headers in the testing client.
+        # They must be transformed to the internal format (HTTP_X_DUKEDS_AUTHORIZATION)
+        # Because the test client won't transform from X-DukeDS-Authorization
+        headers = {DukeDSTokenAuthentication().internal_request_auth_header(): key}
         self.client.credentials(**headers)
 
     @patch('d4s2_auth.backends.dukeds.decode')
@@ -80,7 +83,10 @@ class DukeDSTokenAuthenticationTestCase(TestCase):
         return self.auth.authenticate(self.request)
 
     def set_auth_header(self, value):
-        self.request.META[DukeDSTokenAuthentication.request_auth_header] = value
+        # This is how we set headers in the testing client.
+        # They must be transformed to the internal format (HTTP_X_DUKEDS_AUTHORIZATION)
+        # Because the test client won't transform from X-DukeDS-Authorization
+        self.request.META[self.auth.internal_request_auth_header()] = value
 
     def test_no_token(self):
         self.set_auth_header('')
