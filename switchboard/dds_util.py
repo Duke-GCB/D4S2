@@ -52,7 +52,7 @@ def get_dds_token_from_oauth(oauth_token):
     :param oauth_token: An OAuthToken object
     :return: The dictionary from JSON returned by the /user/api_token endpoint
     """
-    authentication_service_id = '??'
+    authentication_service_id = settings.DDSCLIENT_PROPERTIES['openid_provider_id']
     headers = {
         'Content-Type': ContentType.json,
     }
