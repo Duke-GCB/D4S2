@@ -3,7 +3,7 @@ from ddsc.core.ddsapi import ContentType
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import DukeDSUser, EmailTemplate
 from d4s2_auth.backends.dukeds import check_jwt_token, InvalidTokenError, make_auth_config, save_dukeds_token
-from d4s2_auth.models import OAuthToken, OAuthService, User
+from d4s2_auth.models import OAuthToken, OAuthService, User, DukeDSAPIToken
 from d4s2_auth.oauth_utils import current_user_details, OAuthException
 import requests
 import json
@@ -33,16 +33,15 @@ def get_local_dds_token(user):
     :param user: A django user
     :return: The DukeDSAPIToken for the user, or None if invalid or not present
     """
+    # If user has an existing token, check to see if it's valid
     try:
-        # If user has an existing token, check to see if it's valid
-        try:
-            checked = check_jwt_token(user.dukedsapitoken.key)
+        for token in DukeDSAPIToken.objects.filter(user=user):
+            checked = check_jwt_token(token.key)
             if checked:
-                return user.dukedsapitoken
-        except InvalidTokenError:
-            pass
-    except User.dukedsapitoken.RelatedObjectDoesNotExist:
-        pass
+                return token
+    except InvalidTokenError:
+        token.delete()
+
     return None
 
 
