@@ -55,13 +55,15 @@ def get_dds_token_from_oauth(oauth_token):
     headers = {
         'Content-Type': ContentType.json,
     }
+    access_token = oauth_token.token_dict.get('access_token')
+
     data = {
-        "access_token": oauth_token.token_json,
+        "access_token": access_token,
         "authentication_service_id": authentication_service_id,
     }
     base_url = settings.DDSCLIENT_PROPERTIES['url']
     url = base_url + "/user/api_token"
-    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response = requests.get(url, headers=headers, params=data)
     try:
         response.raise_for_status()
         return response.json()
