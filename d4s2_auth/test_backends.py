@@ -3,6 +3,7 @@ from mock.mock import patch, MagicMock, Mock
 
 from .backends import OAuth2Backend, DukeDSAuthBackend
 from .backends.dukeds import remove_invalid_dukeds_tokens
+from .backends.base import BaseBackend
 from .tests_oauth_utils import make_oauth_service
 from django.contrib.auth import get_user_model
 from .models import DukeDSAPIToken
@@ -66,8 +67,6 @@ class OAuth2BackendTestCase(TestCase):
         self.assertEqual(user.pk, orig_user_pk, 'Should update existing user')
         self.assertEqual(user.first_name, self.details.get('given_name'), 'Updates first name')
         self.assertEqual(user.email, self.details.get('email'), 'Updates email')
-
-# TODO: Test the update flag and decide how to use it
 
 
 class DukeDSAuthBackendTestCase(TestCase):
@@ -134,3 +133,25 @@ class DukeDSAuthBackendTestCase(TestCase):
         remove_invalid_dukeds_tokens(self.user)
         self.assertTrue(self.mock_jwt_decode.called, 'Should call jwt decode')
         self.assertEqual(DukeDSAPIToken.objects.count(), 0, 'Should have removed token')
+
+
+class BaseBackendTestCase(TestCase):
+
+    def tests_update_user_flag(self):
+        details = {
+            'username': 'ab123',
+            'first_name': 'Aaron',
+            'last_name': 'Burr',
+            'email': 'ab123@us.gov'
+        }
+
+        user_model = get_user_model()
+        user = user_model.objects.create(username=details.get('username'))
+        self.assertEqual(user.first_name, '', 'User created should not have first_name')
+
+        backend = BaseBackend()
+        saved_user = backend.save_user(details, update=False)
+        self.assertEqual(saved_user.first_name, '', 'should not have updated user')
+
+        saved_user = backend.save_user(details, update=True)
+        self.assertEqual(saved_user.first_name, 'Aaron', 'should have updated user')

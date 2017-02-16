@@ -71,7 +71,7 @@ class BaseBackend(object):
         user, created = get_user_model().objects.get_or_create(username=user_dict.get('username'))
         # Update the keys
         if created or update:
-            self.update_model(user, user_dict)
+            user = self.update_model(user, user_dict)
         return user
 
     def get_user(self, user_id):
