@@ -75,18 +75,18 @@ D4S2 sends emails to notify recipients of data deliveries and other actions. To 
 
 The email templates are intended to be specific to a group of users (such as a data-generating core facility), so there is no default group.
 
-To administer groups and email templates:
+Groups and users can be registered with a manage.py command. To register user with NetID **ba123** and add to group **informatics**, use the following:
+
+      python manage.py registeruser ba123@duke.edu informatics
+
+Groups, users, and Email templates can also be administered via the Django Admin application:
 
 1. Login to admin at http://127.0.0.1:8000/admin (using your superuser account)
-2. Create a group
-3. Add users to the group
-4. Either create email templates manually for each action and group or load the samples:
+2. Create email templates manually for each action and group or load the samples:
 
         python manage.py loaddata emailtemplates.json
 
-The sample templates here are linked to the group with id 1 and the user with id 1, but
-
-When a user sends a delivery or share with the API, D4S2 will determine the email template to use based on their group membership.
+Sample templates included are linked to the group with id 1 and the user with id 1.
 
 ## Sharing a project
 
