@@ -6,29 +6,20 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.contrib.auth.models import User, Group
 from simple_history.models import HistoricalRecords
 
-class APIUserManager(models.Manager):
-    """
-    Manager to return API users - those with API keys
-    """
-    def get_queryset(self):
-        return super(APIUserManager, self).get_queryset().exclude(api_key__isnull=True)
-
 
 class DukeDSUser(models.Model):
     """
-    Represents a DukeDS user. Keeps track of their API key. The API key
+    Represents a DukeDS user.
     is used when the corresponding user invokes an action that requires
     communication with DukeDS (e.g. sharing a project or performing delivery)
 
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    api_key = models.CharField(max_length=36, null=True, unique=True)
     full_name = models.TextField(null=True)
     email = models.EmailField(null=True)
 
     objects = models.Manager()
-    api_users = APIUserManager()
 
     def populated(self):
         if self.full_name and self.email:
@@ -104,7 +95,7 @@ class Delivery(models.Model):
     from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
     to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
-    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    transfer_id = models.CharField(max_length=36, null=False, unique=True)
     decline_reason = models.TextField(null=False, blank=True)
     performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or declined the delivery
     delivery_email_text = models.TextField(null=False, blank=True)

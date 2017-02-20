@@ -38,7 +38,6 @@ if os.getenv('D4S2_SMTP_HOST') is not None:
 DDSCLIENT_PROPERTIES = {
   'url': os.getenv('D4S2_DDSCLIENT_URL'),
   'portal_root': os.getenv('D4S2_DDSCLIENT_PORTAL_ROOT'),
-  'agent_key': os.getenv('D4S2_DDSCLIENT_AGENT_KEY'),
 }
 
 STATIC_ROOT='/usr/src/app/static'

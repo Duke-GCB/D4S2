@@ -15,11 +15,10 @@ Installation - Local
 
         cp d4s2/settings.template d4s2/settings.py
 
-4. Edit the `settings.py` file to populate the `DDSCLIENT_PROPERTIES` with a the DukeDS API URL and a software agent key, e.g.
+4. Edit the `settings.py` file to populate the `DDSCLIENT_PROPERTIES` with the DukeDS API URL.
 
         DDSCLIENT_PROPERTIES = {
           'url': 'https://api.dataservice.duke.edu/api/v1',
-          'agent_key': '37a9cc3b5ed69bc96081e98478c009bb',
         }
 
 5. Create the database schema:
@@ -49,7 +48,6 @@ Installation - Docker Compose
 
         D4S2_SECRET_KEY=some-random-string
         D4S2_DDSCLIENT_URL=https://dataservice-host/api/v1
-        D4S2_DDSCLIENT_AGENT_KEY=your-agent-key
         POSTGRES_USER=d4s2_user
         POSTGRES_PASSWORD=some-random-password
         POSTGRES_DB=d4s2_db
@@ -68,20 +66,27 @@ Installation - Docker Compose
 
 7. The server is running and the API can be explored at  [http://your-docker-host:8000/api/v1/](http://your-docker-host:8000/api/v1/)
 
-
 Usage
 =====
 
-## Register a DukeDS user
+## Creating Email templates and users
 
-D4S2 communicates with the Duke Data Service API as a software agent. For this to work, DukeDS users must register their UDID and user key with D4S2. This can be done from the admin interface:
+D4S2 sends emails to notify recipients of data deliveries and other actions. To share or deliver data using D4S2, sending users must belong to **groups**. Each group must have a set of email templates registered for the actions its users will perform (share, delivery, accept, decline, etc).
 
-1. Visit http://127.0.0.1:8000/admin/d4s2_api/dukedsuser/
-2. Login with your superuser account
-3. Click **Add Duke DS User**
-  1. Select or add a User (e.g. the superuser you created)
-  2. Enter the DukeDS UDID of the user and the user's API key
-  3. Click **Save**
+The email templates are intended to be specific to a group of users (such as a data-generating core facility), so there is no default group.
+
+Groups and users can be registered with a manage.py command. To register user with NetID **ba123** and add to group **informatics**, use the following:
+
+      python manage.py registeruser ba123@duke.edu informatics
+
+Groups, users, and Email templates can also be administered via the Django Admin application:
+
+1. Login to admin at http://127.0.0.1:8000/admin (using your superuser account)
+2. Create email templates manually for each action and group or load the samples:
+
+        python manage.py loaddata emailtemplates.json
+
+Sample templates included are linked to the group with id 1 and the user with id 1.
 
 ## Sharing a project
 
@@ -89,14 +94,12 @@ Sharing a project is done by granting permissions to additional users, then noti
 
 This application is responsible for sending emails to the recipients, based on the roles they are given.
 
-_September 21, 2016: Instructions are WIP due to email templates tied to groups_
-
 1. Create a Django group, add django user to group. Must correspond to
 2. Create an email template, associate with group and role
 3. Create a Share:
 
         $ curl -X POST \
-          -H "Authorization: Token <your-api-key>"
+          -H "Authorization: X-DukeDS-Authorization <JWT from DukeDS>"
           -H "Content-Type: application/json" \
           -d '{"project_id": "project-dds-uuid", "from_user_id": "from-user-uuid", "to_user_id": "to-user-uuid", "role": "file_downloader" } \
           http://127.0.0.1:8000/api/v1/shares/

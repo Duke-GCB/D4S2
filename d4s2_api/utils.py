@@ -111,26 +111,28 @@ class ProcessedMessage(Message):
         super(ProcessedMessage, self).__init__(message)
 
 
-def perform_delivery(delivery):
+def accept_delivery(delivery, user):
     """
-    Communicates with DukeDS via DDSUtil to add the to_user to a project
+    Communicates with DukeDS via DDSUtil to accept the project transfer
+    :param user: The user with a DukeDS authentication credential
     :param delivery: A Delivery object
     :return:
     """
-    auth_role = 'project_admin'
     try:
-        # Add the to_user to the project, acting as the from_user
-        ddsutil_from = DDSUtil(delivery.from_user.dds_id)
-        ddsutil_from.add_user(delivery.to_user.dds_id, delivery.project.project_id, auth_role)
-        # At this point, We'd like to remove the from_user from the project, changing ownership
-        # However, we cannot remove the from_user if we are authenticated as that user
-        # We experimented with authenticating as the to_user, but this was not practical
-        # as we are not able to register our application to receive credentials from
-        # the duke-authentication service. The alternative was to require all recipients
-        # to obtain API keys and register them our service, but this is a poor user experience
-        # We hope to simplify this if the from_user can remove himself/herself from the
-        # project after he/she has added the to_user:
-        # https://github.com/Duke-Translational-Bioinformatics/duke-data-service/issues/577
+        dds_util = DDSUtil(user)
+        dds_util.accept_project_transfer(delivery.transfer_id)
+    except ValueError as e:
+        raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
 
+def decline_delivery(delivery, user, reason):
+    """
+    Communicates with DukeDS via DDSUtil to add the to_user to a project
+    :param user: The user with a DukeDS authentication credential
+    :param delivery: A Delivery object
+    :return:
+    """
+    try:
+        dds_util = DDSUtil(user)
+        dds_util.reject_project_transfer(delivery.transfer_id, reason)
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))

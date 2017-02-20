@@ -31,7 +31,7 @@ DATABASES = {
 
 # DukeDSClient configuration
 DDSCLIENT_PROPERTIES = {
-  'url': '',
-  'portal_root': '',
-  'agent_key': '',
+  'url': '', # 'https://api.dataservice.duke.edu/api/v1'
+  'portal_root': '', # 'https://dev.dataservice.duke.edu',
+  'openid_provider_id': '', # service_id from https://api.dataservice.duke.edu/api/v1/auth_providers
 }

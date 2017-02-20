@@ -2,15 +2,15 @@ from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from d4s2_api.models import Delivery, State
-from d4s2_api.utils import perform_delivery, ProcessedMessage
+from d4s2_api.utils import accept_delivery, decline_delivery, ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 
-MISSING_TOKEN_MSG = 'Missing authorization token.'
-INVALID_TOKEN_MSG = 'Invalid authorization token.'
-TOKEN_NOT_FOUND_MSG = 'Authorization token not found.'
+MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
+INVALID_TRANSFER_ID = 'Invalid transfer ID.'
+TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
 
 
@@ -32,7 +32,7 @@ def build_delivery_context(delivery):
     to_user = delivery_details.get_to_user()
     project = delivery_details.get_project()
     return {
-        'token': str(delivery.token),
+        'transfer_id': str(delivery.transfer_id),
         'from_name': from_user.full_name,
         'from_email': from_user.email,
         'to_name': to_user.full_name,
@@ -61,10 +61,10 @@ def ownership_process(request):
 
 def accept_project_redirect(request, delivery):
     """
-    Perform delivery and redirect user to look at the project.
+    Accept delivery and redirect user to look at the project.
     """
     try:
-        perform_delivery(delivery)
+        accept_delivery(delivery, request.user)
         message = ProcessedMessage(delivery, "accepted")
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)
@@ -92,10 +92,14 @@ def decline_project(request, delivery):
         context['error_message'] = REASON_REQUIRED_MSG
         return render(request, 'ownership/decline_reason.html', context, status=400)
 
-    message = ProcessedMessage(delivery, "declined", "Reason: {}".format(reason))
-    message.send()
-    delivery.mark_declined(request.user.get_username(), reason, message.email_text)
-    return render(request, 'ownership/decline_done.html', build_delivery_context(delivery))
+    try:
+        decline_delivery(delivery, request.user, reason)
+        message = ProcessedMessage(delivery, "declined", "Reason: {}".format(reason))
+        message.send()
+        delivery.mark_declined(request.user.get_username(), reason, message.email_text)
+        return render(request, 'ownership/decline_done.html', build_delivery_context(delivery))
+    except Exception as e:
+        return general_error(request, msg=str(e), status=500)
 
 
 @login_required
@@ -105,7 +109,7 @@ def ownership_decline(request):
     Handle response from decline reason prompt.
     """
     if request.POST.get('cancel', None):
-        url = url_with_token('ownership-prompt', request.POST.get('token'))
+        url = url_with_transfer_id('ownership-prompt', request.POST.get('transfer_id'))
         return redirect(url)
     params = request.GET
     func = render_decline_reason_prompt
@@ -115,37 +119,35 @@ def ownership_decline(request):
     return response_with_delivery(request, params, func)
 
 
-def url_with_token(name, token=None):
+def url_with_transfer_id(name, transfer_id=None):
     """
-    Lookup url for name and append token to url.
+    Lookup url for name and append transfer_id to url.
     """
     url = reverse(name)
-    if token:
-        url = "{}?token={}".format(url, token)
+    if transfer_id:
+        url = "{}?transfer_id={}".format(url, transfer_id)
     return url
 
 
 def response_with_delivery(request, param_dict, func):
     """
-    Pull out token from request params and return func(delivery).
+    Pull out transfer_id from request params and return func(delivery).
     If delivery already complete render already complete message.
-    Renders missing authorization token message otherwise.
+    Renders missing authorization transfer_id message otherwise.
     """
-    token = param_dict.get('token', None)
-    if token:
+    transfer_id = param_dict.get('transfer_id', None)
+    if transfer_id:
         try:
-            delivery = Delivery.objects.get(token=token)
+            delivery = Delivery.objects.get(transfer_id=transfer_id)
             if delivery.is_complete():
                 return render_already_complete(request, delivery)
             return func(request, delivery)
-        except ValueError as err:
-            return general_error(request, msg=INVALID_TOKEN_MSG, status=400)
         except ObjectDoesNotExist:
-            return general_error(request, msg=TOKEN_NOT_FOUND_MSG, status=404)
+            return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)
         except DataServiceError as err:
             return general_error(request, msg=(err), status=500)
     else:
-        return general_error(request, msg=MISSING_TOKEN_MSG, status=400)
+        return general_error(request, msg=MISSING_TRANSFER_ID_MSG, status=400)
 
 
 def render_already_complete(request, delivery):

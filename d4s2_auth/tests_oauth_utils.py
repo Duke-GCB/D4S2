@@ -1,6 +1,6 @@
 from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
-
+from django.contrib.auth import get_user_model
 from .oauth_utils import *
 
 
@@ -73,13 +73,13 @@ class OAuthUtilsTest(TestCase):
         self.assertEqual(token, {'access_token': 'abcxyz'}, 'Returns expected token')
 
     @patch('d4s2_auth.oauth_utils.make_oauth_session')
-    def test_get_user_details(self, mock_make_oauth_session):
+    def test_user_details_from_token(self, mock_make_oauth_session):
         mock_client = Mock()
         mock_make_oauth_session.return_value = mock_client
         user_details = {'name':'George Washington'}
         configure_mock_client(mock_client, user_details)
         token_dict = {'access_token': 'abcxyz'}
-        resource = get_user_details(self.service, token_dict)
+        resource = user_details_from_token(self.service, token_dict)
         self.assertEqual(resource, user_details, 'Returns expected resource')
         self.assertTrue(mock_make_oauth_session.post.called_with(self.service.resource_uri), 'Posts to resource URI')
 

@@ -8,7 +8,7 @@
 <form action="{% url 'ownership-decline' %}" method="post">
   <div>
     {% csrf_token %}
-    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="transfer_id" value="{{ transfer_id }}">
 
     <textarea autofocus class="decline_textarea" type="text" rows= "10" name="decline_reason" ></textarea>
 

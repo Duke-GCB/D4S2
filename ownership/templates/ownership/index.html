@@ -43,7 +43,7 @@
 <br/>
 <form action="{% url 'ownership-process' %}" method="post">
     {% csrf_token %}
-    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="transfer_id" value="{{ transfer_id }}">
 
     <input type="submit" value="Accept"
            name="accept"

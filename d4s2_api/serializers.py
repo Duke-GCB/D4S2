@@ -1,8 +1,9 @@
-from d4s2_api.models import Delivery, Share, DukeDSUser, DukeDSProject
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.encoding import smart_text
 from rest_framework import serializers
+
+from d4s2_api.models import Delivery, Share, DukeDSUser, DukeDSProject
 
 
 class CreatableSlugRelatedField(serializers.SlugRelatedField):
@@ -22,6 +23,7 @@ class CreatableSlugRelatedField(serializers.SlugRelatedField):
 
     From http://stackoverflow.com/a/28011896
     """
+
     def to_internal_value(self, data):
         try:
             return self.get_queryset().get_or_create(**{self.slug_field: data})[0]
@@ -32,27 +34,30 @@ class CreatableSlugRelatedField(serializers.SlugRelatedField):
 
 
 class DeliverySerializer(serializers.HyperlinkedModelSerializer):
-    project_id = CreatableSlugRelatedField(source='project', slug_field='project_id', queryset=DukeDSProject.objects.all())
+    project_id = CreatableSlugRelatedField(source='project', slug_field='project_id',
+                                           queryset=DukeDSProject.objects.all())
     from_user_id = CreatableSlugRelatedField(source='from_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
     to_user_id = CreatableSlugRelatedField(source='to_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
 
     class Meta:
         model = Delivery
-        fields = ('id','url','project_id','from_user_id','to_user_id','state')
+        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id')
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
-    project_id = CreatableSlugRelatedField(source='project', slug_field='project_id', queryset=DukeDSProject.objects.all())
+    project_id = CreatableSlugRelatedField(source='project', slug_field='project_id',
+                                           queryset=DukeDSProject.objects.all())
     from_user_id = CreatableSlugRelatedField(source='from_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
     to_user_id = CreatableSlugRelatedField(source='to_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
 
     class Meta:
         model = Share
-        fields = ('id','url','project_id','from_user_id','to_user_id','role','state')
+        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state')
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     user_id = serializers.PrimaryKeyRelatedField(source='user', queryset=User.objects.all())
+
     class Meta:
         model = DukeDSUser
-        fields = ('id', 'user_id','url','dds_id', 'api_key', 'full_name', 'email')
+        fields = ('id', 'user_id', 'url', 'dds_id', 'full_name', 'email')
