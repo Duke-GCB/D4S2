@@ -71,7 +71,11 @@ Usage
 
 ## Creating Email templates and users
 
-D4S2 sends emails on behalf of users. To do this, the email templates must be registered and linked to a user's group.
+D4S2 sends emails to notify recipients of data deliveries and other actions. To share or deliver data using D4S2, sending users must belong to **groups**. Each group must have a set of email templates registered for the actions its users will perform (share, delivery, accept, decline, etc).
+
+The email templates are intended to be specific to a group of users (such as a data-generating core facility), so there is no default group.
+
+To administer groups and email templates:
 
 1. Login to admin at http://127.0.0.1:8000/admin (using your superuser account)
 2. Create a group
