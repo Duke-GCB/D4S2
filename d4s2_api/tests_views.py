@@ -121,7 +121,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2, transfer_id='abcd')
         self.assertTrue(h.is_new())
         url = reverse('delivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
@@ -129,6 +129,10 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         h = Delivery.objects.get(pk=h.pk)
         self.assertFalse(h.is_new())
         self.assertTrue(mock_delivery_message.called)
+        # Make sure transfer_id is in the email message
+        ownership_url = reverse('ownership-prompt')
+        # TODO: Remove http://testserver
+        mock_delivery_message.assert_called_with(h, 'http://testserver' + ownership_url + '?transfer_id=abcd')
         self.assertTrue(instance.send.called)
 
     @patch('d4s2_api.views.DeliveryMessage')
