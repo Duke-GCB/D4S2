@@ -133,8 +133,8 @@ class DDSUtil(object):
     def accept_project_transfer(self, transfer_id):
         return self.remote_store.data_service.accept_project_transfer(transfer_id).json()
 
-    def decline_project_transfer(self, transfer_id):
-        return self.remote_store.data_service.reject_project_transfer(transfer_id).json()
+    def decline_project_transfer(self, transfer_id, reason):
+        return self.remote_store.data_service.reject_project_transfer(transfer_id, reason).json()
 
 
 class ModelPopulator(object):
