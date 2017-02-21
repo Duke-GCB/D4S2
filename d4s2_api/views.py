@@ -102,7 +102,7 @@ class DeliveryViewSet(TransferViewSet):
         delivery = self.get_object()
         if not delivery.is_new():
             raise AlreadyNotifiedException(detail='Delivery already in progress')
-        accept_path = reverse('ownership-prompt') + "?token=" + str(delivery.transfer_id)
+        accept_path = reverse('ownership-prompt') + "?transfer_id=" + str(delivery.transfer_id)
         accept_url = request.build_absolute_uri(accept_path)
         message = DeliveryMessage(delivery, accept_url)
         message.send()
