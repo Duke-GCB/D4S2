@@ -7,6 +7,7 @@ from d4s2_api.models import *
 from django.contrib.auth.models import User as django_user
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from d4s2_auth.tests_dukeds_auth import ResponseStatusCodeTestCase
+from rest_framework.test import APIRequestFactory
 
 
 def setup_mock_ddsutil(mock_ddsutil):
@@ -121,7 +122,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2, transfer_id='abcd')
         self.assertTrue(h.is_new())
         url = reverse('delivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
@@ -129,6 +130,10 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         h = Delivery.objects.get(pk=h.pk)
         self.assertFalse(h.is_new())
         self.assertTrue(mock_delivery_message.called)
+        # Make sure transfer_id is in the email message
+        ownership_url = reverse('ownership-prompt')
+        expected_absolute_url = APIRequestFactory().request().build_absolute_uri(ownership_url) + '?transfer_id=abcd'
+        mock_delivery_message.assert_called_with(h, expected_absolute_url)
         self.assertTrue(instance.send.called)
 
     @patch('d4s2_api.views.DeliveryMessage')

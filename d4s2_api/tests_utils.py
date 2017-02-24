@@ -30,11 +30,11 @@ class UtilsTestCaseDelivery(TestCase):
     @patch('d4s2_api.utils.DDSUtil')
     def test_decline_delivery(self, MockDDSUtil):
         mock_ddsutil = MockDDSUtil()
-        mock_ddsutil.reject_project_transfer = Mock()
+        mock_ddsutil.decline_project_transfer = Mock()
         h = self.h
         decline_delivery(h, self.user, 'reason')
         MockDDSUtil.assert_any_call(self.user)
-        mock_ddsutil.reject_project_transfer.assert_called_with(h.transfer_id, 'reason')
+        mock_ddsutil.decline_project_transfer.assert_called_with(h.transfer_id, 'reason')
 
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_email_templating(self, MockDeliveryDetails):

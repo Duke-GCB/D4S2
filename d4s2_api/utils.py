@@ -133,6 +133,6 @@ def decline_delivery(delivery, user, reason):
     """
     try:
         dds_util = DDSUtil(user)
-        dds_util.reject_project_transfer(delivery.transfer_id, reason)
+        dds_util.decline_project_transfer(delivery.transfer_id, reason)
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
