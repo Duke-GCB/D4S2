@@ -127,6 +127,9 @@ class DDSUtil(object):
         user = self.remote_store.fetch_user(user_id)
         self.remote_store.revoke_user_project_permission(project, user)
 
+    def get_project_transfer(self, transfer_id):
+        return self.remote_store.data_service.get_project_transfer(transfer_id).json()
+
     def create_project_transfer(self, project_id, to_user_ids):
         return self.remote_store.data_service.create_project_transfer(project_id, to_user_ids).json()
 
@@ -167,6 +170,10 @@ class ModelPopulator(object):
             dds_project.name = dds_project.name or remote_project.name
             dds_project.save()
 
+    def update_delivery(self, delivery):
+        project_transfer = self.dds_util.get_project_transfer(delivery.transfer_id)
+        delivery.update_state_from_project_transfer(project_transfer)
+
 
 class DeliveryDetails(object):
     def __init__(self, delivery_or_share):
@@ -202,3 +209,7 @@ class DeliveryDetails(object):
             return email_template.subject, email_template.body
         else:
             raise RuntimeError('No email template found')
+
+    def get_delivery(self):
+        self.model_populator.update_delivery(self.delivery)
+        return self.delivery
