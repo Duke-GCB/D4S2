@@ -42,6 +42,27 @@ class DukeDSProject(models.Model):
     def __str__(self):
         return "{} - {}".format(self.project_id, self.name,)
 
+class DDSProjectTransferDetails(object):
+    class Fields(object):
+        """
+        Fields of interest in project_transfer paylods
+        """
+        STATUS = 'status'
+        STATUS_COMMENT = 'status_comment'
+        FROM_USER = 'from_user'
+        TO_USERS = 'to_users'
+        PROJECT = 'project'
+
+    class Status(object):
+        """
+        States for Duke Data Service project_transfers
+        """
+        PENDING = 'pending'
+        REJECTED = 'rejected'
+        ACCEPTED = 'accepted'
+        CANCELED = 'canceled'
+
+
 
 class State(object):
     """
@@ -64,6 +85,19 @@ class State(object):
         (NOTIFIED, 'Notified'),
         (FAILED, 'Failed'),
     )
+
+
+class TransferStatusLookup(object):
+    TransferStatusMap = {
+        DDSProjectTransferDetails.Status.PENDING: State.NEW,
+        DDSProjectTransferDetails.Status.ACCEPTED: State.ACCEPTED,
+        DDSProjectTransferDetails.Status.REJECTED: State.DECLINED,
+        DDSProjectTransferDetails.Status.CANCELED: State.FAILED,
+    }
+
+    @classmethod
+    def get(cls, status):
+        return cls.TransferStatusMap.get(status)
 
 
 class ShareRole(object):
@@ -105,7 +139,7 @@ class Delivery(models.Model):
         return self.state == State.NEW
 
     def is_complete(self):
-        return self.state == State.ACCEPTED or self.state == State.DECLINED
+        return self.state == State.ACCEPTED or self.state == State.DECLINED or self.state == State.FAILED
 
     def mark_notified(self, email_text, save=True):
         self.state = State.NOTIFIED
@@ -125,6 +159,25 @@ class Delivery(models.Model):
         self.completion_email_text = decline_email_text
         if save: self.save()
 
+    @classmethod
+    def by_transfer_id(cls, transfer_id):
+        return Delivery.objects.get(transfer_id=transfer_id)
+
+    def update_state_from_project_transfer(self, project_transfer={}):
+        """
+        Updates a Delivery object with details from a DukeDS project_transfer
+        :param project_transfer: a dictionary containing details of a project_transfer, e.g. {'id': 'abc', 'status': 'rejected'...}
+        :return: None
+        """
+        # sync the project
+        remote_status = project_transfer.get(DDSProjectTransferDetails.Fields.STATUS)
+        local_state = TransferStatusLookup.get(remote_status)
+        if not self.state == local_state:
+            # State has changed
+            self.state = local_state
+            if local_state == State.DECLINED:
+                self.decline_reason = project_transfer.get(DDSProjectTransferDetails.Fields.STATUS_COMMENT)
+            self.save()
 
     def __str__(self):
         return 'Delivery Project: {} State: {} Performed by: {}'.format(
