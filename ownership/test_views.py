@@ -60,9 +60,10 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertIn(MISSING_TRANSFER_ID_MSG, str(response.content))
 
     @patch('ownership.views.DeliveryDetails')
-    def test_normal_with_valid_transfer_id(self, MockDeliveryDetails):
-        setup_mock_delivery_details(MockDeliveryDetails)
+    def test_normal_with_valid_transfer_id(self, mock_delivery_details):
+        setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
         url = url_with_transfer_id('ownership-prompt', transfer_id)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -164,8 +165,8 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn('login', response['Location'])
 
-    @patch('ownership.views.DeliveryDetails')
     @patch('ownership.views.accept_delivery')
+    @patch('ownership.views.DeliveryDetails')
     def test_cancel_decline(self, MockDeliveryDetails, mock_accept_delivery):
         setup_mock_delivery_details(MockDeliveryDetails)
         transfer_id = create_delivery_get_transfer_id()
@@ -176,27 +177,27 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         self.assertIn(expected_url, response.url)
         self.assertFalse(mock_accept_delivery.called)
 
-    @patch('ownership.views.DeliveryDetails')
-    @patch('d4s2_api.utils.DeliveryDetails')
     @patch('ownership.views.decline_delivery')
-    # TODO: Fix order
-    def test_confirm_decline(self, MockDeliveryDetails, MockDeliveryDetails2, mock_decline_delivery):
-        setup_mock_delivery_details(MockDeliveryDetails)
-        setup_mock_delivery_details(MockDeliveryDetails2)
+    @patch('ownership.views.DeliveryDetails')
+    @patch('ownership.views.ProcessedMessage')
+    def test_confirm_decline(self, mock_processed_message, mock_delivery_details, mock_decline_delivery):
+        mock_processed_message.return_value.email_text = 'email text'
+        setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
         url = reverse('ownership-decline')
-        # THIS SHOULD FAIL UNLESS 'DECLINE'
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason':'Wrong person.'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('has been declined', str(response.content))
         self.assertTrue(mock_decline_delivery.called)
+        self.assertTrue(mock_processed_message.called)
+        self.assertTrue(mock_processed_message.return_value.send.called)
 
     @patch('ownership.views.DeliveryDetails')
-    @patch('d4s2_api.utils.DeliveryDetails')
-    def test_decline_with_blank(self, MockDeliveryDetails, MockDeliveryDetails2):
-        setup_mock_delivery_details(MockDeliveryDetails)
-        setup_mock_delivery_details(MockDeliveryDetails2)
+    def test_decline_with_blank(self, mock_delivery_details):
+        setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
         url = reverse('ownership-decline')
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason': ''})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
