@@ -206,3 +206,21 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason': ''})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(REASON_REQUIRED_MSG, str(response.content))
+
+
+class AcceptedPageTestCase(AuthenticatedTestCase):
+
+    @patch('ownership.views.DeliveryDetails')
+    def test_renders_accepted_page_with_project_url(self, mock_delivery_details):
+        setup_mock_delivery_details(mock_delivery_details)
+        transfer_id = create_delivery_get_transfer_id()
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
+        url = reverse('ownership-accepted')
+        response = self.client.get(url, {'transfer_id': transfer_id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('View this project', str(response.content))
+
+    def test_renders_error_with_bad_transfer_id(self):
+        url = reverse('ownership-accepted')
+        response = self.client.get(url, {'transfer_id': 'garbage'})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

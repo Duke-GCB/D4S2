@@ -174,7 +174,10 @@ def ownership_accepted(request):
     """
     Shows an acceptance page, with link to the Data Service Project
     """
-    transfer_id = request.GET.get('transfer_id', None)
-    delivery = DeliveryDetails.from_transfer_id(transfer_id).get_delivery()
-    context = build_delivery_context(delivery)
-    return render(request, 'ownership/accepted.html', context)
+    try:
+        transfer_id = request.GET.get('transfer_id', None)
+        delivery = DeliveryDetails.from_transfer_id(transfer_id).get_delivery()
+        context = build_delivery_context(delivery)
+        return render(request, 'ownership/accepted.html', context)
+    except ObjectDoesNotExist:
+        return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)
