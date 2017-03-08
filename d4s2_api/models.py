@@ -159,10 +159,6 @@ class Delivery(models.Model):
         self.completion_email_text = decline_email_text
         if save: self.save()
 
-    @classmethod
-    def by_transfer_id(cls, transfer_id):
-        return Delivery.objects.get(transfer_id=transfer_id)
-
     def update_state_from_project_transfer(self, project_transfer={}):
         """
         Updates a Delivery object with details from a DukeDS project_transfer

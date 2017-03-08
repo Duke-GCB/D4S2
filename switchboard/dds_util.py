@@ -1,7 +1,7 @@
 from django.conf import settings
 from ddsc.core.ddsapi import ContentType
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import DukeDSUser, EmailTemplate
+from d4s2_api.models import DukeDSUser, EmailTemplate, Delivery
 from d4s2_auth.backends.dukeds import check_jwt_token, InvalidTokenError, make_auth_config, save_dukeds_token
 from d4s2_auth.models import OAuthToken, OAuthService, User, DukeDSAPIToken
 from d4s2_auth.oauth_utils import current_user_details, OAuthException
@@ -213,3 +213,14 @@ class DeliveryDetails(object):
     def get_delivery(self):
         self.model_populator.update_delivery(self.delivery)
         return self.delivery
+
+    @classmethod
+    def from_transfer_id(self, transfer_id):
+        """
+        Finds a local delivery by transfer id and ensures it's up-to-date with the server
+        :param transfer_id: a DukeDS Project Transfer ID
+        :return: a d4s2_api.models.Delivery
+        """
+
+        delivery = Delivery.objects.get(transfer_id=transfer_id)
+        return DeliveryDetails(delivery)
