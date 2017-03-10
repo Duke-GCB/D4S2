@@ -26,3 +26,9 @@
     color: red;
     font-weight: bold;
 }
+
+a.login_local {
+    font-size: small;
+    color: rgb(180,180,180);
+    text-decoration: none;
+}
