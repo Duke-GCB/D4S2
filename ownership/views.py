@@ -138,7 +138,9 @@ def response_with_delivery(request, param_dict, func):
     transfer_id = param_dict.get('transfer_id', None)
     if transfer_id:
         try:
-            delivery = Delivery.objects.get(transfer_id=transfer_id)
+            details = DeliveryDetails.from_transfer_id(transfer_id)
+            delivery = details.get_delivery()
+            # update the status
             if delivery.is_complete():
                 return render_already_complete(request, delivery)
             return func(request, delivery)

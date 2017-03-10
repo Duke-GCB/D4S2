@@ -76,6 +76,18 @@ class DDSUtilTestCase(TestCase):
                 ddsutil = DDSUtil('')
                 ddsutil.remote_store
 
+    @patch('switchboard.dds_util.RemoteStore')
+    def testGetProjectTransfer(self, mockRemoteStore):
+        transfer_id = 'abvcca-123'
+        mock_project_transfer = {'id': transfer_id, 'status': 'accepted'}
+        get_project_transfer = MagicMock(return_value=MagicMock(json=MagicMock(return_value=mock_project_transfer)))
+        mockRemoteStore.return_value = MagicMock(data_service=MagicMock(get_project_transfer=get_project_transfer))
+        with self.settings(DDSCLIENT_PROPERTIES={}):
+            ddsutil = DDSUtil(self.user)
+            project_transfer = ddsutil.get_project_transfer(transfer_id)
+            self.assertTrue(get_project_transfer.called_with(transfer_id))
+            self.assertEqual(project_transfer.get('status'), 'accepted')
+
 
 class DDSUtilAuthTestCase(TestCase):
 
@@ -134,9 +146,9 @@ class MockDetails(object):
 
 def setup_mock_ddsutil(mock_ddsutil):
     mock_ddsutil.return_value = Mock()
-    mock_ddsutil.return_value.get_remote_user = Mock()
     mock_ddsutil.return_value.get_remote_user.return_value = MockDDSUser(MockDetails.full_name, MockDetails.email)
     mock_ddsutil.return_value.get_remote_project.return_value = MockDDSProject(MockDetails.project_name)
+    mock_ddsutil.return_value.get_project_transfer.return_value = {'id': 'transfer-abc', 'status': 'rejected', 'status_comment': 'Bad Data'}
 
 
 # Test model populator
@@ -190,6 +202,19 @@ class TestModelPopulator(TestCase):
         m.populate_project(p)
         self.assertTrue(p.populated())
         self.assertFalse(dds_util.get_remote_project.called)
+
+    @patch('switchboard.dds_util.DDSUtil')
+    def test_update_delivery(self, mock_dds_util):
+        mock_delivery = Mock()
+        mock_delivery.return_value.update_state_from_project_transfer = Mock()
+        mock_delivery.return_value.transfer_id = 'transfer_id'
+        delivery = mock_delivery()
+        setup_mock_ddsutil(mock_dds_util)
+        dds_util = mock_dds_util()
+        m = ModelPopulator(dds_util)
+        m.update_delivery(delivery)
+        self.assertTrue(dds_util.get_project_transfer.called_with('transfer_id'))
+        self.assertTrue(delivery.update_state_from_project_transfer.called)
 
 
 class TestDeliveryDetails(TestCase):

@@ -1,7 +1,7 @@
 from django.conf import settings
 from ddsc.core.ddsapi import ContentType
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import DukeDSUser, EmailTemplate
+from d4s2_api.models import DukeDSUser, EmailTemplate, Delivery
 from d4s2_auth.backends.dukeds import check_jwt_token, InvalidTokenError, make_auth_config, save_dukeds_token
 from d4s2_auth.models import OAuthToken, OAuthService, User, DukeDSAPIToken
 from d4s2_auth.oauth_utils import current_user_details, OAuthException
@@ -127,6 +127,9 @@ class DDSUtil(object):
         user = self.remote_store.fetch_user(user_id)
         self.remote_store.revoke_user_project_permission(project, user)
 
+    def get_project_transfer(self, transfer_id):
+        return self.remote_store.data_service.get_project_transfer(transfer_id).json()
+
     def create_project_transfer(self, project_id, to_user_ids):
         return self.remote_store.data_service.create_project_transfer(project_id, to_user_ids).json()
 
@@ -167,6 +170,10 @@ class ModelPopulator(object):
             dds_project.name = dds_project.name or remote_project.name
             dds_project.save()
 
+    def update_delivery(self, delivery):
+        project_transfer = self.dds_util.get_project_transfer(delivery.transfer_id)
+        delivery.update_state_from_project_transfer(project_transfer)
+
 
 class DeliveryDetails(object):
     def __init__(self, delivery_or_share):
@@ -202,3 +209,18 @@ class DeliveryDetails(object):
             return email_template.subject, email_template.body
         else:
             raise RuntimeError('No email template found')
+
+    def get_delivery(self):
+        self.model_populator.update_delivery(self.delivery)
+        return self.delivery
+
+    @classmethod
+    def from_transfer_id(self, transfer_id):
+        """
+        Finds a local delivery by transfer id and ensures it's up-to-date with the server
+        :param transfer_id: a DukeDS Project Transfer ID
+        :return: a d4s2_api.models.Delivery
+        """
+
+        delivery = Delivery.objects.get(transfer_id=transfer_id)
+        return DeliveryDetails(delivery)
