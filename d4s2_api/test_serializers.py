@@ -90,3 +90,18 @@ class DeliverySerializerTestCase(TestCase):
         expected_original_project = DukeDSProject.objects.get(project_id=original_project_id)
         self.assertEqual(original_project, expected_original_project)
         self.assertNotEqual(original_project, updated_delivery.project)
+
+    def test_valid_without_user_message(self):
+        serializer = DeliverySerializer(data=self.data)
+        self.assertNotIn('user_message', self.data, 'Data must not have user_message yet')
+        self.assertTrue(serializer.is_valid(), 'serializer should be valid even without a user message')
+        delivery = serializer.save()
+        self.assertIsNone(delivery.user_message)
+
+    def test_valid_with_user_message(self):
+        user_message = 'User-submitted message'
+        self.data['user_message'] = user_message
+        serializer = DeliverySerializer(data=self.data)
+        self.assertTrue(serializer.is_valid(), 'serializer should be valid with a user message')
+        delivery = serializer.save()
+        self.assertEqual(delivery.user_message, user_message)

@@ -41,7 +41,7 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Delivery
-        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id')
+        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',)
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
@@ -52,7 +52,7 @@ class ShareSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Share
-        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state')
+        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',)
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
