@@ -134,6 +134,8 @@ class Delivery(models.Model):
     performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or declined the delivery
     delivery_email_text = models.TextField(null=False, blank=True)
     completion_email_text = models.TextField(null=False, blank=True)
+    user_message = models.TextField(null=True,
+                                    help_text='Custom message to include about this item when sending notifications')
 
     def is_new(self):
         return self.state == State.NEW
@@ -199,6 +201,8 @@ class Share(models.Model):
     state = models.IntegerField(choices=State.SHARE_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
+    user_message = models.TextField(null=True,
+                                    help_text='Custom message to include about this item when sending notifications')
 
     def is_notified(self):
         return self.state == State.NOTIFIED
