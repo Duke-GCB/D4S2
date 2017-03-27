@@ -114,6 +114,16 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.state, State.DECLINED)
         self.assertEqual(delivery.decline_reason, 'Bad Data', 'Should not change when status doesnt change')
 
+    def test_user_message(self):
+        delivery = Delivery.objects.first()
+        self.assertIsNone(delivery.user_message)
+        user_message = 'This is the final result of analysis xyz123'
+        delivery.user_message = user_message
+        delivery.save()
+        delivery = Delivery.objects.first()
+        self.assertEqual(delivery.user_message, user_message)
+
+
 class ShareTestCase(TransferBaseTestCase):
 
     def setUp(self):
@@ -144,6 +154,15 @@ class ShareTestCase(TransferBaseTestCase):
         self.assertIsNotNone(v)
         self.assertIsNotNone(d)
         self.assertNotEqual(v, d)
+
+    def test_user_message(self):
+        share = Share.objects.first()
+        self.assertIsNone(share.user_message)
+        user_message = 'This is the preliminary result of analysis xyz123'
+        share.user_message = user_message
+        share.save()
+        share = Share.objects.first()
+        self.assertEqual(share.user_message, user_message)
 
 
 class ProjectTestCase(TestCase):
