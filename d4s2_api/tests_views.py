@@ -150,6 +150,24 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertFalse(mock_delivery_message.called)
         self.assertFalse(instance.send.called)
 
+    @patch('d4s2_api.views.DDSUtil')
+    def test_deliver_with_user_message(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
+        url = reverse('delivery-list')
+        user_message = 'User-specified delivery message'
+        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'user_message': user_message}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Delivery.objects.count(), 1)
+        self.assertEqual(Delivery.objects.get().user_message, user_message)
+        # get_remote_user should be called for both from and to users
+        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
+        # get_remote project should be called once
+        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
+        # create_project_transfer should be called once
+        self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
+        self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
+
 
 class ShareViewTestCase(AuthenticatedResourceTestCase):
 
@@ -263,6 +281,21 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         response=self.client.get(url, {'project_id': 'project23'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
+
+    @patch('d4s2_api.views.DDSUtil')
+    def test_share_with_user_message(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
+        url = reverse('share-list')
+        user_message = 'This is a user-specified share message'
+        data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'role': 'share_role', 'user_message': user_message}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Share.objects.count(), 1)
+        self.assertEqual(Share.objects.get().user_message, user_message)
+        # get_remote_user should be called for both from and to users
+        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
+        # get_remote project should be called once
+        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
 
 
 class UserViewTestCase(AuthenticatedResourceTestCase):
