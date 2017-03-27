@@ -32,8 +32,10 @@ def setup_mock_delivery_details(MockDeliveryDetails):
     x = MockDeliveryDetails()
     x.get_from_user.return_value = MockDDSUser('joe', 'joe@joe.com')
     x.get_to_user.return_value = MockDDSUser('bob', 'bob@joe.com')
+    x.get_user_message.return_value = 'msg'
     x.get_project.return_value = MockDDSProject('project')
-    x.get_action_template_text.return_value = ('Subject Template {{ project_name }}', 'Body Template {{ recipient_name }}')
+    x.get_action_template_text.return_value = ('Subject Template {{ project_name }}',
+                                               'Body Template {{ recipient_name }}, User Message {{ user_message }}')
 
 
 class AuthenticatedTestCase(TestCase):

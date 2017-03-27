@@ -44,6 +44,8 @@ class UtilsTestCaseDelivery(TestCase):
         self.assertEqual(mock_details.get_project.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
+        self.assertEqual(mock_details.get_user_message.call_count, 1)
         self.assertIn('Subject Template project', message.email_text)
         self.assertIn('Body Template bob', message.email_text)
+        self.assertIn('User Message msg', message.email_text)
 

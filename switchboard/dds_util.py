@@ -196,6 +196,9 @@ class DeliveryDetails(object):
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.delivery.project.project_id)
 
+    def get_user_message(self):
+        return self.delivery.user_message
+
     def get_share_template_text(self):
         email_template = EmailTemplate.for_share(self.delivery)
         if email_template:
