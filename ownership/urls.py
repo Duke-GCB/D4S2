@@ -5,4 +5,5 @@ urlpatterns = [
     url(r'^$', views.ownership_prompt, name='ownership-prompt'),
     url(r'^process/$', views.ownership_process, name='ownership-process'),
     url(r'^decline/$', views.ownership_decline, name='ownership-decline'),
+    url(r'^accepted/$', views.ownership_accepted, name='ownership-accepted'),
 ]

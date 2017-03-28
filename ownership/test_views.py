@@ -36,6 +36,7 @@ def setup_mock_delivery_details(MockDeliveryDetails):
     x.get_project.return_value = MockDDSProject('project')
     x.get_action_template_text.return_value = ('Subject Template {{ project_name }}',
                                                'Body Template {{ recipient_name }}, User Message {{ user_message }}')
+    x.get_project_url.return_value = 'http://example.com/project-url'
 
 
 class AuthenticatedTestCase(TestCase):
@@ -105,15 +106,18 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('ownership.views.accept_delivery')
     @patch('ownership.views.ProcessedMessage')
     def test_normal_with_transfer_id_is_redirect(self, mock_processed_message, mock_accept_delivery, mock_dds_util, mock_delivery_details):
+        mock_processed_message.return_value.email_text = 'email text'
         setup_mock_delivery_details(mock_delivery_details)
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value.is_complete.return_value = False
+        delivery = create_delivery()
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         mock_ddsutil = mock_dds_util()
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id})
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        expected_url = reverse('ownership-accepted') + '?transfer_id=' + transfer_id
+        self.assertRedirects(response, expected_url)
         self.assertNotIn(MISSING_TRANSFER_ID_MSG, str(response.content))
         self.assertTrue(mock_accept_delivery.called)
         self.assertTrue(mock_processed_message.called)
@@ -204,3 +208,21 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason': ''})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(REASON_REQUIRED_MSG, str(response.content))
+
+
+class AcceptedPageTestCase(AuthenticatedTestCase):
+
+    @patch('ownership.views.DeliveryDetails')
+    def test_renders_accepted_page_with_project_url(self, mock_delivery_details):
+        setup_mock_delivery_details(mock_delivery_details)
+        transfer_id = create_delivery_get_transfer_id()
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
+        url = reverse('ownership-accepted')
+        response = self.client.get(url, {'transfer_id': transfer_id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('View this project', str(response.content))
+
+    def test_renders_error_with_bad_transfer_id(self):
+        url = reverse('ownership-accepted')
+        response = self.client.get(url, {'transfer_id': 'garbage'})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
