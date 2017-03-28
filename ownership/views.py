@@ -31,12 +31,14 @@ def build_delivery_context(delivery):
     from_user = delivery_details.get_from_user()
     to_user = delivery_details.get_to_user()
     project = delivery_details.get_project()
+    project_url = delivery_details.get_project_url()
     return {
         'transfer_id': str(delivery.transfer_id),
         'from_name': from_user.full_name,
         'from_email': from_user.email,
         'to_name': to_user.full_name,
         'project_title': project.name,
+        'project_url': project_url
     }
 
 
@@ -70,9 +72,7 @@ def accept_project_redirect(request, delivery):
         delivery.mark_accepted(request.user.get_username(), message.email_text)
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
-    delivery_details = DeliveryDetails(delivery)
-    url = delivery_details.get_project_url()
-    return redirect(url)
+    return redirect(reverse('ownership-accepted') + '?transfer_id=' + delivery.transfer_id )
 
 
 def render_decline_reason_prompt(request, delivery):
@@ -169,3 +169,15 @@ def general_error(request, msg, status):
     context = {'message': message}
     return render(request, 'ownership/error.html', context, status=status)
 
+
+def ownership_accepted(request):
+    """
+    Shows an acceptance page, with link to the Data Service Project
+    """
+    try:
+        transfer_id = request.GET.get('transfer_id', None)
+        delivery = DeliveryDetails.from_transfer_id(transfer_id).get_delivery()
+        context = build_delivery_context(delivery)
+        return render(request, 'ownership/accepted.html', context)
+    except ObjectDoesNotExist:
+        return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)
