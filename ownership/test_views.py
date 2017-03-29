@@ -34,9 +34,12 @@ def setup_mock_delivery_details(MockDeliveryDetails):
     x.get_to_user.return_value = MockDDSUser('bob', 'bob@joe.com')
     x.get_user_message.return_value = 'msg'
     x.get_project.return_value = MockDDSProject('project')
-    x.get_action_template_text.return_value = ('Subject Template {{ project_name }}',
-                                               'Body Template {{ recipient_name }}, User Message {{ user_message }}')
+    x.get_action_template_text.return_value = ('Action Subject Template {{ project_name }}',
+                                               'Action Body Template {{ recipient_name }}, Action User Message {{ user_message }}')
+    x.get_share_template_text.return_value = ('Share Subject Template {{ project_name }}',
+                                               'Share Body Template {{ recipient_name }}, Share User Message {{ user_message }}')
     x.get_project_url.return_value = 'http://example.com/project-url'
+    return x
 
 
 class AuthenticatedTestCase(TestCase):
