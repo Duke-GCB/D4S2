@@ -36,6 +36,7 @@ class ShareMessage(Message):
             receiver = delivery_details.get_to_user()
             project = delivery_details.get_project()
             url = delivery_details.get_project_url()
+            user_message = delivery_details.get_user_message()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
         template_subject, template_body = delivery_details.get_share_template_text()
@@ -46,6 +47,7 @@ class ShareMessage(Message):
             'sender_name': sender.full_name,
             'sender_email': sender.email,
             'url': url,
+            'user_message': user_message,
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
@@ -97,6 +99,7 @@ class ProcessedMessage(Message):
             sender = delivery_details.get_from_user()
             receiver = delivery_details.get_to_user()
             project = delivery_details.get_project()
+            user_message = delivery_details.get_user_message()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
         template_subject, template_body = delivery_details.get_action_template_text(process_type)
@@ -106,6 +109,7 @@ class ProcessedMessage(Message):
             'sender_name': sender.full_name,
             'type': process_type,
             'message': reason,
+            'user_message': user_message,
             'signature': 'Duke Center for Genomic and Computational Biology\n'
                          'http://www.genome.duke.edu/cores-and-services/computational-solutions'
         }
