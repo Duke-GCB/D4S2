@@ -4,8 +4,41 @@ from switchboard.dds_util import DeliveryDetails, DDSUtil
 
 class Message(object):
 
-    def __init__(self, message):
-        self._message = message
+    def __init__(self, deliverable, accept_url=None, reason=None, process_type=None):
+        """
+        Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
+        in a models.Share or models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
+        generate an EmailMessage object, which can be .send()ed.
+        """
+
+        self.deliverable = deliverable
+        try:
+            delivery_details = DeliveryDetails(self.deliverable)
+            sender = delivery_details.get_from_user()
+            receiver = delivery_details.get_to_user()
+            project = delivery_details.get_project()
+            project_url = delivery_details.get_project_url()
+            user_message = delivery_details.get_user_message()
+            template_subject, template_body = self.get_templates(delivery_details)
+        except ValueError as e:
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+
+        context = {
+            'project_name': project.name,
+            'recipient_name': receiver.full_name,
+            'recipient_email': receiver.email,
+            'sender_email': sender.email,
+            'sender_name': sender.full_name,
+            'project_url': project_url,
+            'accept_url': accept_url,
+            'type': process_type, # accept or decline
+            'message': reason, # decline reason
+            'user_message': user_message,
+        }
+        self._message = generate_message(sender.email, receiver.email, template_subject, template_body, context)
+
+    def get_templates(self, delivery_details):
+        return (None, None)
 
     @property
     def email_text(self):
@@ -24,97 +57,40 @@ class Message(object):
 
 class ShareMessage(Message):
 
+    def get_templates(self, delivery_details):
+        return delivery_details.get_share_template_text()
+
     def __init__(self, share):
         """
-        Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
-        in a models.Share object. Then calls generate_message with email addresses, subject, and the details to
-        generate an EmailMessage object, which can be .send()ed.
+        Generates a Message to the recipient informing they have access to a project
+        :param share:
         """
-        try:
-            delivery_details = DeliveryDetails(share)
-            sender = delivery_details.get_from_user()
-            receiver = delivery_details.get_to_user()
-            project = delivery_details.get_project()
-            url = delivery_details.get_project_url()
-            user_message = delivery_details.get_user_message()
-        except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = delivery_details.get_share_template_text()
-        context = {
-            'project_name': project.name,
-            'status': 'Draft',
-            'recipient_name': receiver.full_name,
-            'sender_name': sender.full_name,
-            'sender_email': sender.email,
-            'url': url,
-            'user_message': user_message,
-            'signature': 'Duke Center for Genomic and Computational Biology\n'
-                         'http://www.genome.duke.edu/cores-and-services/computational-solutions'
-        }
-        message = generate_message(sender.email, receiver.email, template_subject, template_body, context)
-        super(ShareMessage, self).__init__(message)
+        super(ShareMessage, self).__init__(share)
 
 
 class DeliveryMessage(Message):
 
+    def get_templates(self, delivery_details):
+        return delivery_details.get_action_template_text('delivery')
+
     def __init__(self, delivery, accept_url):
         """
-        Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
-        in a models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
-        generate an EmailMessage object, which can be .send()ed.
+        Generates a Message to the recipient prompting to accept the delivery
         """
-
-        try:
-            delivery_details = DeliveryDetails(delivery)
-            sender = delivery_details.get_from_user()
-            receiver = delivery_details.get_to_user()
-            project = delivery_details.get_project()
-            user_message = delivery_details.get_user_message()
-        except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = delivery_details.get_action_template_text('delivery')
-        context = {
-            'project_name': project.name,
-            'status': 'Final',
-            'recipient_name': receiver.full_name,
-            'sender_name': sender.full_name,
-            'sender_email': sender.email,
-            'url': accept_url,
-            'user_message': user_message,
-            'signature': 'Duke Center for Genomic and Computational Biology\n'
-                         'http://www.genome.duke.edu/cores-and-services/computational-solutions'
-        }
-        message = generate_message(sender.email, receiver.email, template_subject, template_body, context)
-        super(DeliveryMessage, self).__init__(message)
+        super(DeliveryMessage, self).__init__(delivery, accept_url=accept_url)
 
 
 class ProcessedMessage(Message):
 
+    def get_templates(self, delivery_details):
+        return delivery_details.get_action_template_text(self.process_type)
+
     def __init__(self, delivery, process_type, reason=''):
         """
-        Generates an EmailMessage reporting whether or not the recipient accepted the delivery
+        Generates a Message to the sender reporting whether or not the recipient accepted the delivery
         """
-        try:
-            delivery_details = DeliveryDetails(delivery)
-            sender = delivery_details.get_from_user()
-            receiver = delivery_details.get_to_user()
-            project = delivery_details.get_project()
-            user_message = delivery_details.get_user_message()
-        except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
-        template_subject, template_body = delivery_details.get_action_template_text(process_type)
-        context = {
-            'project_name': project.name,
-            'recipient_name': receiver.full_name,
-            'sender_name': sender.full_name,
-            'type': process_type,
-            'message': reason,
-            'user_message': user_message,
-            'signature': 'Duke Center for Genomic and Computational Biology\n'
-                         'http://www.genome.duke.edu/cores-and-services/computational-solutions'
-        }
-        message = generate_message(receiver.email, sender.email, template_subject, template_body, context)
-        super(ProcessedMessage, self).__init__(message)
+        self.process_type = process_type
+        super(ProcessedMessage, self).__init__(delivery, process_type=process_type, reason=reason)
 
 
 def accept_delivery(delivery, user):
