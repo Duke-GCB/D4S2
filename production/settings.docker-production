@@ -15,6 +15,20 @@ from d4s2.settings_base import *
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('D4S2_SECRET_KEY')
 
+# Additional production security settings
+ALLOWED_HOSTS = [os.getenv('D4S2_ALLOWED_HOST')]
+SECURE_HSTS_SECONDS = 3600
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_SSL_REDIRECT = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = True
+X_FRAME_OPTIONS = 'DENY'
+
+DEBUG = False
+
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
