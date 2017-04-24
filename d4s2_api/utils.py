@@ -2,9 +2,22 @@ from switchboard.mailer import generate_message
 from switchboard.dds_util import DeliveryDetails, DDSUtil
 
 
+class MessageDirection(object):
+    NotificationToRecipient = 0
+    ConfirmationToSender = 1
+
+    @staticmethod
+    def email_addresses(sender, receiver, direction=NotificationToRecipient):
+        if direction == MessageDirection.NotificationToRecipient:
+            return sender.email, receiver.email
+        else:
+            return receiver.email, sender.email
+
+
 class Message(object):
 
-    def __init__(self, deliverable, accept_url=None, reason=None, process_type=None):
+    def __init__(self, deliverable, accept_url=None, reason=None, process_type=None,
+                 direction=MessageDirection.NotificationToRecipient):
         """
         Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
         in a models.Share or models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
@@ -35,7 +48,10 @@ class Message(object):
             'message': reason, # decline reason
             'user_message': user_message,
         }
-        self._message = generate_message(sender.email, receiver.email, template_subject, template_body, context)
+
+        # Delivery confirmation emails should go back to the delivery sender
+        from_email, to_email = MessageDirection.email_addresses(sender, receiver, direction)
+        self._message = generate_message(from_email, to_email, template_subject, template_body, context)
 
     def get_templates(self, delivery_details):
         return (None, None)
@@ -47,6 +63,22 @@ class Message(object):
         :return: text of the message
         """
         return str(self._message.message())
+
+    @property
+    def email_receipients(self):
+        """
+        Returns the recipients of the email message
+        :return: list of email addresses to receive the message
+        """
+        return self._message.recipients()
+
+    @property
+    def email_from(self):
+        """
+        Returns the email sender's address
+        :return: Email address from underlying message
+        """
+        return self._message.from_email
 
     def send(self):
         """
@@ -90,7 +122,8 @@ class ProcessedMessage(Message):
         Generates a Message to the sender reporting whether or not the recipient accepted the delivery
         """
         self.process_type = process_type
-        super(ProcessedMessage, self).__init__(delivery, process_type=process_type, reason=reason)
+        super(ProcessedMessage, self).__init__(delivery, process_type=process_type, reason=reason,
+                                               direction=MessageDirection.ConfirmationToSender)
 
 
 def accept_delivery(delivery, user):

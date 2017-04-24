@@ -80,3 +80,25 @@ class UtilsTestCase(TestCase):
         self.assertIn('Action Body Template bob', message.email_text)
         self.assertIn('Action User Message msg', message.email_text)
 
+    @patch('d4s2_api.utils.DeliveryDetails')
+    def test_message_direction_share(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        message = ShareMessage(self.share)
+        self.assertEqual(message.email_receipients, ['bob@joe.com'], 'Share message should go to delivery recipient')
+        self.assertEqual(message.email_from, 'joe@joe.com', 'Share message should be from delivery sender')
+
+    @patch('d4s2_api.utils.DeliveryDetails')
+    def test_message_direction_delivery(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        message = DeliveryMessage(self.share,  'http://localhost/accept')
+        self.assertEqual(message.email_receipients, ['bob@joe.com'], 'Delivery message go to delivery recipient')
+        self.assertEqual(message.email_from, 'joe@joe.com', 'Delivery message should be from delivery sender')
+
+    @patch('d4s2_api.utils.DeliveryDetails')
+    def test_message_direction_processed(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        process_type = 'decline'
+        reason = 'sample reason'
+        message = ProcessedMessage(self.delivery, process_type, reason)
+        self.assertEqual(message.email_receipients, ['joe@joe.com'], 'Processed message should go to delivery sender')
+        self.assertEqual(message.email_from, 'bob@joe.com', 'Processed message should be from delivery recipient')
