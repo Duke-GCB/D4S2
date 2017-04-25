@@ -1,6 +1,6 @@
 from mock import patch, Mock
 from django.test import TestCase
-from d4s2_api.utils import accept_delivery, decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage
+from d4s2_api.utils import accept_delivery, decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, MessageDirection
 from d4s2_api.models import Delivery, Share, DukeDSProject, DukeDSUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
@@ -102,3 +102,24 @@ class UtilsTestCase(TestCase):
         message = ProcessedMessage(self.delivery, process_type, reason)
         self.assertEqual(message.email_receipients, ['joe@joe.com'], 'Processed message should go to delivery sender')
         self.assertEqual(message.email_from, 'bob@joe.com', 'Processed message should be from delivery recipient')
+
+
+class MessageDirectionTestCase(TestCase):
+
+    def setUp(self):
+        self.sender_email = 'sender@email.com'
+        self.receiver_email = 'receiver@email.com'
+        self.sender = Mock(email=self.sender_email)
+        self.receiver = Mock(email=self.receiver_email)
+
+    def test_default_order(self):
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver)
+        self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
+
+    def test_orders_forward(self):
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.NotificationToRecipient)
+        self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
+
+    def test_orders_reverse(self):
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ConfirmationToSender)
+        self.assertEqual(ordered_addresses, (self.receiver_email, self.sender_email))
