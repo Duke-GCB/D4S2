@@ -1,10 +1,9 @@
 from __future__ import print_function
-from django.conf import settings
 import requests
 from ddsc.core.ddsapi import ContentType
 from requests_oauthlib import OAuth2Session
-from d4s2_auth.models import OAuthToken, OAuthService, DukeDSAPIToken, DukeDSSettings
-from d4s2_auth.backends.dukeds import check_jwt_token, InvalidTokenError, save_dukeds_token
+from gcb_web_auth.models import OAuthToken, OAuthService, DukeDSAPIToken, DukeDSSettings
+from gcb_web_auth.backends.dukeds import check_jwt_token, InvalidTokenError, save_dukeds_token
 import logging
 
 logger = logging.getLogger(__name__)

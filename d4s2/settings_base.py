@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'd4s2_api',
-    'd4s2_auth',
+    'gcb_web_auth',
     'switchboard',
     'crispy_forms',
     'ownership',
@@ -93,8 +93,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'd4s2_auth.backends.dukeds.DukeDSAuthBackend',
-    'd4s2_auth.backends.oauth.OAuth2Backend',
+    'gcb_web_auth.backends.dukeds.DukeDSAuthBackend',
+    'gcb_web_auth.backends.oauth.OAuth2Backend',
 ]
 
 # Internationalization
@@ -131,7 +131,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'd4s2_auth.dukeds_auth.DukeDSTokenAuthentication', # Allows users to authenticate with a DukeDS token
+        'gcb_web_auth.dukeds_auth.DukeDSTokenAuthentication', # Allows users to authenticate with a DukeDS token
         'rest_framework.authentication.TokenAuthentication', # Allows users to authenticate with D4S2 rest_framework authtoken
         'rest_framework.authentication.SessionAuthentication',
     ),

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from d4s2_api.models import *
-from d4s2_auth.models import DukeDSSettings
+from gcb_web_auth.models import DukeDSSettings
 from simple_history.admin import SimpleHistoryAdmin
 
 admin.site.register(DukeDSUser)

@@ -83,4 +83,4 @@ def authorize_callback(request):
 
 @login_required
 def home(request):
-    return render(request, 'd4s2_auth/home.html')
+    return render(request, 'gcb_web_auth/home.html')

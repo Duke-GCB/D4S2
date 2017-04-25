@@ -4,7 +4,7 @@ from ddsc.config import Config
 from requests.exceptions import HTTPError
 from ..models import DukeDSAPIToken
 from d4s2_api.models import DukeDSUser
-from d4s2_auth.models import DukeDSSettings
+from gcb_web_auth.models import DukeDSSettings
 from django.core.exceptions import ObjectDoesNotExist
 from jwt import decode, InvalidTokenError
 

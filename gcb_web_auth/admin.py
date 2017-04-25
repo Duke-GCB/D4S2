@@ -1,5 +1,5 @@
 from django.contrib import admin
-from d4s2_auth.models import OAuthService, OAuthToken, DukeDSAPIToken
+from gcb_web_auth.models import OAuthService, OAuthToken, DukeDSAPIToken
 
 # Register your models here.
 admin.site.register(OAuthService)

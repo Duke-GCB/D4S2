@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from d4s2_auth.models import DukeDSSettings
+from gcb_web_auth.models import DukeDSSettings
 
 
 class Command(BaseCommand):

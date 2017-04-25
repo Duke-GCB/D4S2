@@ -4,8 +4,8 @@ from django.test import TestCase
 from rest_framework import status, exceptions
 from rest_framework.test import APIClient, APIRequestFactory, APITestCase
 from d4s2_api.models import DukeDSUser
-from d4s2_auth.dukeds_auth import DukeDSTokenAuthentication
-from d4s2_auth.models import DukeDSAPIToken
+from gcb_web_auth.dukeds_auth import DukeDSTokenAuthentication
+from gcb_web_auth.models import DukeDSAPIToken
 from mock.mock import patch, Mock
 
 
@@ -33,7 +33,7 @@ class DukeDSTokenAuthenticationClientTestCase(APITestCase, ResponseStatusCodeTes
         headers = {DukeDSTokenAuthentication().internal_request_auth_header(): key}
         self.client.credentials(**headers)
 
-    @patch('d4s2_auth.backends.dukeds.decode')
+    @patch('gcb_web_auth.backends.dukeds.decode')
     def test_header_auth(self, mock_jwt_decode):
         token = DukeDSAPIToken.objects.create(user=self.user, key='2mma0c3')
         self.set_request_token(token.key)
@@ -53,7 +53,7 @@ class DukeDSTokenAuthenticationClientTestCase(APITestCase, ResponseStatusCodeTes
 class DukeDSTokenAuthenticationTestCase(TestCase):
 
     def patch_backend(self):
-        patcher = patch('d4s2_auth.dukeds_auth.DukeDSAuthBackend')
+        patcher = patch('gcb_web_auth.dukeds_auth.DukeDSAuthBackend')
         mock_backend_cls = patcher.start()
         mock_backend = Mock()
         mock_backend_cls.return_value = mock_backend

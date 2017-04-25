@@ -23,11 +23,11 @@ class OAuthViewsTest(TestCase):
         self.assertEqual(response.status_code, 302, 'Should redirect')
         self.assertIn('https://authorize/', response.get('Location'), 'Should redirect to authorization_uri')
 
-    @patch('d4s2_auth.views.pop_state')
-    @patch('d4s2_auth.views.save_token')
-    @patch('d4s2_auth.views.get_token_dict')
-    @patch('d4s2_auth.views.authenticate')
-    @patch('d4s2_auth.views.login')
+    @patch('gcb_web_auth.views.pop_state')
+    @patch('gcb_web_auth.views.save_token')
+    @patch('gcb_web_auth.views.get_token_dict')
+    @patch('gcb_web_auth.views.authenticate')
+    @patch('gcb_web_auth.views.login')
     def test_authorize_callback(self, mock_login, mock_authenticate, mock_get_token_dict, mock_save_token, mock_pop_state):
         token_dict = {'access_token': 'foo-bar'}
         user = get_user_model().objects.create(username='USER')
@@ -43,11 +43,11 @@ class OAuthViewsTest(TestCase):
         self.assertRedirects(response, reverse('auth-home'), fetch_redirect_response=False,
                              msg_prefix='Should redirect to home after authorize success')
 
-    @patch('d4s2_auth.views.pop_state')
-    @patch('d4s2_auth.views.save_token')
-    @patch('d4s2_auth.views.get_token_dict')
-    @patch('d4s2_auth.views.authenticate')
-    @patch('d4s2_auth.views.login')
+    @patch('gcb_web_auth.views.pop_state')
+    @patch('gcb_web_auth.views.save_token')
+    @patch('gcb_web_auth.views.get_token_dict')
+    @patch('gcb_web_auth.views.authenticate')
+    @patch('gcb_web_auth.views.login')
     def test_authorize_fails_bad_authenticate(self, mock_login, mock_authenticate, mock_get_token_dict, mock_save_token, mock_pop_state):
         token_dict = {'access_token': 'foo-bar'}
         mock_get_token_dict.return_value = token_dict

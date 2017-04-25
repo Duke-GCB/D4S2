@@ -4,7 +4,7 @@ from mock import patch, Mock, MagicMock
 from switchboard.dds_util import DDSUtil, ModelPopulator, DeliveryDetails
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from d4s2_api.models import User
-from d4s2_auth.models import DukeDSSettings
+from gcb_web_auth.models import DukeDSSettings
 
 
 class DDSUtilTestCase(TestCase):

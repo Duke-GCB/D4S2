@@ -48,13 +48,13 @@ class OAuthUtilsTest(TestCase):
     def setUp(self):
         self.service = make_oauth_service(cls=MagicMock)
 
-    @patch('d4s2_auth.oauth_utils.OAuth2Session')
+    @patch('gcb_web_auth.oauth_utils.OAuth2Session')
     def test_make_oauth(self, mock_session):
         oauth = make_oauth_session(self.service)
         self.assertTrue(mock_session.called, 'instantiates an oauth session')
         self.assertIsNotNone(oauth, 'Returns an OAuth session')
 
-    @patch('d4s2_auth.oauth_utils.OAuth2Session')
+    @patch('gcb_web_auth.oauth_utils.OAuth2Session')
     def test_authorization_url(self, mock_session):
         configure_mock_session(mock_session)
         auth_url = authorization_url(self.service)
@@ -62,7 +62,7 @@ class OAuthUtilsTest(TestCase):
         self.assertTrue(mock_session.mock_authorization_url.called_with('authorize'), 'calls authorize url with expected data')
         self.assertEqual(auth_url, 'authorization_url', 'returned authorization url is expected')
 
-    @patch('d4s2_auth.oauth_utils.OAuth2Session')
+    @patch('gcb_web_auth.oauth_utils.OAuth2Session')
     def test_get_token_dict(self, mock_session):
         configure_mock_session(mock_session)
         mock_response = Mock()
@@ -73,7 +73,7 @@ class OAuthUtilsTest(TestCase):
                         'Fetches token with expected arguments')
         self.assertEqual(token, {'access_token': 'abcxyz'}, 'Returns expected token')
 
-    @patch('d4s2_auth.oauth_utils.make_oauth_session')
+    @patch('gcb_web_auth.oauth_utils.make_oauth_session')
     def test_user_details_from_token(self, mock_make_oauth_session):
         mock_client = Mock()
         mock_make_oauth_session.return_value = mock_client
@@ -84,7 +84,7 @@ class OAuthUtilsTest(TestCase):
         self.assertEqual(resource, user_details, 'Returns expected resource')
         self.assertTrue(mock_make_oauth_session.post.called_with(self.service.resource_uri), 'Posts to resource URI')
 
-    @patch('d4s2_auth.oauth_utils.revoke_token')
+    @patch('gcb_web_auth.oauth_utils.revoke_token')
     def test_updates_existing_token_and_revokes(self, mock_revoke_token):
         service = make_oauth_service(OAuthService, save=True)
         user = get_user_model().objects.create(username='user123')
@@ -99,7 +99,7 @@ class OAuthUtilsTest(TestCase):
         self.assertTrue(mock_revoke_token.called_with(t1), 'Should have revoked t1')
         self.assertEqual(mock_revoke_token.call_count, 1, 'Should revoke once')
 
-    @patch('d4s2_auth.oauth_utils.requests')
+    @patch('gcb_web_auth.oauth_utils.requests')
     def test_revoke_token(self, mock_client):
         configure_mock_client(mock_client)
         service = make_oauth_service(OAuthService, save=True)
@@ -110,7 +110,7 @@ class OAuthUtilsTest(TestCase):
         revoke_token(token) # Will raise exception if not passed correct data
         self.assertTrue(mock_client.post.called_with(self.service.revoke_uri), 'Posts to revoke URI')
 
-    @patch('d4s2_auth.oauth_utils.revoke_token')
+    @patch('gcb_web_auth.oauth_utils.revoke_token')
     def test_no_revoke_token_on_save_new(self, mock_revoke_token):
         service = make_oauth_service(OAuthService, save=True)
         user = get_user_model().objects.create(username='user123')
@@ -129,19 +129,19 @@ class OAuthTokenUtilTestCase(TestCase):
         self.oauth_service = OAuthService.objects.create(name="Test Service")
         DukeDSSettings.objects.create(url='', portal_root='', openid_provider_id='')
 
-    @patch('d4s2_auth.oauth_utils.check_jwt_token')
-    def test_reads_local_token(self, mock_check_jwt_token):
+    @patch('gcb_web_auth.oauth_utils.check_jwt_token')
+    def gcb_web_auth(self, mock_check_jwt_token):
         mock_check_jwt_token.return_value = True
         local_token = get_local_dds_token(self.user)
         self.assertEqual(local_token.key, 'some-token', 'Should return token when check passes')
 
-    @patch('d4s2_auth.oauth_utils.check_jwt_token')
+    @patch('gcb_web_auth.oauth_utils.check_jwt_token')
     def test_no_local_token_when_check_fails(self, mock_check_jwt_token):
         mock_check_jwt_token.return_value = False
         local_token = get_local_dds_token(self.user)
         self.assertIsNone(local_token, 'Should return none when check fails')
 
-    @patch('d4s2_auth.oauth_utils.requests')
+    @patch('gcb_web_auth.oauth_utils.requests')
     def test_gets_dds_token_from_oauth(self, mock_requests):
         mocked_dds_token = {'api_token': 'abc1234'}
         mock_response = Mock(raise_for_status=Mock(), json=Mock(return_value=mocked_dds_token))
@@ -157,7 +157,7 @@ class OAuthTokenUtilTestCase(TestCase):
         self.assertTrue(mock_response.raise_for_status.called)
         self.assertEqual(exchanged, mocked_dds_token)
 
-    @patch('d4s2_auth.oauth_utils.requests')
+    @patch('gcb_web_auth.oauth_utils.requests')
     def test_handles_dds_token_from_oauth_failure(self, mock_requests):
         mock_requests.HTTPError = Exception
         mocked_dds_token = {'api_token': 'abc1234'}

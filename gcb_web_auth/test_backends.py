@@ -26,7 +26,7 @@ class OAuth2BackendTestCase(TestCase):
             'sub': 'ab1756@duke.edu'
         }
 
-    @patch('d4s2_auth.backends.oauth.user_details_from_token')
+    @patch('gcb_web_auth.backends.oauth.user_details_from_token')
     def tests_authenticate(self, mock_user_details_from_token):
         username = 'user123'
         mock_user_details_from_token.return_value = {self.username_key: username}
@@ -37,7 +37,7 @@ class OAuth2BackendTestCase(TestCase):
         self.assertIsNotNone(user, 'Should have user')
         self.assertEqual(user.username, username)
 
-    @patch('d4s2_auth.backends.oauth.user_details_from_token')
+    @patch('gcb_web_auth.backends.oauth.user_details_from_token')
     def tests_authenticate_failure(self, mock_user_details_from_token):
         mock_user_details_from_token.return_value = {}
         service = make_oauth_service(MagicMock)
@@ -51,7 +51,7 @@ class OAuth2BackendTestCase(TestCase):
         self.assertEqual(set(mapped.keys()), set(self.oauth_backend.get_user_details_map().keys()), 'Maps user details to only safe keys')
         self.assertEqual(mapped.get('username'), self.details.get('sub'), 'Maps username from sub')
 
-    @patch('d4s2_auth.backends.oauth.user_details_from_token')
+    @patch('gcb_web_auth.backends.oauth.user_details_from_token')
     def tests_update_user(self, mock_user_details_from_token):
         mock_user_details_from_token.return_value = self.details
         user_model = get_user_model()
@@ -73,13 +73,13 @@ class DukeDSAuthBackendTestCase(TestCase):
 
     def setUp(self):
         # Patch the jwt decode function everwherywhere
-        jwt_decode_patcher = patch('d4s2_auth.backends.dukeds.decode')
+        jwt_decode_patcher = patch('gcb_web_auth.backends.dukeds.decode')
         self.mock_jwt_decode = jwt_decode_patcher.start()
         self.addCleanup(jwt_decode_patcher.stop)
 
         # Mock the data service api and auth
-        dataservice_api_patcher = patch('d4s2_auth.backends.dukeds.DataServiceApi')
-        dataservice_auth_patcher = patch('d4s2_auth.backends.dukeds.DataServiceAuth')
+        dataservice_api_patcher = patch('gcb_web_auth.backends.dukeds.DataServiceApi')
+        dataservice_auth_patcher = patch('gcb_web_auth.backends.dukeds.DataServiceAuth')
         self.mock_dataservice_api = dataservice_api_patcher.start()
         self.mock_dataservice_auth = dataservice_auth_patcher.start()
         self.addCleanup(dataservice_api_patcher.stop)
