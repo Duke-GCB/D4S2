@@ -52,3 +52,12 @@ class DukeDSAPIToken(models.Model):
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     key = models.TextField(unique=True, blank=False, null=False) # Opaque here, but JWT in practice
+
+
+class DukeDSSettings(models.Model):
+    """
+    Singleton that contains settings for DukeDS integration 
+    """
+    url = models.URLField(null=False, blank=False)
+    portal_root = models.URLField(null=False, blank=False)
+    openid_provider_id = models.CharField(max_length=64, null=False, blank=False)

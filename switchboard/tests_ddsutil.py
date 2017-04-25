@@ -4,8 +4,7 @@ from mock import patch, Mock, MagicMock
 from switchboard.dds_util import DDSUtil, ModelPopulator, DeliveryDetails
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from d4s2_api.models import User
-from d4s2_auth.oauth_utils import get_local_dds_token, get_dds_token_from_oauth, NoTokenException
-from d4s2_auth.models import OAuthService, DukeDSAPIToken, OAuthToken
+from d4s2_auth.models import DukeDSSettings
 
 
 class DDSUtilTestCase(TestCase):
@@ -13,12 +12,12 @@ class DDSUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='ddsutil_user')
         self.user_id = 'abcd-1234-efgh-8876'
+        DukeDSSettings.objects.create(url='', portal_root='', openid_provider_id='')
 
         patcher = patch('switchboard.dds_util.get_dds_token')
         mock_get_dds_token = patcher.start()
         mock_get_dds_token.return_value = MagicMock(key='sometoken')
         self.addCleanup(patcher.stop)
-
 
     @patch('switchboard.dds_util.RemoteStore')
     def testGetEmail(self, mockRemoteStore):
@@ -28,12 +27,9 @@ class DDSUtilTestCase(TestCase):
         remote_user.email = email
         instance = mockRemoteStore.return_value
         instance.fetch_user.return_value = remote_user
-        # DukeDSUser.objects.create(dds_id=self.user_id)
-        # DDSUtil reads settings from django settings, so inject some here
-        with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user)
-            self.assertEqual(email, ddsutil.get_remote_user(self.user_id).email)
-            self.assertTrue(instance.fetch_user.called)
+        ddsutil = DDSUtil(self.user)
+        self.assertEqual(email, ddsutil.get_remote_user(self.user_id).email)
+        self.assertTrue(instance.fetch_user.called)
 
     @patch('switchboard.dds_util.RemoteStore')
     def testGetProject(self, mockRemoteStore):
@@ -44,38 +40,33 @@ class DDSUtilTestCase(TestCase):
         instance = mockRemoteStore.return_value
         instance.fetch_remote_project_by_id.return_value = remote_project
         DukeDSUser.objects.create(dds_id=self.user_id)
-        # DDSUtil reads settings from django settings, so inject some here
-        with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user)
-            self.assertEqual(ddsutil.get_remote_project(project_id).name, project_name)
-            self.assertTrue(instance.fetch_remote_project_by_id.called)
+        ddsutil = DDSUtil(self.user)
+        self.assertEqual(ddsutil.get_remote_project(project_id).name, project_name)
+        self.assertTrue(instance.fetch_remote_project_by_id.called)
 
     @patch('switchboard.dds_util.RemoteStore')
     def testAddUser(self, mockRemoteStore):
         instance = mockRemoteStore.return_value
         instance.set_user_project_permission = Mock()
         DukeDSUser.objects.create(dds_id=self.user_id)
-        with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user)
-            ddsutil.add_user('userid','projectid','auth_role')
-            self.assertTrue(instance.set_user_project_permission.called)
+        ddsutil = DDSUtil(self.user)
+        ddsutil.add_user('userid','projectid','auth_role')
+        self.assertTrue(instance.set_user_project_permission.called)
 
     @patch('switchboard.dds_util.RemoteStore')
     def testRemoveUser(self, mockRemoteStore):
         instance = mockRemoteStore.return_value
         instance.set_user_project_permission = Mock()
         DukeDSUser.objects.create(dds_id=self.user_id)
-        with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user)
-            ddsutil.remove_user('userid','projectid')
-            self.assertTrue(instance.revoke_user_project_permission.called)
+        ddsutil = DDSUtil(self.user)
+        ddsutil.remove_user('userid','projectid')
+        self.assertTrue(instance.revoke_user_project_permission.called)
 
     def testFailsWithoutUser(self):
-        with self.settings(DDSCLIENT_PROPERTIES={}):
-            self.assertEqual(len(DukeDSUser.objects.all()), 0)
-            with self.assertRaises(ValueError):
-                ddsutil = DDSUtil('')
-                ddsutil.remote_store
+        self.assertEqual(len(DukeDSUser.objects.all()), 0)
+        with self.assertRaises(ValueError):
+            ddsutil = DDSUtil('')
+            ddsutil.remote_store
 
     @patch('switchboard.dds_util.RemoteStore')
     def testGetProjectTransfer(self, mockRemoteStore):
@@ -83,11 +74,10 @@ class DDSUtilTestCase(TestCase):
         mock_project_transfer = {'id': transfer_id, 'status': 'accepted'}
         get_project_transfer = MagicMock(return_value=MagicMock(json=MagicMock(return_value=mock_project_transfer)))
         mockRemoteStore.return_value = MagicMock(data_service=MagicMock(get_project_transfer=get_project_transfer))
-        with self.settings(DDSCLIENT_PROPERTIES={}):
-            ddsutil = DDSUtil(self.user)
-            project_transfer = ddsutil.get_project_transfer(transfer_id)
-            self.assertTrue(get_project_transfer.called_with(transfer_id))
-            self.assertEqual(project_transfer.get('status'), 'accepted')
+        ddsutil = DDSUtil(self.user)
+        project_transfer = ddsutil.get_project_transfer(transfer_id)
+        self.assertTrue(get_project_transfer.called_with(transfer_id))
+        self.assertEqual(project_transfer.get('status'), 'accepted')
 
 
 class MockDetails(object):

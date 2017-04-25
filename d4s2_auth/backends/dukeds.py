@@ -1,10 +1,10 @@
 from .base import BaseBackend
 from ddsc.core.ddsapi import DataServiceApi, DataServiceAuth
 from ddsc.config import Config
-from django.conf import settings
 from requests.exceptions import HTTPError
 from ..models import DukeDSAPIToken
 from d4s2_api.models import DukeDSUser
+from d4s2_auth.models import DukeDSSettings
 from django.core.exceptions import ObjectDoesNotExist
 from jwt import decode, InvalidTokenError
 
@@ -50,7 +50,10 @@ def make_auth_config(token):
     :return: a ddsc.config.Config
     """
     config = Config()
-    config.update_properties(settings.DDSCLIENT_PROPERTIES)
+    duke_ds_settings = DukeDSSettings.objects.first()
+    config.update_properties({
+        Config.URL: duke_ds_settings.url,
+    })
     config.values[Config.AUTH] = token
     return config
 

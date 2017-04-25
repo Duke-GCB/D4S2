@@ -6,7 +6,7 @@ from .backends.dukeds import remove_invalid_dukeds_tokens
 from .backends.base import BaseBackend
 from .tests_oauth_utils import make_oauth_service
 from django.contrib.auth import get_user_model
-from .models import DukeDSAPIToken
+from .models import DukeDSAPIToken, DukeDSSettings
 from jwt import InvalidTokenError
 
 
@@ -107,6 +107,7 @@ class DukeDSAuthBackendTestCase(TestCase):
 
     def test_calls_dukeds_for_unrecognized_token(self):
         key = 'unrecognized'
+        DukeDSSettings.objects.create(url='', portal_root='', openid_provider_id='')
         self.assertEqual(DukeDSAPIToken.objects.filter(key=key).count(), 0, 'Should not have a token with this key')
         mock_get_current_user = MagicMock(return_value=MagicMock(json=MagicMock(return_value=self.details)))
         self.mock_dataservice_api.return_value.get_current_user = mock_get_current_user

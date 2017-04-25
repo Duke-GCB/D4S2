@@ -3,7 +3,7 @@ from django.conf import settings
 import requests
 from ddsc.core.ddsapi import ContentType
 from requests_oauthlib import OAuth2Session
-from d4s2_auth.models import OAuthToken, OAuthService, DukeDSAPIToken
+from d4s2_auth.models import OAuthToken, OAuthService, DukeDSAPIToken, DukeDSSettings
 from d4s2_auth.backends.dukeds import check_jwt_token, InvalidTokenError, save_dukeds_token
 import logging
 
@@ -168,7 +168,8 @@ def get_dds_token_from_oauth(oauth_token):
     :param oauth_token: An OAuthToken object
     :return: The dictionary from JSON returned by the /user/api_token endpoint
     """
-    authentication_service_id = settings.DDSCLIENT_PROPERTIES['openid_provider_id']
+    duke_ds_settings = DukeDSSettings.objects.first()
+    authentication_service_id = duke_ds_settings.openid_provider_id
     headers = {
         'Content-Type': ContentType.json,
     }
@@ -178,8 +179,7 @@ def get_dds_token_from_oauth(oauth_token):
         "access_token": access_token,
         "authentication_service_id": authentication_service_id,
     }
-    base_url = settings.DDSCLIENT_PROPERTIES['url']
-    url = base_url + "/user/api_token"
+    url = duke_ds_settings.url + "/user/api_token"
     response = requests.get(url, headers=headers, params=data)
     try:
         response.raise_for_status()

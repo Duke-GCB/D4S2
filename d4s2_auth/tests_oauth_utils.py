@@ -127,6 +127,7 @@ class OAuthTokenUtilTestCase(TestCase):
         self.user_id = 'abcd-1234-efgh-8876'
         self.token = DukeDSAPIToken.objects.create(user=self.user, key='some-token')
         self.oauth_service = OAuthService.objects.create(name="Test Service")
+        DukeDSSettings.objects.create(url='', portal_root='', openid_provider_id='')
 
     @patch('d4s2_auth.oauth_utils.check_jwt_token')
     def test_reads_local_token(self, mock_check_jwt_token):
