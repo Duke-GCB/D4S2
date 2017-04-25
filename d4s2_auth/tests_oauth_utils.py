@@ -2,6 +2,7 @@ from django.test import TestCase
 from mock.mock import patch, MagicMock, Mock
 from django.contrib.auth import get_user_model
 from .oauth_utils import *
+from django.contrib.auth.models import User
 
 
 def make_oauth_service(cls=MagicMock, save=False):
@@ -118,3 +119,53 @@ class OAuthUtilsTest(TestCase):
         self.assertFalse(mock_revoke_token.called, 'Should not revoke token')
         self.assertEqual(t1.token_dict, token_dict, 'Should return saved token')
 
+
+class OAuthTokenUtilTestCase(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create(username='ddsutil_user')
+        self.user_id = 'abcd-1234-efgh-8876'
+        self.token = DukeDSAPIToken.objects.create(user=self.user, key='some-token')
+        self.oauth_service = OAuthService.objects.create(name="Test Service")
+
+    @patch('d4s2_auth.oauth_utils.check_jwt_token')
+    def test_reads_local_token(self, mock_check_jwt_token):
+        mock_check_jwt_token.return_value = True
+        local_token = get_local_dds_token(self.user)
+        self.assertEqual(local_token.key, 'some-token', 'Should return token when check passes')
+
+    @patch('d4s2_auth.oauth_utils.check_jwt_token')
+    def test_no_local_token_when_check_fails(self, mock_check_jwt_token):
+        mock_check_jwt_token.return_value = False
+        local_token = get_local_dds_token(self.user)
+        self.assertIsNone(local_token, 'Should return none when check fails')
+
+    @patch('d4s2_auth.oauth_utils.requests')
+    def test_gets_dds_token_from_oauth(self, mock_requests):
+        mocked_dds_token = {'api_token': 'abc1234'}
+        mock_response = Mock(raise_for_status=Mock(), json=Mock(return_value=mocked_dds_token))
+        mock_requests.get = Mock(return_value=mock_response)
+        oauth_token = OAuthToken.objects.create(user=self.user,
+                                                service=self.oauth_service,
+                                                token_json='{"access_token":"g2jo83lmvasijgq"}')
+        exchanged = get_dds_token_from_oauth(oauth_token)
+        # Should parse the JSON of the oauth_token and send the value of access_token to the DDS API
+        sent_get_params = mock_requests.get.call_args[1].get('params')
+        self.assertEqual(sent_get_params['access_token'], 'g2jo83lmvasijgq')
+        self.assertTrue(mock_requests.get.called)
+        self.assertTrue(mock_response.raise_for_status.called)
+        self.assertEqual(exchanged, mocked_dds_token)
+
+    @patch('d4s2_auth.oauth_utils.requests')
+    def test_handles_dds_token_from_oauth_failure(self, mock_requests):
+        mock_requests.HTTPError = Exception
+        mocked_dds_token = {'api_token': 'abc1234'}
+        raise_for_status = Mock()
+        raise_for_status.side_effect = mock_requests.HTTPError()
+        mock_response = Mock(raise_for_status=raise_for_status)
+        mock_requests.get = Mock(return_value=mock_response)
+        oauth_token = OAuthToken.objects.create(user=self.user,
+                                                service=self.oauth_service,
+                                                token_json='{"access_token":"g2jo83lmvasijgq"}')
+        with self.assertRaises(NoTokenException):
+            get_dds_token_from_oauth(oauth_token)
