@@ -1,6 +1,6 @@
 from mock import patch, Mock
 from django.test import TestCase
-from d4s2_api.utils import accept_delivery, decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage
+from d4s2_api.utils import accept_delivery, decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, MessageDirection
 from d4s2_api.models import Delivery, Share, DukeDSProject, DukeDSUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
@@ -80,3 +80,46 @@ class UtilsTestCase(TestCase):
         self.assertIn('Action Body Template bob', message.email_text)
         self.assertIn('Action User Message msg', message.email_text)
 
+    @patch('d4s2_api.utils.DeliveryDetails')
+    def test_message_direction_share(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        message = ShareMessage(self.share)
+        self.assertEqual(message.email_receipients, ['bob@joe.com'], 'Share message should go to delivery recipient')
+        self.assertEqual(message.email_from, 'joe@joe.com', 'Share message should be from delivery sender')
+
+    @patch('d4s2_api.utils.DeliveryDetails')
+    def test_message_direction_delivery(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        message = DeliveryMessage(self.share,  'http://localhost/accept')
+        self.assertEqual(message.email_receipients, ['bob@joe.com'], 'Delivery message go to delivery recipient')
+        self.assertEqual(message.email_from, 'joe@joe.com', 'Delivery message should be from delivery sender')
+
+    @patch('d4s2_api.utils.DeliveryDetails')
+    def test_message_direction_processed(self, MockDeliveryDetails):
+        setup_mock_delivery_details(MockDeliveryDetails)
+        process_type = 'decline'
+        reason = 'sample reason'
+        message = ProcessedMessage(self.delivery, process_type, reason)
+        self.assertEqual(message.email_receipients, ['joe@joe.com'], 'Processed message should go to delivery sender')
+        self.assertEqual(message.email_from, 'bob@joe.com', 'Processed message should be from delivery recipient')
+
+
+class MessageDirectionTestCase(TestCase):
+
+    def setUp(self):
+        self.sender_email = 'sender@email.com'
+        self.receiver_email = 'receiver@email.com'
+        self.sender = Mock(email=self.sender_email)
+        self.receiver = Mock(email=self.receiver_email)
+
+    def test_default_order(self):
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver)
+        self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
+
+    def test_orders_forward(self):
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ToRecipient)
+        self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
+
+    def test_orders_reverse(self):
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ToSender)
+        self.assertEqual(ordered_addresses, (self.receiver_email, self.sender_email))
