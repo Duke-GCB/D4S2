@@ -1,7 +1,7 @@
 from gcb_web_auth.dukeds_auth import DukeDSTokenAuthentication
 from gcb_web_auth.backends.dukeds import DukeDSAuthBackend
 from gcb_web_auth.backends.base import BaseBackend
-from models import DukeDSUser
+from .models import DukeDSUser
 
 
 class D4S2DukeDSTokenAuthentication(DukeDSTokenAuthentication):
