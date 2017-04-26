@@ -15,25 +15,23 @@ Installation - Local
 
         cp d4s2/settings.template d4s2/settings.py
 
-4. Edit the `settings.py` file to populate the `DDSCLIENT_PROPERTIES` with the DukeDS API URL.
-
-        DDSCLIENT_PROPERTIES = {
-          'url': 'https://api.dataservice.duke.edu/api/v1',
-        }
-
-5. Create the database schema:
+4. Create the database schema:
 
         $ python manage.py migrate
 
-6. Create a superuser (A user account is required for making authenticated API requests)
+5. Create a superuser (A user account is required for making authenticated API requests)
 
         $ python manage.py createsuperuser
 
-6. Start the app:
+6 . Create DukeDS settings
+
+        $ python manage.py createddssettings https://api.dataservice.duke.edu/api/v1 https://dev.dataservice.duke.edu <openid
+
+7. Start the app:
 
         $ python manage.py runserver
 
-7. The server is running and the API can be explored at [http://127.0.0.1:8000/api/v1/](http://127.0.0.1:8000/api/v1/)
+8. The server is running and the API can be explored at [http://127.0.0.1:8000/api/v1/](http://127.0.0.1:8000/api/v1/)
 
 
 Installation - Docker Compose

@@ -28,10 +28,3 @@ DATABASES = {
 # To enable SMTP email, uncomment EMAIL_BACKEND and supply an SMTP host
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = ''
-
-# DukeDSClient configuration
-DDSCLIENT_PROPERTIES = {
-  'url': '', # 'https://api.dataservice.duke.edu/api/v1'
-  'portal_root': '', # 'https://dev.dataservice.duke.edu',
-  'openid_provider_id': '', # service_id from https://api.dataservice.duke.edu/api/v1/auth_providers
-}

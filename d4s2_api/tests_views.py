@@ -6,7 +6,7 @@ from d4s2_api.views import *
 from d4s2_api.models import *
 from django.contrib.auth.models import User as django_user
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
-from d4s2_auth.tests_dukeds_auth import ResponseStatusCodeTestCase
+from gcb_web_auth.tests_dukeds_auth import ResponseStatusCodeTestCase
 from rest_framework.test import APIRequestFactory
 
 
