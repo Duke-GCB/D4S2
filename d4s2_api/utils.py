@@ -3,12 +3,12 @@ from switchboard.dds_util import DeliveryDetails, DDSUtil
 
 
 class MessageDirection(object):
-    NotificationToRecipient = 0
-    ConfirmationToSender = 1
+    ToRecipient = 0
+    ToSender = 1
 
     @staticmethod
-    def email_addresses(sender, receiver, direction=NotificationToRecipient):
-        if direction == MessageDirection.NotificationToRecipient:
+    def email_addresses(sender, receiver, direction=ToRecipient):
+        if direction == MessageDirection.ToRecipient:
             return sender.email, receiver.email
         else:
             return receiver.email, sender.email
@@ -17,7 +17,7 @@ class MessageDirection(object):
 class Message(object):
 
     def __init__(self, deliverable, accept_url=None, reason=None, process_type=None,
-                 direction=MessageDirection.NotificationToRecipient):
+                 direction=MessageDirection.ToRecipient):
         """
         Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
         in a models.Share or models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
@@ -123,7 +123,7 @@ class ProcessedMessage(Message):
         """
         self.process_type = process_type
         super(ProcessedMessage, self).__init__(delivery, process_type=process_type, reason=reason,
-                                               direction=MessageDirection.ConfirmationToSender)
+                                               direction=MessageDirection.ToSender)
 
 
 def accept_delivery(delivery, user):

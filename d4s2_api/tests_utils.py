@@ -117,9 +117,9 @@ class MessageDirectionTestCase(TestCase):
         self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
 
     def test_orders_forward(self):
-        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.NotificationToRecipient)
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ToRecipient)
         self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
 
     def test_orders_reverse(self):
-        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ConfirmationToSender)
+        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ToSender)
         self.assertEqual(ordered_addresses, (self.receiver_email, self.sender_email))
