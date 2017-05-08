@@ -19,6 +19,14 @@ class D4S2DukeDSAuthBackend(DukeDSAuthBackend):
             BaseBackend.update_model(dukeds_user, user_dict)
 
 
+class D4S2DukeDSTokenAuthentication(DukeDSTokenAuthentication):
+    """
+    Extends authorization to save users to DukeDSUser
+    """
+    def __init__(self):
+        self.backend = D4S2DukeDSAuthBackend()
+
+
 class D4S2OAuth2Backend(OAuth2Backend):
     """
     Slight customization to connect User objects to existing DukeDSUser objects (by email)
