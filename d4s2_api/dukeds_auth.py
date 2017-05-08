@@ -9,7 +9,6 @@ class D4S2DukeDSAuthBackend(DukeDSAuthBackend):
     """
     DukeDSAuthBackend that updates a local user model with D4S2 details on creation
     """
-
     def handle_new_user(self, user, details):
         user_dict = DukeDSAuthBackend.harmonize_dukeds_user_details(details)
         dukeds_user, created = DukeDSUser.objects.get_or_create(dds_id=details.get('id'))
@@ -31,7 +30,7 @@ class D4S2OAuth2Backend(OAuth2Backend):
     """
     Slight customization to connect User objects to existing DukeDSUser objects (by email)
     """
-    def handle_new_oauth_user(self, user, details):
+    def handle_new_user(self, user, details):
         """
         When saving a new user from OAuth, check to see if an unlinked DukeDSUser object exists, and link it
         :param user: A django user, created after receiving OAuth details
