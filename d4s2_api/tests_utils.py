@@ -40,7 +40,7 @@ class UtilsTestCase(TestCase):
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_delivery_message(self, MockDeliveryDetails):
         mock_details = setup_mock_delivery_details(MockDeliveryDetails)
-        message = DeliveryMessage(self.delivery, 'http://localhost/accept')
+        message = DeliveryMessage(self.delivery, self.user, 'http://localhost/accept')
         self.assertEqual(mock_details.get_project.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
@@ -54,7 +54,7 @@ class UtilsTestCase(TestCase):
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_share_message(self, MockDeliveryDetails):
         mock_details = setup_mock_delivery_details(MockDeliveryDetails)
-        message = ShareMessage(self.share)
+        message = ShareMessage(self.share, self.user)
         self.assertEqual(mock_details.get_project.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
@@ -69,7 +69,7 @@ class UtilsTestCase(TestCase):
         mock_details = setup_mock_delivery_details(MockDeliveryDetails)
         process_type = 'decline'
         reason = 'sample reason'
-        message = ProcessedMessage(self.delivery, process_type, reason)
+        message = ProcessedMessage(self.delivery, self.user, process_type, reason)
         self.assertEqual(mock_details.get_project.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
@@ -83,14 +83,14 @@ class UtilsTestCase(TestCase):
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_message_direction_share(self, MockDeliveryDetails):
         setup_mock_delivery_details(MockDeliveryDetails)
-        message = ShareMessage(self.share)
+        message = ShareMessage(self.share, self.user)
         self.assertEqual(message.email_receipients, ['bob@joe.com'], 'Share message should go to delivery recipient')
         self.assertEqual(message.email_from, 'joe@joe.com', 'Share message should be from delivery sender')
 
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_message_direction_delivery(self, MockDeliveryDetails):
         setup_mock_delivery_details(MockDeliveryDetails)
-        message = DeliveryMessage(self.share,  'http://localhost/accept')
+        message = DeliveryMessage(self.share, self.user, 'http://localhost/accept')
         self.assertEqual(message.email_receipients, ['bob@joe.com'], 'Delivery message go to delivery recipient')
         self.assertEqual(message.email_from, 'joe@joe.com', 'Delivery message should be from delivery sender')
 
@@ -99,7 +99,7 @@ class UtilsTestCase(TestCase):
         setup_mock_delivery_details(MockDeliveryDetails)
         process_type = 'decline'
         reason = 'sample reason'
-        message = ProcessedMessage(self.delivery, process_type, reason)
+        message = ProcessedMessage(self.delivery, self.user, process_type, reason)
         self.assertEqual(message.email_receipients, ['joe@joe.com'], 'Processed message should go to delivery sender')
         self.assertEqual(message.email_from, 'bob@joe.com', 'Processed message should be from delivery recipient')
 

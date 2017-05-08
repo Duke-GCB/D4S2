@@ -164,7 +164,8 @@ class TestDeliveryDetails(TestCase):
     def test_gets_share_template(self, MockEmailTemplate):
         MockEmailTemplate.for_share = Mock(return_value=MagicMock(subject='share subject', body='share body'))
         delivery = Mock()
-        details = DeliveryDetails(delivery)
+        user = Mock()
+        details = DeliveryDetails(delivery, user)
         subject, body = details.get_share_template_text()
         self.assertTrue(MockEmailTemplate.for_share.called_with(delivery))
         self.assertEqual(subject, 'share subject')
@@ -174,7 +175,8 @@ class TestDeliveryDetails(TestCase):
     def test_gets_action_template(self, MockEmailTemplate):
         MockEmailTemplate.for_operation = Mock(return_value=MagicMock(subject='action subject', body='action body'))
         delivery = Mock()
-        details = DeliveryDetails(delivery)
+        user = Mock()
+        details = DeliveryDetails(delivery, user)
         subject, body = details.get_action_template_text('accepted')
         self.assertEqual(subject, 'action subject')
         self.assertEqual(body, 'action body')
