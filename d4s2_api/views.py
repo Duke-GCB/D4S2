@@ -104,7 +104,7 @@ class DeliveryViewSet(TransferViewSet):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_path = reverse('ownership-prompt') + "?transfer_id=" + str(delivery.transfer_id)
         accept_url = request.build_absolute_uri(accept_path)
-        message = DeliveryMessage(delivery, accept_url)
+        message = DeliveryMessage(delivery, request.user, accept_url)
         message.send()
         delivery.mark_notified(message.email_text)
         return self.retrieve(request)
@@ -142,7 +142,7 @@ class ShareViewSet(TransferViewSet):
             force = False
         if share.is_notified() and not force:
             raise AlreadyNotifiedException()
-        message = ShareMessage(share)
+        message = ShareMessage(share, request.user)
         message.send()
         share.mark_notified(message.email_text)
         return self.retrieve(request)

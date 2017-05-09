@@ -16,7 +16,7 @@ class MessageDirection(object):
 
 class Message(object):
 
-    def __init__(self, deliverable, accept_url=None, reason=None, process_type=None,
+    def __init__(self, deliverable, user, accept_url=None, reason=None, process_type=None,
                  direction=MessageDirection.ToRecipient):
         """
         Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
@@ -26,7 +26,7 @@ class Message(object):
 
         self.deliverable = deliverable
         try:
-            delivery_details = DeliveryDetails(self.deliverable)
+            delivery_details = DeliveryDetails(self.deliverable, user)
             sender = delivery_details.get_from_user()
             receiver = delivery_details.get_to_user()
             project = delivery_details.get_project()
@@ -92,12 +92,12 @@ class ShareMessage(Message):
     def get_templates(self, delivery_details):
         return delivery_details.get_share_template_text()
 
-    def __init__(self, share):
+    def __init__(self, share, user):
         """
         Generates a Message to the recipient informing they have access to a project
         :param share:
         """
-        super(ShareMessage, self).__init__(share)
+        super(ShareMessage, self).__init__(share, user)
 
 
 class DeliveryMessage(Message):
@@ -105,11 +105,11 @@ class DeliveryMessage(Message):
     def get_templates(self, delivery_details):
         return delivery_details.get_action_template_text('delivery')
 
-    def __init__(self, delivery, accept_url):
+    def __init__(self, delivery, user, accept_url):
         """
         Generates a Message to the recipient prompting to accept the delivery
         """
-        super(DeliveryMessage, self).__init__(delivery, accept_url=accept_url)
+        super(DeliveryMessage, self).__init__(delivery, user, accept_url=accept_url)
 
 
 class ProcessedMessage(Message):
@@ -117,12 +117,12 @@ class ProcessedMessage(Message):
     def get_templates(self, delivery_details):
         return delivery_details.get_action_template_text(self.process_type)
 
-    def __init__(self, delivery, process_type, reason=''):
+    def __init__(self, delivery, user, process_type, reason=''):
         """
         Generates a Message to the sender reporting whether or not the recipient accepted the delivery
         """
         self.process_type = process_type
-        super(ProcessedMessage, self).__init__(delivery, process_type=process_type, reason=reason,
+        super(ProcessedMessage, self).__init__(delivery, user, process_type=process_type, reason=reason,
                                                direction=MessageDirection.ToSender)
 
 
@@ -138,6 +138,7 @@ def accept_delivery(delivery, user):
         dds_util.accept_project_transfer(delivery.transfer_id)
     except ValueError as e:
         raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+
 
 def decline_delivery(delivery, user, reason):
     """

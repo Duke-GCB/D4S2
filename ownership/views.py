@@ -23,11 +23,11 @@ def ownership_prompt(request):
     return response_with_delivery(request, request.GET, render_accept_delivery_page)
 
 
-def build_delivery_context(delivery):
+def build_delivery_context(delivery, user):
     """
     Return dictionary of commonly needed delivery data for use with templates.
     """
-    delivery_details = DeliveryDetails(delivery)
+    delivery_details = DeliveryDetails(delivery, user=user)
     from_user = delivery_details.get_from_user()
     to_user = delivery_details.get_to_user()
     project = delivery_details.get_project()
@@ -46,7 +46,7 @@ def render_accept_delivery_page(request, delivery):
     """
     Renders page with delivery details and ACCEPT/DECLINE buttons.
     """
-    return render(request, 'ownership/index.html', build_delivery_context(delivery))
+    return render(request, 'ownership/index.html', build_delivery_context(delivery, request.user))
 
 
 @login_required
@@ -67,7 +67,7 @@ def accept_project_redirect(request, delivery):
     """
     try:
         accept_delivery(delivery, request.user)
-        message = ProcessedMessage(delivery, "accepted")
+        message = ProcessedMessage(delivery, request.user, "accepted")
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)
     except Exception as e:
@@ -79,7 +79,7 @@ def render_decline_reason_prompt(request, delivery):
     """
     Prompts for a reason for declineing the project.
     """
-    return render(request, 'ownership/decline_reason.html', build_delivery_context(delivery))
+    return render(request, 'ownership/decline_reason.html', build_delivery_context(delivery, request.user))
 
 
 def decline_project(request, delivery):
@@ -88,16 +88,16 @@ def decline_project(request, delivery):
     """
     reason = request.POST.get('decline_reason')
     if not reason:
-        context = build_delivery_context(delivery)
+        context = build_delivery_context(delivery, request.user)
         context['error_message'] = REASON_REQUIRED_MSG
         return render(request, 'ownership/decline_reason.html', context, status=400)
 
     try:
         decline_delivery(delivery, request.user, reason)
-        message = ProcessedMessage(delivery, "declined", "Reason: {}".format(reason))
+        message = ProcessedMessage(delivery, request.user, "declined", "Reason: {}".format(reason))
         message.send()
         delivery.mark_declined(request.user.get_username(), reason, message.email_text)
-        return render(request, 'ownership/decline_done.html', build_delivery_context(delivery))
+        return render(request, 'ownership/decline_done.html', build_delivery_context(delivery, request.user))
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
 
@@ -138,7 +138,7 @@ def response_with_delivery(request, param_dict, func):
     transfer_id = param_dict.get('transfer_id', None)
     if transfer_id:
         try:
-            details = DeliveryDetails.from_transfer_id(transfer_id)
+            details = DeliveryDetails.from_transfer_id(transfer_id, request.user)
             delivery = details.get_delivery()
             # update the status
             if delivery.is_complete():
@@ -176,8 +176,8 @@ def ownership_accepted(request):
     """
     try:
         transfer_id = request.GET.get('transfer_id', None)
-        delivery = DeliveryDetails.from_transfer_id(transfer_id).get_delivery()
-        context = build_delivery_context(delivery)
+        delivery = DeliveryDetails.from_transfer_id(transfer_id, request.user).get_delivery()
+        context = build_delivery_context(delivery, request.user)
         return render(request, 'ownership/accepted.html', context)
     except ObjectDoesNotExist:
         return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)

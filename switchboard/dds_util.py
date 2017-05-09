@@ -94,9 +94,9 @@ class ModelPopulator(object):
 
 
 class DeliveryDetails(object):
-    def __init__(self, delivery_or_share):
+    def __init__(self, delivery_or_share, user):
         self.delivery = delivery_or_share
-        self.ddsutil = DDSUtil(self.delivery.from_user.user)
+        self.ddsutil = DDSUtil(user)
         self.model_populator = ModelPopulator(self.ddsutil)
 
     def get_from_user(self):
@@ -136,12 +136,13 @@ class DeliveryDetails(object):
         return self.delivery
 
     @classmethod
-    def from_transfer_id(self, transfer_id):
+    def from_transfer_id(self, transfer_id, user):
         """
         Finds a local delivery by transfer id and ensures it's up-to-date with the server
         :param transfer_id: a DukeDS Project Transfer ID
+        :param user: a Django user with related DukeDS credentials
         :return: a d4s2_api.models.Delivery
         """
 
         delivery = Delivery.objects.get(transfer_id=transfer_id)
-        return DeliveryDetails(delivery)
+        return DeliveryDetails(delivery, user)
