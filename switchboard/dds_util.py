@@ -2,7 +2,7 @@ from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, Delivery
 from gcb_web_auth.backends.dukeds import make_auth_config
-from gcb_web_auth.oauth_utils import get_dds_token
+from gcb_web_auth.utils import get_dds_token
 from gcb_web_auth.models import DukeDSSettings
 
 
