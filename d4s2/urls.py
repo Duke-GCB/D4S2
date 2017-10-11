@@ -11,7 +11,7 @@ urlpatterns = [
     url(r'^api/v1/', include('d4s2_api.urls')),
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
-    url(r'^api-token-auth/', authtoken_views.obtain_auth_token),
+    url(r'^api-auth-token/', authtoken_views.obtain_auth_token),
     url(r'^accounts/login/$', auth_views.login, {'template_name': 'gcb_web_auth/login.html' }, name='login'),
     url(r'^accounts/logout/$', auth_views.logout, {'template_name': 'gcb_web_auth/logged_out.html' }, name='logout'),
     url(r'^accounts/login-local/$', auth_views.login, {'template_name': 'gcb_web_auth/login-local.html'}, name='login-local'),
