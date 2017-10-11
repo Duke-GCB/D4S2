@@ -137,4 +137,15 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication', # Allows users to authenticate with D4S2 rest_framework authtoken
         'rest_framework.authentication.SessionAuthentication',
     ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'data.renderers.JSONRootObjectRenderer',
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+        'data.parsers.JSONRootObjectParser',
+    ),
+    'EXCEPTION_HANDLER': 'data.exception_handlers.switching_exception_handler',
+
 }
