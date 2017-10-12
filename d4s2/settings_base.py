@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'd4s2_api',
+    'd4s2_api_v2',
     'gcb_web_auth',
     'switchboard',
     'crispy_forms',
