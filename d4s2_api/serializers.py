@@ -42,6 +42,7 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Delivery
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',)
+        resource_name = 'deliveries'
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
@@ -53,6 +54,7 @@ class ShareSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Share
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',)
+        resource_name = 'shares'
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -61,3 +63,4 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = DukeDSUser
         fields = ('id', 'user_id', 'url', 'dds_id', 'full_name', 'email')
+        resource_name = 'users'
