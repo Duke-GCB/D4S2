@@ -127,7 +127,7 @@ class Delivery(models.Model):
     history = HistoricalRecords()
     project = models.ForeignKey(DukeDSProject)
     from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
-    to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
+    to_users = models.ManyToManyField(DukeDSUser, related_name='deliveries_to_users')
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
     transfer_id = models.CharField(max_length=36, null=False, unique=True)
     decline_reason = models.TextField(null=False, blank=True)
@@ -182,9 +182,6 @@ class Delivery(models.Model):
             self.project, State.DELIVERY_CHOICES[self.state][1], self.performed_by
         )
 
-    class Meta:
-        unique_together = ('project', 'from_user', 'to_user')
-
 
 class Share(models.Model):
     """
@@ -197,7 +194,7 @@ class Share(models.Model):
     history = HistoricalRecords()
     project = models.ForeignKey(DukeDSProject)
     from_user = models.ForeignKey(DukeDSUser, related_name='shares_from')
-    to_user = models.ForeignKey(DukeDSUser, related_name='shares_to')
+    to_users = models.ManyToManyField(DukeDSUser, related_name='shares_to_users')
     state = models.IntegerField(choices=State.SHARE_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
@@ -216,9 +213,6 @@ class Share(models.Model):
         return 'Share of Project: {} State: {}'.format(
             self.project, State.DELIVERY_CHOICES[self.state][1]
         )
-
-    class Meta:
-        unique_together = ('project', 'from_user', 'to_user', 'role')
 
 
 class EmailTemplateException(BaseException):
