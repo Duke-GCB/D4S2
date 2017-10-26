@@ -19,10 +19,11 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(DeliveryTestCase, self).setUp()
-        Delivery.objects.create(project=self.project1,
-                                from_user=self.user1,
-                                to_user=self.user2,
-                                transfer_id=self.transfer_id)
+        delivery = Delivery.objects.create(project=self.project1,
+                                           from_user=self.user1,
+                                           transfer_id=self.transfer_id)
+        delivery.to_users = [self.user2]
+        delivery.save()
 
     def test_initial_state(self):
         delivery = Delivery.objects.first()
@@ -31,13 +32,6 @@ class DeliveryTestCase(TransferBaseTestCase):
     def test_required_fields(self):
         with self.assertRaises(ValueError):
             Delivery.objects.create(project=None, from_user=None, to_user=None, transfer_id=None)
-
-    def test_prohibits_duplicates(self):
-        with self.assertRaises(IntegrityError):
-            Delivery.objects.create(project=self.project1,
-                                    from_user=self.user1,
-                                    to_user=self.user2,
-                                    transfer_id=self.transfer_id)
 
     def test_mark_notified(self):
         delivery = Delivery.objects.first()
@@ -128,7 +122,9 @@ class ShareTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(ShareTestCase, self).setUp()
-        Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
+        share = Share.objects.create(project=self.project1, from_user=self.user1)
+        share.to_users = [self.user2]
+        share.save()
 
     def test_initial_state(self):
         share = Share.objects.first()
@@ -139,18 +135,20 @@ class ShareTestCase(TransferBaseTestCase):
         with self.assertRaises(ValueError):
             Share.objects.create(project=None, from_user=None, to_user=None)
 
-    def test_prohibits_duplicates(self):
-        with self.assertRaises(IntegrityError):
-            Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2)
-
     def test_allows_multiple_shares(self):
         user3 = DukeDSUser.objects.create(dds_id='user3')
-        d = Share.objects.create(project=self.project1, from_user=self.user1, to_user=user3)
+        d = Share.objects.create(project=self.project1, from_user=self.user1)
+        d.to_users = [user3]
+        d.save()
         self.assertIsNotNone(d)
 
     def test_allows_multiple_shares_different_roles(self):
-        v = Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2, role=ShareRole.VIEW)
-        d = Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2, role=ShareRole.EDIT)
+        v = Share.objects.create(project=self.project1, from_user=self.user1, role=ShareRole.VIEW)
+        v.to_users = [self.user2]
+        v.save()
+        d = Share.objects.create(project=self.project1, from_user=self.user1, role=ShareRole.EDIT)
+        d.to_users = [self.user2]
+        d.save()
         self.assertIsNotNone(v)
         self.assertIsNotNone(d)
         self.assertNotEqual(v, d)
@@ -208,9 +206,15 @@ class DeliveryRelationsTestCase(TransferBaseTestCase):
         self.project2 = DukeDSProject.objects.create(project_id='project2')
         self.project3 = DukeDSProject.objects.create(project_id='project3')
         self.user3 = DukeDSUser.objects.create(dds_id='user3')
-        self.h1 = Delivery.objects.create(project=self.project1, from_user=self.user1, to_user=self.user2, transfer_id='1')
-        self.h2 = Delivery.objects.create(project=self.project2, from_user=self.user1, to_user=self.user3, transfer_id='2')
-        self.h3 = Delivery.objects.create(project=self.project3, from_user=self.user2, to_user=self.user3, transfer_id='3')
+        self.h1 = Delivery.objects.create(project=self.project1, from_user=self.user1, transfer_id='1')
+        self.h1.to_users = [self.user2]
+        self.h1.save()
+        self.h2 = Delivery.objects.create(project=self.project2, from_user=self.user1, transfer_id='2')
+        self.h2.to_users = [self.user3]
+        self.h2.save()
+        self.h3 = Delivery.objects.create(project=self.project3, from_user=self.user2, transfer_id='3')
+        self.h3.to_users = [self.user3]
+        self.h3.save()
 
     def test_deliveries_from(self):
         self.assertIn(self.h1, self.user1.deliveries_from.all())
@@ -219,10 +223,10 @@ class DeliveryRelationsTestCase(TransferBaseTestCase):
         self.assertIn(self.h3, self.user2.deliveries_from.all())
 
     def test_deliveries_to(self):
-        self.assertIn(self.h1, self.user2.deliveries_to.all())
-        self.assertIn(self.h2, self.user3.deliveries_to.all())
-        self.assertIn(self.h3, self.user3.deliveries_to.all())
-        self.assertNotIn(self.h2, self.user2.deliveries_to.all())
+        self.assertIn(self.h1, self.user2.deliveries_to_users.all())
+        self.assertIn(self.h2, self.user3.deliveries_to_users.all())
+        self.assertIn(self.h3, self.user3.deliveries_to_users.all())
+        self.assertNotIn(self.h2, self.user2.deliveries_to_users.all())
 
     def test_delete_user_deletes_deliveries(self):
         initial = Delivery.objects.count()
@@ -245,9 +249,15 @@ class ShareRelationsTestCase(TransferBaseTestCase):
         self.project4 = DukeDSProject.objects.create(project_id='project4')
         self.project5 = DukeDSProject.objects.create(project_id='project5')
         self.user4 = DukeDSUser.objects.create(dds_id='user4')
-        self.d1 = Share.objects.create(project=self.project1, from_user=self.user1, to_user=self.user4)
-        self.d4 = Share.objects.create(project=self.project4, from_user=self.user2, to_user=self.user4)
-        self.d5 = Share.objects.create(project=self.project5, from_user=self.user2, to_user=self.user1)
+        self.d1 = Share.objects.create(project=self.project1, from_user=self.user1)
+        self.d1.to_users = [self.user4]
+        self.d1.save()
+        self.d4 = Share.objects.create(project=self.project4, from_user=self.user2)
+        self.d4.to_users = [self.user4]
+        self.d4.save()
+        self.d5 = Share.objects.create(project=self.project5, from_user=self.user2)
+        self.d5.to_users = [self.user1]
+        self.d5.save()
 
     def test_shares_from(self):
         self.assertIn(self.d1, self.user1.shares_from.all())
@@ -256,10 +266,10 @@ class ShareRelationsTestCase(TransferBaseTestCase):
         self.assertIn(self.d5, self.user2.shares_from.all())
 
     def test_shares_to(self):
-        self.assertIn(self.d1, self.user4.shares_to.all())
-        self.assertIn(self.d4, self.user4.shares_to.all())
-        self.assertIn(self.d5, self.user1.shares_to.all())
-        self.assertNotIn(self.d5, self.user4.shares_to.all())
+        self.assertIn(self.d1, self.user4.shares_to_users.all())
+        self.assertIn(self.d4, self.user4.shares_to_users.all())
+        self.assertIn(self.d5, self.user1.shares_to_users.all())
+        self.assertNotIn(self.d5, self.user4.shares_to_users.all())
 
     def test_delete_user_deletes_shares(self):
         initial = Share.objects.count()
@@ -367,8 +377,9 @@ class EmailTemplateTestCase(TestCase):
                                      body='email body')
         share = Share.objects.create(project=self.dds_project,
                                      from_user=self.dds_user1,
-                                     to_user=self.dds_user2,
                                      role=ShareRole.DOWNLOAD)
+        share.to_users = [self.dds_user2]
+        share.save()
         t = EmailTemplate.for_share(share)
         self.assertIsNotNone(t)
         self.assertEqual(t.body, 'email body')
@@ -377,8 +388,9 @@ class EmailTemplateTestCase(TestCase):
         # Create an email template
         delivery = Delivery.objects.create(project=self.dds_project,
                                            from_user=self.dds_user1,
-                                           to_user=self.dds_user2,
                                            transfer_id=self.transfer_id)
+        delivery.to_users = [self.dds_user2]
+        delivery.save()
         EmailTemplate.objects.create(group=self.group,
                                      owner=self.user,
                                      template_type=EmailTemplateType.objects.get(name='accepted'),
@@ -391,16 +403,18 @@ class EmailTemplateTestCase(TestCase):
     def test_no_templates(self):
         share = Share.objects.create(project=self.dds_project,
                                      from_user=self.dds_user1,
-                                     to_user=self.dds_user2,
                                      role=ShareRole.DOWNLOAD)
+        share.to_users = [self.dds_user2]
+        share.save()
         self.assertIsNone(EmailTemplate.for_share(share))
 
     def test_user_not_found(self):
         # dds_user2 is not bound to a django user, so we can't find templates
         share = Share.objects.create(project=self.dds_project,
                                      from_user=self.dds_user2,
-                                     to_user=self.dds_user1,
                                      role=ShareRole.DOWNLOAD)
+        share.to_users = [self.dds_user1]
+        share.save()
         with self.assertRaises(EmailTemplateException):
             EmailTemplate.for_share(share)
 
@@ -424,7 +438,8 @@ class EmailTemplateTestCase(TestCase):
         self.assertNotEqual(t1.group, t2.group)
         share = Share.objects.create(project=self.dds_project,
                                      from_user=self.dds_user1,
-                                     to_user=self.dds_user2,
                                      role=ShareRole.DOWNLOAD)
+        share.to_users = [self.dds_user2]
+        share.save()
         with self.assertRaises(EmailTemplateException):
             EmailTemplate.for_share(share)

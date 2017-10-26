@@ -27,6 +27,14 @@ class DukeDSUser(models.Model):
         else:
             return False
 
+    def delete(self):
+        for model in [Share, Delivery]:
+            for delivery in  self.deliveries_to_users.all():
+                delivery.delete()
+            for share in  self.shares_to_users.all():
+                share.delete()
+        super(DukeDSUser, self).delete()
+
     def __str__(self):
         return "{} - {} - {}".format(self.dds_id, self.email, self.full_name,)
 
