@@ -32,18 +32,18 @@ class DeliveryAPITestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
         self.client.logout()
-        url = reverse('delivery-list')
+        url = reverse('v2-delivery-list')
         response = self.client.post(url, {}, format='json')
         self.assertUnauthorized(response)
 
     def test_is_readonly(self):
         d = Delivery.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2,
                                     transfer_id=self.transfer_id1)
-        list_url = reverse('delivery-list')
+        list_url = reverse('v2-delivery-list')
         response = self.client.post(list_url , {}, format='json')
         self.assertNotAllowed(response)
 
-        detail_url = reverse('delivery-detail', args=(d.pk,))
+        detail_url = reverse('v2-delivery-detail', args=(d.pk,))
         response = self.client.delete(detail_url, format='json')
         self.assertNotAllowed(response)
 
@@ -55,7 +55,7 @@ class DeliveryAPITestCase(AuthenticatedResourceTestCase):
                                 transfer_id=self.transfer_id1)
         Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2,
                                 transfer_id=self.transfer_id2)
-        url = reverse('delivery-list')
+        url = reverse('v2-delivery-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
@@ -65,7 +65,7 @@ class DeliveryAPITestCase(AuthenticatedResourceTestCase):
                                     transfer_id=self.transfer_id1)
         Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2,
                                 transfer_id=self.transfer_id2)
-        detail_url = reverse('delivery-detail', args=(d.pk,))
+        detail_url = reverse('v2-delivery-detail', args=(d.pk,))
         response = self.client.get(detail_url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('id'), d.pk)
@@ -77,7 +77,7 @@ class DeliveryAPITestCase(AuthenticatedResourceTestCase):
                                              transfer_id=self.transfer_id2)
         unrelated = Delivery.objects.create(project=self.project3, from_user=self.ddsuser2, to_user=self.ddsuser3,
                                              transfer_id=self.transfer_id3)
-        url = reverse('delivery-list')
+        url = reverse('v2-delivery-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -91,17 +91,17 @@ class DukeDSUserAPITestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
         self.client.logout()
-        url = reverse('dukedsuser-list')
+        url = reverse('v2-dukedsuser-list')
         response = self.client.post(url, {}, format='json')
         self.assertUnauthorized(response)
 
     def test_api_is_readonly(self):
         d = DukeDSUser.objects.create(dds_id='test-user')
-        list_url = reverse('dukedsuser-list')
+        list_url = reverse('v2-dukedsuser-list')
         response = self.client.post(list_url , {}, format='json')
         self.assertNotAllowed(response)
 
-        detail_url = reverse('dukedsuser-detail', args=(d.pk,))
+        detail_url = reverse('v2-dukedsuser-detail', args=(d.pk,))
         response = self.client.delete(detail_url, format='json')
         self.assertNotAllowed(response)
 
@@ -111,7 +111,7 @@ class DukeDSUserAPITestCase(AuthenticatedResourceTestCase):
     def test_lists_all_users(self):
         model_ids = [u.pk for u in DukeDSUser.objects.all()]
         self.assertGreater(len(model_ids), 0)
-        url = reverse('dukedsuser-list')
+        url = reverse('v2-dukedsuser-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), len(model_ids))
@@ -123,17 +123,17 @@ class DukeDSProjectAPITestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
         self.client.logout()
-        url = reverse('dukedsproject-list')
+        url = reverse('v2-dukedsproject-list')
         response = self.client.post(url, {}, format='json')
         self.assertUnauthorized(response)
 
     def test_api_is_readonly(self):
         p = DukeDSProject.objects.create(project_id='test-project', name='Test Project')
-        list_url = reverse('dukedsproject-list')
+        list_url = reverse('v2-dukedsproject-list')
         response = self.client.post(list_url , {}, format='json')
         self.assertNotAllowed(response)
 
-        detail_url = reverse('dukedsproject-detail', args=(p.pk,))
+        detail_url = reverse('v2-dukedsproject-detail', args=(p.pk,))
         response = self.client.delete(detail_url, format='json')
         self.assertNotAllowed(response)
 
@@ -152,7 +152,7 @@ class DukeDSProjectAPITestCase(AuthenticatedResourceTestCase):
         Delivery.objects.create(project=unrelated, from_user=self.ddsuser2, to_user=self.ddsuser3,
                                 transfer_id=self.transfer_id3)
 
-        list_url = reverse('dukedsproject-list')
+        list_url = reverse('v2-dukedsproject-list')
         response = self.client.get(list_url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_ids = [p['id'] for p in response.data]
