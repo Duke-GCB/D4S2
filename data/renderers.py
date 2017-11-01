@@ -1,6 +1,5 @@
 from rest_framework.renderers import JSONRenderer
 
-
 def response_is_error(response):
     try:
         return response.status_code / 100 in (4, 5)

@@ -1,5 +1,5 @@
 from rest_framework.parsers import JSONParser, ParseError
-from renderers import JSONRootObjectRenderer
+from data.renderers import JSONRootObjectRenderer
 import six
 
 class JSONRootObjectParser(JSONParser):

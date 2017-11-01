@@ -5,7 +5,7 @@ from rest_framework.decorators import detail_route
 from django.core.urlresolvers import reverse
 
 from d4s2_api_v2.serializers import *
-from models import *
+from d4s2_api_v2.models import *
 
 class DeliveryViewSet(viewsets.ReadOnlyModelViewSet):
 
