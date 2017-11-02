@@ -33,11 +33,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'd4s2_api',
+    'd4s2_api_v2',
     'gcb_web_auth',
     'switchboard',
     'crispy_forms',
     'ownership',
     'simple_history',
+    'corsheaders',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -50,6 +52,7 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'd4s2.urls'
@@ -135,4 +138,20 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication', # Allows users to authenticate with D4S2 rest_framework authtoken
         'rest_framework.authentication.SessionAuthentication',
     ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'data.renderers.JSONRootObjectRenderer',
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+        'data.parsers.JSONRootObjectParser',
+    ),
+    'EXCEPTION_HANDLER': 'data.exception_handlers.switching_exception_handler',
+
 }
+
+CORS_ORIGIN_WHITELIST = (
+    'localhost:4200',
+    '127.0.0.1:4200',
+)
