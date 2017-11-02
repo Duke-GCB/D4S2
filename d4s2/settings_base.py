@@ -150,3 +150,8 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'data.exception_handlers.switching_exception_handler',
 
 }
+
+CORS_ORIGIN_WHITELIST = (
+    'localhost:4200',
+    '127.0.0.1:4200',
+)
