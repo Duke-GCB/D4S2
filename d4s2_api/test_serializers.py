@@ -1,5 +1,5 @@
 from django.test import TestCase
-from d4s2_api.serializers import DeliverySerializer
+from d4s2_api.serializers import DeliverySerializer, SHARE_USERS_INVALID_MSG
 from d4s2_api.models import DukeDSProject, DukeDSUser, Delivery
 
 
@@ -19,6 +19,32 @@ class DeliverySerializerTestCase(TestCase):
         self.assertEqual(delivery.project.project_id, self.data['project_id'])
         self.assertEqual(delivery.from_user.dds_id, self.data['from_user_id'])
         self.assertEqual(delivery.to_user.dds_id, self.data['to_user_id'])
+
+    def test_serializes_delivery_with_share_user_ids(self):
+        mydata = dict(self.data)
+        mydata['share_user_ids'] = ['user-1111', 'user-4949']
+        serializer = DeliverySerializer(data=mydata)
+        self.assertTrue(serializer.is_valid())
+        delivery = serializer.save()
+        self.assertEqual(delivery.project.project_id, self.data['project_id'])
+        self.assertEqual(delivery.from_user.dds_id, self.data['from_user_id'])
+        self.assertEqual(delivery.to_user.dds_id, self.data['to_user_id'])
+        shared_to_user_dds_ids = [user.dds_id for user in delivery.share_to_users.all()]
+        self.assertEqual(shared_to_user_dds_ids, ['user-1111', 'user-4949'])
+
+    def test_serializes_delivery_prevents_to_user_in_share_users(self):
+        mydata = dict(self.data)
+        mydata['share_user_ids'] = [self.data['to_user_id']]
+        serializer = DeliverySerializer(data=mydata)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
+
+    def test_serializes_delivery_prevents_from_user_in_share_users(self):
+        mydata = dict(self.data)
+        mydata['share_user_ids'] = [self.data['from_user_id']]
+        serializer = DeliverySerializer(data=mydata)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
 
     def test_finds_related_project(self):
         p = DukeDSProject.objects.create(project_id=self.data['project_id'])
