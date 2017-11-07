@@ -39,13 +39,6 @@ class DeliverySerializerTestCase(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
 
-    def test_serializes_delivery_prevents_from_user_in_share_users(self):
-        mydata = dict(self.data)
-        mydata['share_user_ids'] = [self.data['from_user_id']]
-        serializer = DeliverySerializer(data=mydata)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
-
     def test_finds_related_project(self):
         p = DukeDSProject.objects.create(project_id=self.data['project_id'])
         serializer = DeliverySerializer(data=self.data)

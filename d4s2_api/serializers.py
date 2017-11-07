@@ -4,7 +4,7 @@ from django.utils.encoding import smart_text
 from rest_framework import serializers
 
 from d4s2_api.models import Delivery, Share, DukeDSUser, DukeDSProject
-SHARE_USERS_INVALID_MSG = "from_user and to_user cannot be part of share_to_users."
+SHARE_USERS_INVALID_MSG = "to_user cannot be part of share_to_users."
 
 
 class CreatableSlugRelatedField(serializers.SlugRelatedField):
@@ -44,14 +44,13 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
 
     def validate(self, data):
         """
-        Check that from_user_id and to_user_id are not accidentally included in share_user_ids
+        Check that to_user_id is not accidentally included in share_user_ids
         """
-        from_user_id = data['from_user'].id
         to_user_id = data['to_user'].id
         share_to_users = data.get('share_to_users', [])
         if share_to_users:
             share_to_users_ids = [user.id for user in share_to_users]
-            if from_user_id in share_to_users_ids or to_user_id in share_to_users_ids:
+            if to_user_id in share_to_users_ids:
                 raise serializers.ValidationError(SHARE_USERS_INVALID_MSG)
         return data
 
