@@ -66,13 +66,15 @@ def accept_project_redirect(request, delivery):
     Accept delivery and redirect user to look at the project.
     """
     try:
-        accept_delivery(delivery, request.user)
+        failed_share_users = accept_delivery(delivery, request.user)
+        failed_share_users_str = ', '.join(failed_share_users)
         message = ProcessedMessage(delivery, request.user, "accepted")
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
-    return redirect(reverse('ownership-accepted') + '?transfer_id=' + delivery.transfer_id )
+    return redirect(reverse('ownership-accepted') + '?transfer_id=' + delivery.transfer_id +
+                    '&failed_share_users=' + failed_share_users_str)
 
 
 def render_decline_reason_prompt(request, delivery):
@@ -176,8 +178,10 @@ def ownership_accepted(request):
     """
     try:
         transfer_id = request.GET.get('transfer_id', None)
+        failed_share_users = request.GET.get('failed_share_users', None)
         delivery = DeliveryDetails.from_transfer_id(transfer_id, request.user).get_delivery()
         context = build_delivery_context(delivery, request.user)
+        context['failed_share_users'] = failed_share_users
         return render(request, 'ownership/accepted.html', context)
     except ObjectDoesNotExist:
         return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)

@@ -6,6 +6,7 @@ from ownership.views import MISSING_TRANSFER_ID_MSG, INVALID_TRANSFER_ID, TRANSF
 from d4s2_api.models import Delivery, State, DukeDSProject, DukeDSUser
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from django.contrib.auth.models import User as django_user
+from django.utils.encoding import escape_uri_path
 from mock import patch, Mock
 
 
@@ -109,6 +110,7 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('ownership.views.accept_delivery')
     @patch('ownership.views.ProcessedMessage')
     def test_normal_with_transfer_id_is_redirect(self, mock_processed_message, mock_accept_delivery, mock_dds_util, mock_delivery_details):
+        mock_accept_delivery.return_value = ['Joe Smith', 'Bob Tom']
         mock_processed_message.return_value.email_text = 'email text'
         setup_mock_delivery_details(mock_delivery_details)
         delivery = create_delivery()
@@ -119,7 +121,9 @@ class ProcessTestCase(AuthenticatedTestCase):
         transfer_id = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id})
-        expected_url = reverse('ownership-accepted') + '?transfer_id=' + transfer_id
+        expected_failed_share_users = escape_uri_path('Joe Smith, Bob Tom')
+        expected_url = reverse('ownership-accepted') + '?transfer_id=' + transfer_id + \
+                       '&failed_share_users=' + expected_failed_share_users
         self.assertRedirects(response, expected_url)
         self.assertNotIn(MISSING_TRANSFER_ID_MSG, str(response.content))
         self.assertTrue(mock_accept_delivery.called)

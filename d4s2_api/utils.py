@@ -136,6 +136,7 @@ def accept_delivery(delivery, user):
     Also gives download permission to the users in the delivery's share_to_users list.
     :param user: The user with a DukeDS authentication credential
     :param delivery: A Delivery object
+    :return [str]: list of dds_ids of users we were unable to share project with after successful transfer
     """
     try:
         delivery_util = DeliveryUtil(delivery, user,
@@ -143,7 +144,7 @@ def accept_delivery(delivery, user):
                                      share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
         delivery_util.accept_project_transfer()
         delivery_util.share_with_additional_users()
-        return delivery_util.failed_shares
+        return delivery_util.failed_share_users
     except DataServiceError as e:
         raise RuntimeError('Unable to transfer ownership: {}'.format(e.message))
 
@@ -159,7 +160,7 @@ class DeliveryUtil(object):
         self.dds_util = DDSUtil(user)
         self.share_role = share_role
         self.share_user_message = share_user_message
-        self.failed_shares = []
+        self.failed_share_users = []
 
     def accept_project_transfer(self):
         self.dds_util.accept_project_transfer(self.delivery.transfer_id)
@@ -172,8 +173,15 @@ class DeliveryUtil(object):
         try:
             self.dds_util.share_project_with_user(self.project.project_id, share_to_user.dds_id, self.share_role)
             self._create_and_send_share_message(share_to_user)
-        except DataServiceError as dse:
-            self.failed_shares.append(dse)
+        except DataServiceError:
+            self.failed_share_users.append(self._try_lookup_user_name(share_to_user.dds_id))
+
+    def _try_lookup_user_name(self, user_id):
+        try:
+            remote_user = self.dds_util.get_remote_user(user_id)
+            return remote_user.full_name
+        except DataServiceError:
+            return user_id
 
     def _create_and_send_share_message(self, share_to_user):
         share = Share.objects.create(project=self.project,

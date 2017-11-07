@@ -5,6 +5,14 @@
 <p>
     Project {{ project_title }} has been accepted.
 </p>
+{% if failed_share_users %}
+    <p>
+        Warning: Failed to give permissions to user(s): {failed_share_users}
+    </p>
+{%  endif %}
+<p>
+    {{ warning }}
+</p>
 <p>
     View this project in Duke Data Service at <a href="{{ project_url }}">{{ project_url }}.</a>
 </p>
