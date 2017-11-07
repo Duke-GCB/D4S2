@@ -34,6 +34,19 @@ class CreatableSlugRelatedField(serializers.SlugRelatedField):
             self.fail('invalid')
 
 
+def validate_delivery_data(data):
+    """
+    Check that to_user_id is not accidentally included in share_user_ids
+    """
+    to_user_id = data['to_user'].id
+    share_to_users = data.get('share_to_users', [])
+    if share_to_users:
+        share_to_users_ids = [user.id for user in share_to_users]
+        if to_user_id in share_to_users_ids:
+            raise serializers.ValidationError(SHARE_USERS_INVALID_MSG)
+    return data
+
+
 class DeliverySerializer(serializers.HyperlinkedModelSerializer):
     project_id = CreatableSlugRelatedField(source='project', slug_field='project_id',
                                            queryset=DukeDSProject.objects.all())
@@ -43,16 +56,7 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
                                                slug_field='dds_id', queryset=DukeDSUser.objects.all(), required=False)
 
     def validate(self, data):
-        """
-        Check that to_user_id is not accidentally included in share_user_ids
-        """
-        to_user_id = data['to_user'].id
-        share_to_users = data.get('share_to_users', [])
-        if share_to_users:
-            share_to_users_ids = [user.id for user in share_to_users]
-            if to_user_id in share_to_users_ids:
-                raise serializers.ValidationError(SHARE_USERS_INVALID_MSG)
-        return data
+        return validate_delivery_data(data)
 
     class Meta:
         model = Delivery
