@@ -68,7 +68,10 @@ def accept_project_redirect(request, delivery):
     try:
         failed_share_users = accept_delivery(delivery, request.user)
         failed_share_users_str = ', '.join(failed_share_users)
-        message = ProcessedMessage(delivery, request.user, "accepted")
+        warning_message = None
+        if failed_share_users_str:
+            warning_message = "Failed to share with the following user(s): " + failed_share_users_str
+        message = ProcessedMessage(delivery, request.user, "accepted", warning_message=warning_message)
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)
     except Exception as e:

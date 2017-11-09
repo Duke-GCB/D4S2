@@ -21,7 +21,7 @@ class MessageDirection(object):
 class Message(object):
 
     def __init__(self, deliverable, user, accept_url=None, reason=None, process_type=None,
-                 direction=MessageDirection.ToRecipient):
+                 direction=MessageDirection.ToRecipient, warning_message=''):
         """
         Fetches user and project details from DukeDS (DDSUtil) based on user and project IDs recorded
         in a models.Share or models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
@@ -51,6 +51,7 @@ class Message(object):
             'type': process_type, # accept or decline
             'message': reason, # decline reason
             'user_message': user_message,
+            'warning_message': warning_message,
         }
 
         # Delivery confirmation emails should go back to the delivery sender
@@ -121,13 +122,14 @@ class ProcessedMessage(Message):
     def get_templates(self, delivery_details):
         return delivery_details.get_action_template_text(self.process_type)
 
-    def __init__(self, delivery, user, process_type, reason=''):
+    def __init__(self, delivery, user, process_type, reason='', warning_message=''):
         """
         Generates a Message to the sender reporting whether or not the recipient accepted the delivery
         """
         self.process_type = process_type
         super(ProcessedMessage, self).__init__(delivery, user, process_type=process_type, reason=reason,
-                                               direction=MessageDirection.ToSender)
+                                               direction=MessageDirection.ToSender,
+                                               warning_message=warning_message)
 
 
 def accept_delivery(delivery, user):
