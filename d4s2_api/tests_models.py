@@ -7,8 +7,11 @@ class TransferBaseTestCase(TestCase):
 
     def setUp(self):
         self.project1 = DukeDSProject.objects.create(project_id='project1')
+        self.projectA = DukeDSProject.objects.create(project_id='projectA')
         self.user1 = DukeDSUser.objects.create(dds_id='user1')
         self.user2 = DukeDSUser.objects.create(dds_id='user2')
+        self.userA = DukeDSUser.objects.create(dds_id='userA')
+        self.userB = DukeDSUser.objects.create(dds_id='userB')
         self.transfer_id = 'abcd-1234-efgh-6789'
 
 
@@ -38,6 +41,14 @@ class DeliveryTestCase(TransferBaseTestCase):
                                     from_user=self.user1,
                                     to_user=self.user2,
                                     transfer_id=self.transfer_id)
+
+    def test_can_add_share_users(self):
+        delivery = Delivery.objects.create(project=self.projectA,
+                                           from_user=self.user1,
+                                           to_user=self.user2,
+                                           transfer_id='123-123')
+        delivery.share_to_users = [self.userA, self.userB]
+        delivery.save()
 
     def test_mark_notified(self):
         delivery = Delivery.objects.first()

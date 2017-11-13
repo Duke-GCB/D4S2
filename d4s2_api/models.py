@@ -128,6 +128,7 @@ class Delivery(models.Model):
     project = models.ForeignKey(DukeDSProject)
     from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
     to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
+    share_to_users = models.ManyToManyField(DukeDSUser, related_name='deliveries_shared_to', blank=True)
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
     transfer_id = models.CharField(max_length=36, null=False, unique=True)
     decline_reason = models.TextField(null=False, blank=True)

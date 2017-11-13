@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
-from d4s2_api.models import Delivery, State
-from d4s2_api.utils import accept_delivery, decline_delivery, ProcessedMessage
+from d4s2_api.models import Delivery, State, ShareRole
+from d4s2_api.utils import DeliveryUtil, decline_delivery, ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
 from django.views.decorators.cache import never_cache
@@ -12,6 +12,7 @@ MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
 INVALID_TRANSFER_ID = 'Invalid transfer ID.'
 TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
+SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 
 @login_required
@@ -66,13 +67,21 @@ def accept_project_redirect(request, delivery):
     Accept delivery and redirect user to look at the project.
     """
     try:
-        accept_delivery(delivery, request.user)
-        message = ProcessedMessage(delivery, request.user, "accepted")
+        delivery_util = DeliveryUtil(delivery, request.user,
+                                     share_role=ShareRole.DOWNLOAD,
+                                     share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+        delivery_util.accept_project_transfer()
+        delivery_util.share_with_additional_users()
+        warning_message = delivery_util.get_warning_message()
+        message = ProcessedMessage(delivery, request.user, "accepted", warning_message=warning_message)
         message.send()
         delivery.mark_accepted(request.user.get_username(), message.email_text)
+    except DataServiceError as e:
+        raise RuntimeError('Unable to transfer ownership: {}'.format(e.message))
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
-    return redirect(reverse('ownership-accepted') + '?transfer_id=' + delivery.transfer_id )
+    return redirect(reverse('ownership-accepted') + '?transfer_id=' + delivery.transfer_id +
+                    '&warning_message=' + warning_message)
 
 
 def render_decline_reason_prompt(request, delivery):
@@ -176,8 +185,10 @@ def ownership_accepted(request):
     """
     try:
         transfer_id = request.GET.get('transfer_id', None)
+        warning_message = request.GET.get('warning_message', None)
         delivery = DeliveryDetails.from_transfer_id(transfer_id, request.user).get_delivery()
         context = build_delivery_context(delivery, request.user)
+        context['warning_message'] = warning_message
         return render(request, 'ownership/accepted.html', context)
     except ObjectDoesNotExist:
         return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)
