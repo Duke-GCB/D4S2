@@ -1,6 +1,6 @@
 from mock import patch, Mock, call
 from django.test import TestCase
-from d4s2_api.utils import accept_delivery, decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
+from d4s2_api.utils import decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
     MessageDirection, DeliveryUtil
 from d4s2_api.models import Delivery, Share, DukeDSProject, DukeDSUser, State
 from ownership.test_views import setup_mock_delivery_details
@@ -23,21 +23,6 @@ class UtilsTestCase(TestCase):
         self.delivery.share_to_users = [share_user1, share_user2 ]
         self.delivery.save()
         self.share = Share.objects.create(from_user=from_user, to_user=to_user, project=project)
-
-    @patch('d4s2_api.utils.DDSUtil')
-    @patch('d4s2_api.utils.DeliveryDetails')
-    def test_accept_delivery(self, mock_delivery_details, MockDDSUtil):
-        mock_delivery_details.return_value.get_share_template_text.return_value = 'subject', 'template body'
-        mock_ddsutil = MockDDSUtil()
-        mock_ddsutil.accept_project_transfer = Mock()
-        delivery = self.delivery
-        accept_delivery(delivery, self.user)
-        MockDDSUtil.assert_any_call(self.user)
-        mock_ddsutil.accept_project_transfer.assert_called_with(delivery.transfer_id)
-        mock_ddsutil.share_project_with_user.assert_has_calls([
-            call('ghi789', 'jkl888', 'file_downloader'),
-            call('ghi789', 'mno999', 'file_downloader')
-        ])
 
     @patch('d4s2_api.utils.DDSUtil')
     def test_decline_delivery(self, MockDDSUtil):

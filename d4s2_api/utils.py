@@ -3,8 +3,6 @@ from switchboard.dds_util import DeliveryDetails, DDSUtil
 from d4s2_api.models import ShareRole, Share, DukeDSUser
 from ddsc.core.ddsapi import DataServiceError
 
-SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
-
 
 class MessageDirection(object):
     ToRecipient = 0
@@ -132,30 +130,18 @@ class ProcessedMessage(Message):
                                                warning_message=warning_message)
 
 
-def accept_delivery(delivery, user):
+class DeliveryUtil(object):
     """
     Communicates with DukeDS via DDSUtil to accept the project transfer.
     Also gives download permission to the users in the delivery's share_to_users list.
-    :param user: The user with a DukeDS authentication credential
-    :param delivery: A Delivery object
-    :return [str]: list of dds_ids of users we were unable to share project with after successful transfer
-    """
-    try:
-        delivery_util = DeliveryUtil(delivery, user,
-                                     share_role=ShareRole.DOWNLOAD,
-                                     share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
-        delivery_util.accept_project_transfer()
-        delivery_util.share_with_additional_users()
-        return delivery_util.failed_share_users
-    except DataServiceError as e:
-        raise RuntimeError('Unable to transfer ownership: {}'.format(e.message))
-
-
-class DeliveryUtil(object):
-    """
-    Wraps up accepting a delivery and sharing project with additional users
     """
     def __init__(self, delivery, user, share_role, share_user_message):
+        """
+        :param delivery: A Delivery object
+        :param user: The user with a DukeDS authentication credential
+        :param share_role: str: share role to use for additional users
+        :param share_user_message: str: reason for sharing to this user
+        """
         self.delivery = delivery
         self.project = delivery.project
         self.user = user
@@ -165,9 +151,16 @@ class DeliveryUtil(object):
         self.failed_share_users = []
 
     def accept_project_transfer(self):
+        """
+        Communicate with DukeDS via to accept the project transfer.
+        """
         self.dds_util.accept_project_transfer(self.delivery.transfer_id)
 
     def share_with_additional_users(self):
+        """
+        Share project with additional users based on delivery share_to_users.
+        Adds user names to failed_share_users for failed share commands.
+        """
         for share_to_user in self.delivery.share_to_users.all():
             self._share_with_additional_user(share_to_user)
 
@@ -194,6 +187,17 @@ class DeliveryUtil(object):
         message = ShareMessage(share, self.user)
         message.send()
         share.mark_notified(message.email_text)
+
+    def get_warning_message(self):
+        """
+        Create message about any issues that occurred during share_with_additional_users.
+        :return: str: end user warning message
+        """
+        failed_share_users_str = ', '.join(self.failed_share_users)
+        warning_message = None
+        if failed_share_users_str:
+            warning_message = "Failed to share with the following user(s): " + failed_share_users_str
+        return warning_message
 
 
 def decline_delivery(delivery, user, reason):

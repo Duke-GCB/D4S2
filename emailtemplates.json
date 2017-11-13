@@ -23,7 +23,7 @@
     },
     {
         "fields": {
-            "body": "Hello {{ sender_name }},\r\n\r\n{{ recipient_name }} has {{ type }} project {{ project_name }}.\r\n\r\n{{ message }}\r\n\r\n{{ warning_message }}\r\n\r\nRegards,\r\n\r\nComputational Solutions\r\nDuke Center for Genomic and Computational Biology\r\ngcb-help@duke.edu\r\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions",
+            "body": "Hello {{ sender_name }},\r\n\r\n{{ recipient_name }} has {{ type }} project {{ project_name }}.\r\n\r\n{{ message }}\r\n\r\n{% if warning_message %}{{ warning_message }}\r\n\r\n{% endif %}Regards,\r\n\r\nComputational Solutions\r\nDuke Center for Genomic and Computational Biology\r\ngcb-help@duke.edu\r\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions",
             "group": 1,
             "owner": 1,
             "subject": "Duke Data Service Acceptance for {{ project_name }}",
