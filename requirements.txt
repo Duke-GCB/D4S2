@@ -9,6 +9,7 @@ django-filter==0.13.0
 django-simple-history==1.8.1
 django-sslserver==0.19
 djangorestframework==3.4.7
+drf-ember-backend==1.1
 DukeDSClient==0.3.9
 enum34==1.1.6
 funcsigs==0.4
