@@ -129,6 +129,12 @@ class Delivery(models.Model):
     from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
     to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
     share_to_users = models.ManyToManyField(DukeDSUser, related_name='deliveries_shared_to', blank=True)
+    project_new = models.CharField(max_length=255, blank=False, null=True,
+                                   help_text='DukeDS uuid project to deliver')
+    from_user_new = models.CharField(max_length=255, blank=False, null=True,
+                                     help_text='DukeDS uuid user sending delivery')
+    to_user_new = models.CharField(max_length=255, blank=False, null=True,
+                                   help_text='DukeDS uuid user receiving delivery')
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
     transfer_id = models.CharField(max_length=36, null=False, unique=True)
     decline_reason = models.TextField(null=False, blank=True)
@@ -187,6 +193,11 @@ class Delivery(models.Model):
         unique_together = ('project', 'from_user', 'to_user')
 
 
+class DeliveryShareUser(models.Model):
+    dds_id = models.CharField(max_length=36, null=False, unique=True)
+    delivery = models.ForeignKey(Delivery, related_name='shared_to_users')
+
+
 class Share(models.Model):
     """
     Represents a non-destructive preview of a project from one user to another.
@@ -199,6 +210,12 @@ class Share(models.Model):
     project = models.ForeignKey(DukeDSProject)
     from_user = models.ForeignKey(DukeDSUser, related_name='shares_from')
     to_user = models.ForeignKey(DukeDSUser, related_name='shares_to')
+    project_new = models.CharField(max_length=255, blank=False, null=True,
+                                   help_text='DukeDS uuid project to share with')
+    from_user_new = models.CharField(max_length=255, blank=False, null=True,
+                                     help_text='DukeDS uuid user sharing the project')
+    to_user_new = models.CharField(max_length=255, blank=False, null=True,
+                                   help_text='DukeDS uuid user having project shared with them')
     state = models.IntegerField(choices=State.SHARE_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
