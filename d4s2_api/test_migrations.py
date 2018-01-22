@@ -42,7 +42,7 @@ class TestMigrations(TestCase):
 
 class DukeDSIDMigrationTestCase(TestMigrations):
     migrate_from = '0007_delivery_share_to_users'
-    migrate_to = '0009_migrate_share_delivery_dds_fields'
+    migrate_to = '0010_rename_delivery_dds_fields'
 
     def setUpBeforeMigration(self, apps):
         Delivery = apps.get_model('d4s2_api', 'Delivery')
@@ -88,6 +88,6 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         shares = Share.objects.all()
         self.assertEqual(len(shares), 1)
         share = shares[0]
-        self.assertEqual(share.project_new, 'mn-123')
-        self.assertEqual(share.from_user_new, 'op-456')
-        self.assertEqual(share.to_user_new, 'qr-789')
+        self.assertEqual(share.project_id, 'mn-123')
+        self.assertEqual(share.from_user_id, 'op-456')
+        self.assertEqual(share.to_user_id, 'qr-789')

@@ -2,7 +2,7 @@ from mock import patch, Mock, call
 from django.test import TestCase
 from d4s2_api.utils import decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
     MessageDirection, DeliveryUtil
-from d4s2_api.models import Delivery, Share, DukeDSProject, DukeDSUser, State
+from d4s2_api.models import Delivery, Share, DukeDSProject, DukeDSUser, State, DeliveryShareUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
 
@@ -14,15 +14,10 @@ class UtilsTestCase(TestCase):
         group = Group.objects.create(name='test_group')
         self.user = User.objects.create(username='test_user')
         group.user_set.add(self.user)
-        from_user = DukeDSUser.objects.create(dds_id='abc123', user=self.user)
-        to_user = DukeDSUser.objects.create(dds_id='def456')
-        share_user1 = DukeDSUser.objects.create(dds_id='jkl888')
-        share_user2 = DukeDSUser.objects.create(dds_id='mno999')
-        project = DukeDSProject.objects.create(project_id='ghi789')
-        self.delivery = Delivery.objects.create(from_user=from_user, to_user=to_user, project=project)
-        self.delivery.share_to_users = [share_user1, share_user2 ]
-        self.delivery.save()
-        self.share = Share.objects.create(from_user=from_user, to_user=to_user, project=project)
+        self.delivery = Delivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        DeliveryShareUser.objects.create(delivery=self.delivery, dds_id='jkl888')
+        DeliveryShareUser.objects.create(delivery=self.delivery, dds_id='mno999')
+        self.share = Share.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
 
     @patch('d4s2_api.utils.DDSUtil')
     def test_decline_delivery(self, MockDDSUtil):
@@ -124,14 +119,9 @@ class MessageDirectionTestCase(TestCase):
 class DeliveryUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='test_user')
-        from_user = DukeDSUser.objects.create(dds_id='abc123', user=self.user)
-        to_user = DukeDSUser.objects.create(dds_id='def456')
-        self.share_user1 = DukeDSUser.objects.create(dds_id='jkl888')
-        self.share_user2 = DukeDSUser.objects.create(dds_id='mno999')
-        self.project = DukeDSProject.objects.create(project_id='ghi789')
-        self.delivery = Delivery.objects.create(from_user=from_user, to_user=to_user, project=self.project)
-        self.delivery.share_to_users = [self.share_user1, self.share_user2 ]
-        self.delivery.save()
+        self.delivery = Delivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        DeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
+        DeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
 
     @patch('d4s2_api.utils.DDSUtil')
     def test_accept_project_transfer(self, mock_ddsutil):
@@ -153,11 +143,11 @@ class DeliveryUtilTestCase(TestCase):
         ])
 
         # each additional user should have an email sent (share record)
-        share1 = Share.objects.get(to_user=self.share_user1)
-        self.assertEqual(self.project, share1.project)
-        self.assertEqual(self.delivery.to_user, share1.from_user)
+        share1 = Share.objects.get(to_user_id='jkl888')
+        self.assertEqual('ghi789', share1.project_id)
+        self.assertEqual(self.delivery.to_user_id, share1.from_user_id)
         self.assertEqual(State.NOTIFIED, share1.state)
-        share2 = Share.objects.get(to_user=self.share_user2)
-        self.assertEqual(self.project, share2.project)
-        self.assertEqual(self.delivery.to_user, share2.from_user)
+        share2 = Share.objects.get(to_user_id='mno999')
+        self.assertEqual('ghi789', share2.project_id)
+        self.assertEqual(self.delivery.to_user_id, share2.from_user_id)
         self.assertEqual(State.NOTIFIED, share2.state)

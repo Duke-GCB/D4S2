@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 import uuid
 from django.db import models
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
 from django.contrib.auth.models import User, Group
 from simple_history.models import HistoricalRecords
 
@@ -41,6 +41,7 @@ class DukeDSProject(models.Model):
 
     def __str__(self):
         return "{} - {}".format(self.project_id, self.name,)
+
 
 class DDSProjectTransferDetails(object):
     class Fields(object):
@@ -125,16 +126,12 @@ class Delivery(models.Model):
     above.
     """
     history = HistoricalRecords()
-    project = models.ForeignKey(DukeDSProject)
-    from_user = models.ForeignKey(DukeDSUser, related_name='deliveries_from')
-    to_user = models.ForeignKey(DukeDSUser, related_name='deliveries_to')
-    share_to_users = models.ManyToManyField(DukeDSUser, related_name='deliveries_shared_to', blank=True)
-    project_new = models.CharField(max_length=255, blank=False, null=True,
-                                   help_text='DukeDS uuid project to deliver')
-    from_user_new = models.CharField(max_length=255, blank=False, null=True,
-                                     help_text='DukeDS uuid user sending delivery')
-    to_user_new = models.CharField(max_length=255, blank=False, null=True,
-                                   help_text='DukeDS uuid user receiving delivery')
+    project_id = models.CharField(max_length=255, blank=False, null=True,
+                                  help_text='DukeDS uuid project to deliver')
+    from_user_id = models.CharField(max_length=255, blank=False, null=True,
+                                    help_text='DukeDS uuid user sending delivery')
+    to_user_id = models.CharField(max_length=255, blank=False, null=True,
+                                  help_text='DukeDS uuid user receiving delivery')
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
     transfer_id = models.CharField(max_length=36, null=False, unique=True)
     decline_reason = models.TextField(null=False, blank=True)
@@ -186,16 +183,19 @@ class Delivery(models.Model):
 
     def __str__(self):
         return 'Delivery Project: {} State: {} Performed by: {}'.format(
-            self.project, State.DELIVERY_CHOICES[self.state][1], self.performed_by
+            self.project_id, State.DELIVERY_CHOICES[self.state][1], self.performed_by
         )
 
     class Meta:
-        unique_together = ('project', 'from_user', 'to_user')
+        unique_together = ('project_id', 'from_user_id', 'to_user_id')
 
 
 class DeliveryShareUser(models.Model):
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    delivery = models.ForeignKey(Delivery, related_name='shared_to_users')
+    delivery = models.ForeignKey(Delivery, related_name='share_user_ids')
+
+    class Meta:
+        unique_together = ('dds_id', 'delivery')
 
 
 class Share(models.Model):
@@ -207,15 +207,12 @@ class Share(models.Model):
 
     """
     history = HistoricalRecords()
-    project = models.ForeignKey(DukeDSProject)
-    from_user = models.ForeignKey(DukeDSUser, related_name='shares_from')
-    to_user = models.ForeignKey(DukeDSUser, related_name='shares_to')
-    project_new = models.CharField(max_length=255, blank=False, null=True,
-                                   help_text='DukeDS uuid project to share with')
-    from_user_new = models.CharField(max_length=255, blank=False, null=True,
-                                     help_text='DukeDS uuid user sharing the project')
-    to_user_new = models.CharField(max_length=255, blank=False, null=True,
-                                   help_text='DukeDS uuid user having project shared with them')
+    project_id = models.CharField(max_length=255, blank=False, null=True,
+                                  help_text='DukeDS uuid project to share with')
+    from_user_id = models.CharField(max_length=255, blank=False, null=True,
+                                    help_text='DukeDS uuid user sharing the project')
+    to_user_id = models.CharField(max_length=255, blank=False, null=True,
+                                  help_text='DukeDS uuid user having project shared with them')
     state = models.IntegerField(choices=State.SHARE_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
@@ -232,11 +229,11 @@ class Share(models.Model):
 
     def __str__(self):
         return 'Share of Project: {} State: {}'.format(
-            self.project, State.DELIVERY_CHOICES[self.state][1]
+            self.project_id, State.DELIVERY_CHOICES[self.state][1]
         )
 
     class Meta:
-        unique_together = ('project', 'from_user', 'to_user', 'role')
+        unique_together = ('project_id', 'from_user_id', 'to_user_id', 'role')
 
 
 class EmailTemplateException(BaseException):
@@ -280,7 +277,8 @@ class EmailTemplate(models.Model):
 
     @classmethod
     def for_operation(cls, operation, template_type_name):
-        user = operation.from_user.user
+        from_user = DukeDSUser.objects.filter(dds_id=operation.from_user_id).first()
+        user = from_user.user
         if user is None:
             raise EmailTemplateException('User object not found in {}'.format(operation))
         matches = cls.objects.filter(group__in=user.groups.all(), template_type__name=template_type_name)

@@ -18,10 +18,8 @@ def url_with_transfer_id(name, transfer_id=None):
 
 
 def create_delivery():
-    project1 = DukeDSProject.objects.create(project_id='project1')
-    fromuser1 = DukeDSUser.objects.create(dds_id='fromuser1')
-    touser1= DukeDSUser.objects.create(dds_id='touser1')
-    return Delivery.objects.create(project=project1, from_user=fromuser1, to_user=touser1, transfer_id='abc123')
+    return Delivery.objects.create(project_id='project1', from_user_id='fromuser1',
+                                   to_user_id='touser1', transfer_id='abc123')
 
 
 def create_delivery_get_transfer_id():

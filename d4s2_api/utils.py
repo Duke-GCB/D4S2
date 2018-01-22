@@ -143,7 +143,7 @@ class DeliveryUtil(object):
         :param share_user_message: str: reason for sharing to this user
         """
         self.delivery = delivery
-        self.project = delivery.project
+        self.project_id = delivery.project_id
         self.user = user
         self.dds_util = DDSUtil(user)
         self.share_role = share_role
@@ -161,12 +161,12 @@ class DeliveryUtil(object):
         Share project with additional users based on delivery share_to_users.
         Adds user names to failed_share_users for failed share commands.
         """
-        for share_to_user in self.delivery.share_to_users.all():
+        for share_to_user in self.delivery.share_user_ids.all():
             self._share_with_additional_user(share_to_user)
 
     def _share_with_additional_user(self, share_to_user):
         try:
-            self.dds_util.share_project_with_user(self.project.project_id, share_to_user.dds_id, self.share_role)
+            self.dds_util.share_project_with_user(self.project_id, share_to_user.dds_id, self.share_role)
             self._create_and_send_share_message(share_to_user)
         except DataServiceError:
             self.failed_share_users.append(self._try_lookup_user_name(share_to_user.dds_id))
@@ -179,9 +179,9 @@ class DeliveryUtil(object):
             return user_id
 
     def _create_and_send_share_message(self, share_to_user):
-        share = Share.objects.create(project=self.project,
-                                     from_user=self.delivery.to_user,
-                                     to_user=share_to_user,
+        share = Share.objects.create(project_id=self.project_id,
+                                     from_user_id=self.delivery.to_user_id,
+                                     to_user_id=share_to_user.dds_id,
                                      role=self.share_role,
                                      user_message=self.share_user_message)
         message = ShareMessage(share, self.user)

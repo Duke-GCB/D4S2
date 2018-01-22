@@ -16,12 +16,14 @@ class DeliverySerializer(serializers.ModelSerializer):
         resource_name = 'deliveries'
         fields = '__all__'
 
+
 class DukeDSUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DukeDSUser
         resource_name = 'duke-ds-users'
         fields = '__all__'
+
 
 class DukeDSProjectSerializer(serializers.ModelSerializer):
 
