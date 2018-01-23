@@ -161,7 +161,7 @@ class DeliveryUtil(object):
         Share project with additional users based on delivery share_to_users.
         Adds user names to failed_share_users for failed share commands.
         """
-        for share_to_user in self.delivery.share_user_ids.all():
+        for share_to_user in self.delivery.share_users.all():
             self._share_with_additional_user(share_to_user)
 
     def _share_with_additional_user(self, share_to_user):

@@ -48,8 +48,11 @@ class DeliveryTestCase(TransferBaseTestCase):
                                            from_user_id='user1',
                                            to_user_id='user2',
                                            transfer_id='123-123')
-        delivery.share_to_users = [self.userA, self.userB]
-        delivery.save()
+        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
+        share_users = delivery.share_users.all()
+        self.assertEqual(set([share_user.dds_id for share_user in share_users]),
+                         set(['user3', 'user4']))
 
     def test_mark_notified(self):
         delivery = Delivery.objects.first()

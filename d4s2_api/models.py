@@ -192,7 +192,7 @@ class Delivery(models.Model):
 
 class DeliveryShareUser(models.Model):
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    delivery = models.ForeignKey(Delivery, related_name='share_user_ids')
+    delivery = models.ForeignKey(Delivery, related_name='share_users')
 
     class Meta:
         unique_together = ('dds_id', 'delivery')

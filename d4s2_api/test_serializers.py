@@ -1,5 +1,7 @@
 from django.test import TestCase
+from models import Delivery, DeliveryShareUser
 from d4s2_api.serializers import DeliverySerializer, SHARE_USERS_INVALID_MSG
+from mock import MagicMock
 
 
 class DeliverySerializerTestCase(TestCase):
@@ -29,7 +31,7 @@ class DeliverySerializerTestCase(TestCase):
         self.assertEqual(delivery.project_id, self.data['project_id'])
         self.assertEqual(delivery.from_user_id, self.data['from_user_id'])
         self.assertEqual(delivery.to_user_id, self.data['to_user_id'])
-        shared_to_user_dds_ids = [user.dds_id for user in delivery.share_user_ids.all()]
+        shared_to_user_dds_ids = [user.dds_id for user in delivery.share_users.all()]
         self.assertEqual(shared_to_user_dds_ids, ['user-1111', 'user-4949'])
 
     def test_serializes_delivery_prevents_to_user_in_share_users(self):
@@ -38,6 +40,22 @@ class DeliverySerializerTestCase(TestCase):
         serializer = DeliverySerializer(data=mydata)
         self.assertFalse(serializer.is_valid())
         self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
+
+    def test_serializes_share_user_ids_from_db(self):
+        delivery = Delivery.objects.create(project_id='projectA',
+                                           from_user_id='user1',
+                                           to_user_id='user2',
+                                           transfer_id='123-123')
+        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
+        mock_request = MagicMock()
+        serializer = DeliverySerializer(delivery, context={'request': mock_request})
+
+        self.assertEqual(serializer.data['project_id'], 'projectA')
+        self.assertEqual(serializer.data['from_user_id'], 'user1')
+        self.assertEqual(serializer.data['to_user_id'], 'user2')
+        self.assertEqual(serializer.data['transfer_id'], '123-123')
+        self.assertEqual(serializer.data['share_user_ids'], ['user3','user4'])
 
     def test_finds_related_project(self):
         serializer = DeliverySerializer(data=self.data)

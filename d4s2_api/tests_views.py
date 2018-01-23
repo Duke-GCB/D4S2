@@ -8,7 +8,6 @@ from django.contrib.auth.models import User as django_user
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from gcb_web_auth.tests_dukeds_auth import ResponseStatusCodeTestCase
 from rest_framework.test import APIRequestFactory
-from unittest import skip
 
 
 def setup_mock_ddsutil(mock_ddsutil):
@@ -33,7 +32,6 @@ class AuthenticatedResourceTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.transfer_id2 = 'efgh-5678'
 
 
-@skip
 class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
@@ -46,23 +44,30 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
     def test_create_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('delivery-list')
-        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
+        data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Delivery.objects.count(), 1)
-        self.assertEqual(Delivery.objects.get().from_user.dds_id, 'user1')
-        # get_remote_user should be called for both from and to users
-        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
-        # get_remote project should be called once
-        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
-        # create_project_transfer should be called once
+        self.assertEqual(Delivery.objects.get().from_user_id, 'user1')
+        self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
+        self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
+
+    @patch('d4s2_api.views.DDSUtil')
+    def test_create_delivery_with_shared_ids(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
+        url = reverse('delivery-list')
+        data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Delivery.objects.count(), 1)
+        self.assertEqual(Delivery.objects.get().from_user_id, 'user1')
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
     def test_list_deliveries(self):
-        Delivery.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2,
+        Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
                                 transfer_id=self.transfer_id1)
-        Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2,
+        Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                 transfer_id=self.transfer_id2)
         url = reverse('delivery-list')
         response = self.client.get(url, format='json')
@@ -70,7 +75,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(len(response.data), 2)
 
     def test_get_delivery(self):
-        h = Delivery.objects.create(project=self.project1, from_user=self.ddsuser1, to_user=self.ddsuser2,
+        h = Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
         url = reverse('delivery-detail', args=(h.pk,))
         response = self.client.get(url, format='json')
@@ -78,7 +83,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.data['project_id'], 'project1')
 
     def test_delete_delivery(self):
-        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2,
+        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
         url = reverse('delivery-detail', args=(h.pk,))
         response = self.client.delete(url, format='json')
@@ -88,19 +93,16 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
     @patch('d4s2_api.views.DDSUtil')
     def test_update_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2,
+        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
         DukeDSProject.objects.create(project_id='project3')
-        updated = {'from_user_id': self.ddsuser1.dds_id, 'to_user_id': self.ddsuser2.dds_id ,'project_id': 'project3', 'transfer_id':h.transfer_id}
+        updated = {'from_user_id': self.ddsuser1.dds_id, 'to_user_id': self.ddsuser2.dds_id ,'project_id': 'project3',
+                   'transfer_id': h.transfer_id}
         url = reverse('delivery-detail', args=(h.pk,))
         response = self.client.put(url, data=updated, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         h = Delivery.objects.get(pk=h.pk)
-        self.assertEqual(h.project.project_id, 'project3')
-        # get_remote_user should be called for both from and to users
-        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
-        # get_remote project should be called once
-        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
+        self.assertEqual(h.project_id, 'project3')
 
     def test_create_delivery_fails_with_transfer_id(self):
         url = reverse('delivery-list')
@@ -109,7 +111,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_filter_deliveries(self):
-        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2,
+        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
         url = reverse('delivery-list')
         response=self.client.get(url, {'project_id': 'project2'}, format='json')
@@ -124,7 +126,8 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2, transfer_id='abcd')
+        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                    transfer_id='abcd')
         self.assertTrue(h.is_new())
         url = reverse('delivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
@@ -143,7 +146,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Delivery.objects.create(project=self.project2, from_user=self.ddsuser1, to_user=self.ddsuser2)
+        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         self.assertTrue(h.is_new())
         h.mark_notified('email text')
         url = reverse('delivery-send', args=(h.pk,))
@@ -162,10 +165,6 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Delivery.objects.count(), 1)
         self.assertEqual(Delivery.objects.get().user_message, user_message)
-        # get_remote_user should be called for both from and to users
-        self.assertEqual(mock_ddsutil.return_value.get_remote_user.call_count, 2)
-        # get_remote project should be called once
-        self.assertTrue(mock_ddsutil.return_value.get_remote_project.call_count, 1)
         # create_project_transfer should be called once
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))

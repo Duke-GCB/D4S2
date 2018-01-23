@@ -91,12 +91,15 @@ class TransferViewSet(PopulatingAuthenticatedModelViewSet):
             self.populate_user(dds_user)
 
 
-class DeliveryViewSet(TransferViewSet):
+class DeliveryViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows deliveries to be viewed or edited.
     """
     serializer_class = DeliverySerializer
-    model = Delivery
+    queryset = Delivery.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('project_id', 'from_user_id', 'to_user_id')
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
