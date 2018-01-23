@@ -6,6 +6,7 @@ from d4s2_api.serializers import UserSerializer, DeliverySerializer, ShareSerial
 from d4s2_api.utils import ShareMessage, DeliveryMessage
 from switchboard.dds_util import DDSUtil, ModelPopulator
 from django.core.urlresolvers import reverse
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class PopulatingAuthenticatedModelViewSet(viewsets.ModelViewSet):
@@ -85,7 +86,7 @@ class TransferViewSet(PopulatingAuthenticatedModelViewSet):
 
     def save_and_populate(self, serializer):
         transfer = serializer.save()
-        self.populate_project(transfer.project)
+        self.populate_project(transfer.project_id)
         for dds_user in [transfer.from_user, transfer.to_user]:
             self.populate_user(dds_user)
 
@@ -126,12 +127,15 @@ class AlreadyNotifiedException(APIException):
     default_detail = 'Already notified'
 
 
-class ShareViewSet(TransferViewSet):
+class ShareViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows shares to be viewed or edited.
     """
     serializer_class = ShareSerializer
-    model = Share
+    queryset = Share.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('project_id', 'from_user_id', 'to_user_id')
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
