@@ -49,6 +49,9 @@ def validate_delivery_data(data):
 class DeliverySerializer(serializers.HyperlinkedModelSerializer):
     share_user_ids = serializers.ListField(child=serializers.CharField(), required=False)
 
+    def validate(self, data):
+        return validate_delivery_data(data)
+
     def create(self, validated_data):
         delivery_data = self._remove_share_user_ids(validated_data)
         instance = super(DeliverySerializer, self).create(delivery_data)

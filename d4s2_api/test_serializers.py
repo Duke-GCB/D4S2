@@ -32,12 +32,12 @@ class DeliverySerializerTestCase(TestCase):
         shared_to_user_dds_ids = [user.dds_id for user in delivery.share_user_ids.all()]
         self.assertEqual(shared_to_user_dds_ids, ['user-1111', 'user-4949'])
 
-    # def test_serializes_delivery_prevents_to_user_in_share_users(self):
-    #     mydata = dict(self.data)
-    #     mydata['share_user_ids'] = [self.data['to_user_id']]
-    #     serializer = DeliverySerializer(data=mydata)
-    #     self.assertFalse(serializer.is_valid())
-    #     self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
+    def test_serializes_delivery_prevents_to_user_in_share_users(self):
+        mydata = dict(self.data)
+        mydata['share_user_ids'] = [self.data['to_user_id']]
+        serializer = DeliverySerializer(data=mydata)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
 
     def test_finds_related_project(self):
         serializer = DeliverySerializer(data=self.data)
