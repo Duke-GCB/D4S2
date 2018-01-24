@@ -1,6 +1,4 @@
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-from django.utils.encoding import smart_text
 from rest_framework import serializers
 
 from d4s2_api.models import Delivery, Share, DukeDSUser, DeliveryShareUser
@@ -59,6 +57,7 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Delivery
+        resource_name = 'deliveries'
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',
                   'share_user_ids')
 
@@ -92,7 +91,7 @@ class DDSUserSerializer(serializers.Serializer):
     email = serializers.CharField()
 
     class Meta:
-        resource_name = 'dds-users'
+        resource_name = 'duke-ds-users'
 
 
 class DDSProjectSerializer(serializers.Serializer):
@@ -104,7 +103,7 @@ class DDSProjectSerializer(serializers.Serializer):
     description = serializers.CharField()
 
     class Meta:
-        resource_name = 'dds-projects'
+        resource_name = 'duke-ds-projects'
 
 
 
