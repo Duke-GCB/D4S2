@@ -1,7 +1,7 @@
 from mock import patch, Mock, call
 from django.test import TestCase
 from d4s2_api.utils import decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
-    MessageDirection, DeliveryUtil
+    MessageDirection, DeliveryUtil, Message
 from d4s2_api.models import Delivery, Share, DukeDSProject, DukeDSUser, State, DeliveryShareUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
@@ -151,3 +151,34 @@ class DeliveryUtilTestCase(TestCase):
         self.assertEqual('ghi789', share2.project_id)
         self.assertEqual(self.delivery.to_user_id, share2.from_user_id)
         self.assertEqual(State.NOTIFIED, share2.state)
+
+
+class MessageTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(username='test_user')
+        self.delivery = Delivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        DeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
+        DeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSProject')
+    @patch('switchboard.dds_util.DDSUser')
+    @patch('d4s2_api.utils.generate_message')
+    def test_delivery_context(self, generate_message, mock_ddsuser, mock_dds_project, mock_dds_util):
+        mock_ddsuser.fetch_one.side_effect = [
+            Mock(full_name='Joe Sender', email='joe@joe.joe'),
+            Mock(full_name='Bob Receiver', email='bob@bob.bob'),
+        ]
+        mock_project = Mock()
+        mock_project.name = 'Mouse'
+        mock_dds_project.fetch_one.return_value = mock_project
+        message = Message(self.delivery, self.user)
+
+        # constructor above uses generate_message to build up context
+        args, kwargs = generate_message.call_args
+        context = args[4]
+        self.assertEqual(context['sender_name'], 'Joe Sender')
+        self.assertEqual(context['sender_email'], 'joe@joe.joe')
+        self.assertEqual(context['recipient_name'], 'Bob Receiver')
+        self.assertEqual(context['recipient_email'], 'bob@bob.bob')
+        self.assertEqual(context['project_name'], 'Mouse')

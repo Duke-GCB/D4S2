@@ -46,8 +46,8 @@ class Message(object):
             'sender_name': sender.full_name,
             'project_url': project_url,
             'accept_url': accept_url,
-            'type': process_type, # accept or decline
-            'message': reason, # decline reason
+            'type': process_type,  # accept or decline
+            'message': reason,  # decline reason
             'user_message': user_message,
             'warning_message': warning_message,
         }
