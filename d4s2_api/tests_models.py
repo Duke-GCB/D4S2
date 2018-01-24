@@ -182,14 +182,6 @@ class UserTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678')
 
-    def test_populated(self):
-        u = DukeDSUser.objects.create(dds_id='1234-abcd-fghi-5678')
-        self.assertFalse(u.populated())
-        u.full_name = 'Test user'
-        self.assertFalse(u.populated())
-        u.email = 'email@domain.com'
-        self.assertTrue(u.populated())
-
 
 class EmailTemplateTypeTestCase(TestCase):
 

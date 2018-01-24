@@ -16,19 +16,9 @@ class DukeDSUser(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     dds_id = models.CharField(max_length=36, null=False, unique=True)
-    full_name = models.TextField(null=True)
-    email = models.EmailField(null=True)
-
-    objects = models.Manager()
-
-    def populated(self):
-        if self.full_name and self.email:
-            return True
-        else:
-            return False
 
     def __str__(self):
-        return "{} - {} - {}".format(self.dds_id, self.email, self.full_name,)
+        return "{} - {}".format(self.user.username, self.dds_id)
 
 
 class DDSProjectTransferDetails(object):
