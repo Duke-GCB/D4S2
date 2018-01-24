@@ -280,84 +280,149 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Share.objects.get().user_message, user_message)
 
 
-class UserViewTestCase(AuthenticatedResourceTestCase):
-
+class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
         self.client.logout()
-        url = reverse('dukedsuser-list')
+        url = reverse('ddsuser-list')
         response = self.client.post(url, {}, format='json')
         self.assertUnauthorized(response)
 
-    def test_fails_not_staff(self):
-        self.user.is_staff = False
-        self.user.save()
-        url = reverse('dukedsuser-list')
-        response = self.client.get(url, format='json')
-        self.assertForbidden(response)
+    def test_post_not_permitted(self):
+        url = reverse('ddsuser-list')
+        data = {}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_put_not_permitted(self):
+        url = reverse('ddsuser-list')
+        data = {}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @patch('d4s2_api.views.DDSUtil')
-    def test_create_user(self, mock_ddsutil):
-        setup_mock_ddsutil(mock_ddsutil)
-        initial_count = DukeDSUser.objects.count()
-        new_django_user = django_user.objects.create_user('new_django_user')
-        data = {'dds_id': 'abcd-1234-efgh-5678',
-                'user_id': new_django_user.pk,
+    def test_list_users(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'results': [
+                {
+                    'id': 'user1',
+                    'username': 'joe1',
+                    'full_name': 'Joseph Smith',
+                    'email': 'joe@joe.joe',
+                }, {
+                    'id': 'user2',
+                    'username': 'bob1',
+                    'full_name': 'Robert Doe',
+                    'email': 'bob@bob.bob',
                 }
-        url = reverse('dukedsuser-list')
-        response = self.client.post(url, data=data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(DukeDSUser.objects.count(), initial_count + 1)
-        self.assertEqual(DukeDSUser.objects.get(user_id=new_django_user.pk).dds_id, 'abcd-1234-efgh-5678')
-        self.assertTrue(mock_ddsutil.return_value.get_remote_user.called)
-
-    def test_get_users(self):
-        initial_count = DukeDSUser.objects.count()
-        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678')
-        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5679')
-        url = reverse('dukedsuser-list')
+            ]
+        }
+        mock_dds_util.return_value.get_users.return_value = mock_response
+        url = reverse('ddsuser-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), initial_count + 2)
+        self.assertEqual(len(response.data), 2)
 
-    def test_get_user(self):
-        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678')
-        url = reverse('dukedsuser-detail', args=(u.pk,))
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['dds_id'],'abcd-1234-efgh-5678')
+        user = response.data[0]
+        self.assertEqual(user['id'], 'user1')
+        self.assertEqual(user['username'], 'joe1')
+        self.assertEqual(user['full_name'], 'Joseph Smith')
+        self.assertEqual(user['email'], 'joe@joe.joe')
+
+        user = response.data[1]
+        self.assertEqual(user['id'], 'user2')
+        self.assertEqual(user['username'], 'bob1')
+        self.assertEqual(user['full_name'], 'Robert Doe')
+        self.assertEqual(user['email'], 'bob@bob.bob')
 
     @patch('d4s2_api.views.DDSUtil')
-    def test_update_user(self, mock_ddsutil):
-        setup_mock_ddsutil(mock_ddsutil)
-        # Initially with no django user attached
-        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678')
-        url = reverse('dukedsuser-detail', args=(u.pk,))
-        new_django_user = django_user.objects.create_user('new_django_user')
-        data = {'dds_id':'abcd-5555-0000-ffff',
-                'user_id': new_django_user.pk
+    def test_get_user(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'id': 'user1',
+            'username': 'joe1',
+            'full_name': 'Joseph Smith',
+            'email': 'joe@joe.joe',
+        }
+        mock_dds_util.return_value.get_user.return_value = mock_response
+        url = reverse('ddsuser-list') + 'user1/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_dds_util.return_value.get_user.assert_called_with('user1')
+
+        user = response.data
+        self.assertEqual(user['id'], 'user1')
+        self.assertEqual(user['username'], 'joe1')
+        self.assertEqual(user['full_name'], 'Joseph Smith')
+        self.assertEqual(user['email'], 'joe@joe.joe')
+
+
+class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('ddsproject-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertUnauthorized(response)
+
+    def test_post_not_permitted(self):
+        url = reverse('ddsproject-list')
+        data = {}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_put_not_permitted(self):
+        url = reverse('ddsproject-list')
+        data = {}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch('d4s2_api.views.DDSUtil')
+    def test_list_projects(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'results': [
+                {
+                    'id': 'project1',
+                    'name': 'Mouse',
+                    'description': 'Mouse RNA',
+                }, {
+                    'id': 'project2',
+                    'name': 'Turtle',
+                    'description': 'Turtle DNA',
                 }
-        response = self.client.put(url, data=data, format='json')
+            ]
+        }
+        mock_dds_util.return_value.get_projects.return_value = mock_response
+        url = reverse('ddsproject-list')
+        response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        u = DukeDSUser.objects.get(pk=u.pk)
-        self.assertEqual(u.dds_id,'abcd-5555-0000-ffff')
-        self.assertTrue(mock_ddsutil.return_value.get_remote_user.called)
+        self.assertEqual(len(response.data), 2)
 
-    def test_delete_user(self):
-        initial_count = DukeDSUser.objects.count()
-        u = DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678')
-        self.assertEqual(DukeDSUser.objects.count(), initial_count + 1)
-        url = reverse('dukedsuser-detail', args=(u.pk,))
-        response = self.client.delete(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(DukeDSUser.objects.count(), initial_count)
+        project = response.data[0]
+        self.assertEqual(project['id'], 'project1')
+        self.assertEqual(project['name'], 'Mouse')
+        self.assertEqual(project['description'], 'Mouse RNA')
 
-    def test_filter_users(self):
-        DukeDSUser.objects.create(dds_id='abcd-1234-efgh-5678')
-        url = reverse('dukedsuser-list')
-        response = self.client.get(url, {'dds_id': 'abcd-1234-efgh-5678'}, format='json')
+        project = response.data[1]
+        self.assertEqual(project['id'], 'project2')
+        self.assertEqual(project['name'], 'Turtle')
+        self.assertEqual(project['description'], 'Turtle DNA')
+
+    @patch('d4s2_api.views.DDSUtil')
+    def test_get_project(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'id': 'project1',
+            'name': 'Mouse',
+            'description': 'Mouse RNA',
+        }
+        mock_dds_util.return_value.get_project.return_value = mock_response
+        url = reverse('ddsproject-list') + 'project1/'
+        response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        response = self.client.get(url, {'dds_id': 'abcd-1234-efgh-5673'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        mock_dds_util.return_value.get_project.assert_called_with('project1')
+
+        project = response.data
+        self.assertEqual(project['id'], 'project1')
+        self.assertEqual(project['name'], 'Mouse')
+        self.assertEqual(project['description'], 'Mouse RNA')

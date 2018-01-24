@@ -60,6 +60,18 @@ class DDSUtil(object):
     def share_project_with_user(self, project_id, dds_user_id, auth_role):
         return self.remote_store.data_service.set_user_project_permission(project_id, dds_user_id, auth_role)
 
+    def get_users(self):
+        return self.remote_store.data_service.get_all_users()
+
+    def get_user(self, user_id):
+        return self.remote_store.data_service.get_user_by_id(user_id)
+
+    def get_projects(self):
+        return self.remote_store.data_service.get_projects()
+
+    def get_project(self, project_id):
+        return self.remote_store.data_service.get_project_by_id(project_id)
+
 
 class ModelPopulator(object):
     """

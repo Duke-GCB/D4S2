@@ -78,3 +78,81 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = DukeDSUser
         fields = ('id', 'user_id', 'url', 'dds_id', 'full_name', 'email')
+
+
+class DDSUserSerializer(serializers.Serializer):
+    """
+    Serializer for dds_resources.DDSProject
+    """
+    id = serializers.UUIDField()
+    username = serializers.CharField()
+    full_name = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()
+
+    class Meta:
+        resource_name = 'dds-users'
+
+
+class DDSProjectSerializer(serializers.Serializer):
+    """
+    Serializer for dds_resources.DDSProject
+    """
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    description = serializers.CharField()
+
+    class Meta:
+        resource_name = 'dds-projects'
+
+
+class DDSBase(object):
+    @classmethod
+    def from_list(cls, project_dicts):
+        return [cls(p) for p in project_dicts]
+
+
+class DDSUser(DDSBase):
+    """
+    A simple object to represent a DDSProject
+    """
+
+    def __init__(self, user_dict):
+        self.id = user_dict.get('id')
+        self.username = user_dict.get('username')
+        self.full_name = user_dict.get('full_name')
+        self.first_name = user_dict.get('first_name')
+        self.last_name = user_dict.get('last_name')
+        self.email = user_dict.get('email')
+
+    @staticmethod
+    def fetch_list(dds_util):
+        response = dds_util.get_users().json()
+        return DDSUser.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_user_id):
+        response = dds_util.get_user(dds_user_id).json()
+        return DDSUser(response)
+
+
+class DDSProject(DDSBase):
+    """
+    A simple object to represent a DDSProject
+    """
+
+    def __init__(self, project_dict):
+        self.id = project_dict.get('id')
+        self.name = project_dict.get('name')
+        self.description = project_dict.get('description')
+
+    @staticmethod
+    def fetch_list(dds_util):
+        response = dds_util.get_projects().json()
+        return DDSProject.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_user_id):
+        response = dds_util.get_project(dds_user_id).json()
+        return DDSProject(response)
