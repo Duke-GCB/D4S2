@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TRANSFER_ID_MSG, INVALID_TRANSFER_ID, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG
-from d4s2_api.models import Delivery, State, DukeDSProject, DukeDSUser
+from d4s2_api.models import Delivery, State, DukeDSUser
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from django.contrib.auth.models import User as django_user
 from django.utils.encoding import escape_uri_path

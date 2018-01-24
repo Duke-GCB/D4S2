@@ -31,18 +31,6 @@ class DukeDSUser(models.Model):
         return "{} - {} - {}".format(self.dds_id, self.email, self.full_name,)
 
 
-class DukeDSProject(models.Model):
-    project_id = models.CharField(max_length=36, null=False, unique=True)
-    name = models.TextField(null=True)
-
-    def populated(self):
-        # Only field to populate is name
-        return bool(self.name)
-
-    def __str__(self):
-        return "{} - {}".format(self.project_id, self.name,)
-
-
 class DDSProjectTransferDetails(object):
     class Fields(object):
         """
@@ -278,9 +266,9 @@ class EmailTemplate(models.Model):
     @classmethod
     def for_operation(cls, operation, template_type_name):
         from_user = DukeDSUser.objects.filter(dds_id=operation.from_user_id).first()
-        user = from_user.user
-        if user is None:
+        if from_user is None:
             raise EmailTemplateException('User object not found in {}'.format(operation))
+        user = from_user.user
         matches = cls.objects.filter(group__in=user.groups.all(), template_type__name=template_type_name)
         if len(matches) == 0:
             return None

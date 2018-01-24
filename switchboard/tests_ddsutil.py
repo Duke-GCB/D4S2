@@ -1,5 +1,5 @@
 from django.test import TestCase
-from d4s2_api.models import DukeDSUser, DukeDSProject
+from d4s2_api.models import DukeDSUser
 from mock import patch, Mock, MagicMock
 from switchboard.dds_util import DDSUtil, DeliveryDetails
 from d4s2_api.models import User

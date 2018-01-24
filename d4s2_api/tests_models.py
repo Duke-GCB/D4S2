@@ -7,12 +7,6 @@ from django.contrib.auth.models import User, Group
 class TransferBaseTestCase(TestCase):
 
     def setUp(self):
-        self.project1 = DukeDSProject.objects.create(project_id='project1')
-        self.projectA = DukeDSProject.objects.create(project_id='projectA')
-        self.user1 = DukeDSUser.objects.create(dds_id='user1')
-        self.user2 = DukeDSUser.objects.create(dds_id='user2')
-        self.userA = DukeDSUser.objects.create(dds_id='userA')
-        self.userB = DukeDSUser.objects.create(dds_id='userB')
         self.transfer_id = 'abcd-1234-efgh-6789'
 
 
@@ -176,22 +170,6 @@ class ShareTestCase(TransferBaseTestCase):
         self.assertEqual(share.user_message, user_message)
 
 
-class ProjectTestCase(TestCase):
-    def test_requires_project_id(self):
-        with self.assertRaises(IntegrityError):
-            DukeDSProject.objects.create(project_id=None)
-
-    def test_create_project(self):
-        p = DukeDSProject.objects.create(project_id='abcd-1234')
-        self.assertIsNotNone(p)
-
-    def test_populated(self):
-        p = DukeDSProject.objects.create(project_id='abcd-1234')
-        self.assertFalse(p.populated())
-        p.name = 'A Project'
-        self.assertTrue(p.populated())
-
-
 class UserTestCase(TestCase):
     def setUp(self):
         DukeDSUser.objects.create(dds_id='abcd-1234-fghi-5678')
@@ -243,10 +221,9 @@ class EmailTemplateTestCase(TestCase):
         # email templates depend on groups and users
         self.group = Group.objects.create(name='test_group')
         self.user = User.objects.create(username='test_user')
+        self.user_dds_id = 'user1'
+        DukeDSUser.objects.create(user=self.user, dds_id=self.user_dds_id)
         self.group.user_set.add(self.user)
-        self.dds_project = DukeDSProject.objects.create(project_id='project1')
-        self.dds_user1 = DukeDSUser.objects.create(dds_id='user1', user=self.user)
-        self.dds_user2 = DukeDSUser.objects.create(dds_id='user2')
         self.default_type = EmailTemplateType.from_share_role(ShareRole.DEFAULT)
         self.download_type = EmailTemplateType.from_share_role(ShareRole.DOWNLOAD)
         self.view_type = EmailTemplateType.from_share_role(ShareRole.VIEW)

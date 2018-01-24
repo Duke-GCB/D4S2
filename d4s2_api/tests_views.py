@@ -26,8 +26,6 @@ class AuthenticatedResourceTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.client.login(username=username, password=password)
         self.ddsuser1 = DukeDSUser.objects.create(user=self.user, dds_id='user1')
         self.ddsuser2 = DukeDSUser.objects.create(dds_id='user2')
-        self.project1 = DukeDSProject.objects.create(project_id='project1', name='Project 1')
-        self.project2 = DukeDSProject.objects.create(project_id='project2', name='Project 2')
         self.transfer_id1 = 'abcd-1234'
         self.transfer_id2 = 'efgh-5678'
 
@@ -95,8 +93,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         setup_mock_ddsutil(mock_ddsutil)
         h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
-        DukeDSProject.objects.create(project_id='project3')
-        updated = {'from_user_id': self.ddsuser1.dds_id, 'to_user_id': self.ddsuser2.dds_id ,'project_id': 'project3',
+        updated = {'from_user_id': self.ddsuser1.dds_id, 'to_user_id': self.ddsuser2.dds_id, 'project_id': 'project3',
                    'transfer_id': h.transfer_id}
         url = reverse('delivery-detail', args=(h.pk,))
         response = self.client.put(url, data=updated, format='json')
