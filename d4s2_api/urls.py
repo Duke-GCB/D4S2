@@ -5,8 +5,6 @@ from d4s2_api import views
 router = routers.DefaultRouter()
 router.register(r'deliveries', views.DeliveryViewSet, 'delivery')
 router.register(r'shares', views.ShareViewSet, 'share')
-router.register(r'users', views.DDSUsersViewSet, 'ddsuser')
-router.register(r'projects', views.DDSProjectsViewSet, 'ddsproject')
 
 urlpatterns = [
     url(r'^', include(router.urls)),

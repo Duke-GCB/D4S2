@@ -1,1 +1,155 @@
+from django.core.urlresolvers import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from d4s2_api.tests_views import AuthenticatedResourceTestCase
+from mock import patch, Mock
+from d4s2_api.views import *
+from d4s2_api.models import *
 
+
+class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('v2-dukedsuser-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertUnauthorized(response)
+
+    def test_post_not_permitted(self):
+        url = reverse('v2-dukedsuser-list')
+        data = {}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_put_not_permitted(self):
+        url = reverse('v2-dukedsuser-list')
+        data = {}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_list_users(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'results': [
+                {
+                    'id': 'user1',
+                    'username': 'joe1',
+                    'full_name': 'Joseph Smith',
+                    'email': 'joe@joe.joe',
+                }, {
+                    'id': 'user2',
+                    'username': 'bob1',
+                    'full_name': 'Robert Doe',
+                    'email': 'bob@bob.bob',
+                }
+            ]
+        }
+        mock_dds_util.return_value.get_users.return_value = mock_response
+        url = reverse('v2-dukedsuser-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+        user = response.data[0]
+        self.assertEqual(user['id'], 'user1')
+        self.assertEqual(user['username'], 'joe1')
+        self.assertEqual(user['full_name'], 'Joseph Smith')
+        self.assertEqual(user['email'], 'joe@joe.joe')
+
+        user = response.data[1]
+        self.assertEqual(user['id'], 'user2')
+        self.assertEqual(user['username'], 'bob1')
+        self.assertEqual(user['full_name'], 'Robert Doe')
+        self.assertEqual(user['email'], 'bob@bob.bob')
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_get_user(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'id': 'user1',
+            'username': 'joe1',
+            'full_name': 'Joseph Smith',
+            'email': 'joe@joe.joe',
+        }
+        mock_dds_util.return_value.get_user.return_value = mock_response
+        url = reverse('v2-dukedsuser-list') + 'user1/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_dds_util.return_value.get_user.assert_called_with('user1')
+
+        user = response.data
+        self.assertEqual(user['id'], 'user1')
+        self.assertEqual(user['username'], 'joe1')
+        self.assertEqual(user['full_name'], 'Joseph Smith')
+        self.assertEqual(user['email'], 'joe@joe.joe')
+
+
+class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('v2-dukedsproject-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertUnauthorized(response)
+
+    def test_post_not_permitted(self):
+        url = reverse('v2-dukedsproject-list')
+        data = {}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_put_not_permitted(self):
+        url = reverse('v2-dukedsproject-list')
+        data = {}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_list_projects(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'results': [
+                {
+                    'id': 'project1',
+                    'name': 'Mouse',
+                    'description': 'Mouse RNA',
+                }, {
+                    'id': 'project2',
+                    'name': 'Turtle',
+                    'description': 'Turtle DNA',
+                }
+            ]
+        }
+        mock_dds_util.return_value.get_projects.return_value = mock_response
+        url = reverse('v2-dukedsproject-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+        project = response.data[0]
+        self.assertEqual(project['id'], 'project1')
+        self.assertEqual(project['name'], 'Mouse')
+        self.assertEqual(project['description'], 'Mouse RNA')
+
+        project = response.data[1]
+        self.assertEqual(project['id'], 'project2')
+        self.assertEqual(project['name'], 'Turtle')
+        self.assertEqual(project['description'], 'Turtle DNA')
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_get_project(self, mock_dds_util):
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'id': 'project1',
+            'name': 'Mouse',
+            'description': 'Mouse RNA',
+        }
+        mock_dds_util.return_value.get_project.return_value = mock_response
+        url = reverse('v2-dukedsproject-list') + 'project1/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_dds_util.return_value.get_project.assert_called_with('project1')
+
+        project = response.data
+        self.assertEqual(project['id'], 'project1')
+        self.assertEqual(project['name'], 'Mouse')
+        self.assertEqual(project['description'], 'Mouse RNA')
