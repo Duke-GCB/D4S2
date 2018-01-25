@@ -9,6 +9,10 @@ from django.db import connection
 
 
 class TestMigrations(TestCase):
+    """
+    Modifies setUp to migrate to the migration name in `migrate_from` then run `setUpBeforeMigration(apps)`
+    finally finishes migrating to `migrate_to`. Use app apps.get_model to create model objects.
+    """
     @property
     def app(self):
         return apps.get_containing_app_config(type(self).__module__).name
@@ -41,8 +45,13 @@ class TestMigrations(TestCase):
 
 
 class DukeDSIDMigrationTestCase(TestMigrations):
+    """
+    Runs migrations to the point where Delivery/Share had references to DukeDSProject/DukeDSUser
+    Sets up some sample data. Finishes migrations to where we store the UUIDs instead and runs tests to make sure
+    the data has successfully migrated.
+    """
     migrate_from = '0007_delivery_share_to_users'
-    migrate_to = '0010_rename_delivery_dds_fields'
+    migrate_to = '0012_remove_dukeds_project'
 
     def setUpBeforeMigration(self, apps):
         Delivery = apps.get_model('d4s2_api', 'Delivery')
@@ -75,9 +84,9 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         deliveries = Delivery.objects.all()
         self.assertEqual(len(deliveries), 1)
         delivery = deliveries[0]
-        self.assertEqual(delivery.project_new, 'ab-123')
-        self.assertEqual(delivery.from_user_new, 'cd-456')
-        self.assertEqual(delivery.to_user_new, 'ef-789')
+        self.assertEqual(delivery.project_id, 'ab-123')
+        self.assertEqual(delivery.from_user_id, 'cd-456')
+        self.assertEqual(delivery.to_user_id, 'ef-789')
 
         share_users = delivery.shared_to_users.all()
         self.assertEqual(set(['gh-111', 'ij-222', 'kl-333']), set([user.dds_id for user in share_users]))
