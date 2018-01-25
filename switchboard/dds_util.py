@@ -60,8 +60,11 @@ class DDSUtil(object):
     def share_project_with_user(self, project_id, dds_user_id, auth_role):
         return self.remote_store.data_service.set_user_project_permission(project_id, dds_user_id, auth_role)
 
-    def get_users(self):
-        return self.remote_store.data_service.get_all_users()
+    def get_users(self, full_name_contains=None):
+        if full_name_contains:
+            return self.remote_store.data_service.get_users_by_full_name(full_name_contains)
+        else:
+            return self.remote_store.data_service.get_all_users()
 
     def get_user(self, user_id):
         return self.remote_store.data_service.get_user_by_id(user_id)
@@ -71,6 +74,9 @@ class DDSUtil(object):
 
     def get_project(self, project_id):
         return self.remote_store.data_service.get_project_by_id(project_id)
+
+    def get_current_user(self):
+        return self.remote_store.get_current_user()
 
 
 class DDSBase(object):
@@ -93,8 +99,8 @@ class DDSUser(DDSBase):
         self.email = user_dict.get('email')
 
     @staticmethod
-    def fetch_list(dds_util):
-        response = dds_util.get_users().json()
+    def fetch_list(dds_util, full_name_contains):
+        response = dds_util.get_users(full_name_contains).json()
         return DDSUser.from_list(response['results'])
 
     @staticmethod

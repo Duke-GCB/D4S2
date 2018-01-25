@@ -5,6 +5,7 @@ from rest_framework.exceptions import APIException
 from switchboard.dds_util import DDSUser, DDSProject
 from switchboard.dds_util import DDSUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer
+from d4s2_api.models import Delivery, Share, DeliveryShareUser
 
 
 class DataServiceUnavailable(APIException):
@@ -19,6 +20,12 @@ class WrappedDataServiceException(APIException):
     def __init__(self, data_service_exception):
         self.status_code = data_service_exception.status_code
         self.detail = data_service_exception.message
+
+
+class BadRequestException(APIException):
+    status_code = 400
+    def __init__(self, detail):
+        self.detail = detail
 
 
 class DDSViewSet(viewsets.ReadOnlyModelViewSet):
@@ -42,8 +49,44 @@ class DDSUsersViewSet(DDSViewSet):
     serializer_class = DDSUserSerializer
 
     def get_queryset(self):
+        full_name_contains = self.request.query_params.get('full_name_contains', None)
+        recent = self.request.query_params.get('recent', None)
+
         dds_util = DDSUtil(self.request.user)
-        return self._ds_operation(DDSUser.fetch_list, dds_util)
+        if recent:
+            if full_name_contains:
+                msg = "Query parameter 'full_name_contains' not allowed when specifying the 'recent' query parameter."
+                raise BadRequestException(msg)
+            return self._get_recent_delivery_users(dds_util)
+        else:
+            return self._ds_operation(DDSUser.fetch_list, dds_util, full_name_contains)
+
+    def _get_recent_delivery_users(self, dds_util):
+        """
+        Return users that are the recipient of deliveries create by the current user.
+        :param dds_util: DDSUtil: connection to DukeDS
+        :return: [DDSUser]: users who received deliveries from the current user
+        """
+        current_dds_user = dds_util.get_current_user()
+        to_user_ids = set()
+        for delivery in Delivery.objects.filter(from_user_id=current_dds_user.id):
+            to_user_ids.add(delivery.to_user_id)
+            for share_user in delivery.share_users.all():
+                if share_user.dds_id != current_dds_user.id:
+                    to_user_ids.add(share_user.dds_id)
+        return self._ds_operation(self._fetch_users_for_ids, dds_util, to_user_ids)
+
+    def _fetch_users_for_ids(self, dds_util, to_user_ids):
+        """
+        Given a list of DukeDS user ids fetch user details.
+        :param dds_util: DDSUtil: connection to DukeDS
+        :param to_user_ids: [str]: list of DukeDS user UUIDs
+        :return: [DDSUser]: list of user details fetched from DukeDS
+        """
+        users = []
+        for to_user_id in to_user_ids:
+            users.append(DDSUser.fetch_one(dds_util, to_user_id))
+        return users
 
     def get_object(self):
         dds_user_id = self.kwargs.get('pk')
