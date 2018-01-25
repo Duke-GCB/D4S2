@@ -24,6 +24,12 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
         return validate_delivery_data(data)
 
     def to_representation(self, instance):
+        """
+        Converts our object instance (Delivery) into a dict of primitive datatypes.
+        We add array of shared user ids to the resulting dict.
+        :param instance: Delivery: object to be serialized into a string.
+        :return: dict
+        """
         ret = super(DeliverySerializer, self).to_representation(instance)
         ret['share_user_ids'] = [share_user.dds_id for share_user in instance.share_users.all()]
         return ret
@@ -81,7 +87,7 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
 
 class DDSUserSerializer(serializers.Serializer):
     """
-    Serializer for dds_resources.DDSProject
+    Serializer for DukeDS users API
     """
     id = serializers.UUIDField()
     username = serializers.CharField()
@@ -96,7 +102,7 @@ class DDSUserSerializer(serializers.Serializer):
 
 class DDSProjectSerializer(serializers.Serializer):
     """
-    Serializer for dds_resources.DDSProject
+    Serializer for DukeDS projects API
     """
     id = serializers.UUIDField()
     name = serializers.CharField()
@@ -104,6 +110,3 @@ class DDSProjectSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'duke-ds-projects'
-
-
-
