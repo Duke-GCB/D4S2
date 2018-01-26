@@ -104,12 +104,9 @@ class Delivery(models.Model):
     above.
     """
     history = HistoricalRecords()
-    project_id = models.CharField(max_length=255, blank=False, null=True,
-                                  help_text='DukeDS uuid project to deliver')
-    from_user_id = models.CharField(max_length=255, blank=False, null=True,
-                                    help_text='DukeDS uuid user sending delivery')
-    to_user_id = models.CharField(max_length=255, blank=False, null=True,
-                                  help_text='DukeDS uuid user receiving delivery')
+    project_id = models.CharField(max_length=255, help_text='DukeDS uuid project to deliver')
+    from_user_id = models.CharField(max_length=255, help_text='DukeDS uuid user sending delivery')
+    to_user_id = models.CharField(max_length=255, help_text='DukeDS uuid user receiving delivery')
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
     transfer_id = models.CharField(max_length=36, null=False, unique=True)
     decline_reason = models.TextField(null=False, blank=True)
@@ -169,7 +166,7 @@ class Delivery(models.Model):
 
 
 class DeliveryShareUser(models.Model):
-    dds_id = models.CharField(max_length=36, null=False, unique=True)
+    dds_id = models.CharField(max_length=36, unique=True)
     delivery = models.ForeignKey(Delivery, related_name='share_users')
 
     class Meta:
@@ -185,12 +182,9 @@ class Share(models.Model):
 
     """
     history = HistoricalRecords()
-    project_id = models.CharField(max_length=255, blank=False, null=True,
-                                  help_text='DukeDS uuid project to share with')
-    from_user_id = models.CharField(max_length=255, blank=False, null=True,
-                                    help_text='DukeDS uuid user sharing the project')
-    to_user_id = models.CharField(max_length=255, blank=False, null=True,
-                                  help_text='DukeDS uuid user having project shared with them')
+    project_id = models.CharField(max_length=255, help_text='DukeDS uuid project to share with')
+    from_user_id = models.CharField(max_length=255, help_text='DukeDS uuid user sharing the project')
+    to_user_id = models.CharField(max_length=255, help_text='DukeDS uuid user having project shared with them')
     state = models.IntegerField(choices=State.SHARE_CHOICES, default=State.NEW, null=False)
     email_text = models.TextField(null=False, blank=True)
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
