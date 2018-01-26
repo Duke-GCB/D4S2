@@ -57,12 +57,6 @@ class DeliverySerializerTestCase(TestCase):
         self.assertEqual(serializer.data['transfer_id'], '123-123')
         self.assertEqual(serializer.data['share_user_ids'], ['user3','user4'])
 
-    def test_finds_related_project(self):
-        serializer = DeliverySerializer(data=self.data)
-        self.assertTrue(serializer.is_valid())
-        delivery = serializer.save()
-        self.assertEqual(delivery.project_id, 'project-1234')
-
     def test_finds_related_users(self):
         serializer = DeliverySerializer(data=self.data)
         self.assertTrue(serializer.is_valid())
