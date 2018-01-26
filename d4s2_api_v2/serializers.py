@@ -1,31 +1,28 @@
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-from django.utils.encoding import smart_text
-from d4s2_api_v2.models import Delivery, DukeDSUser, DukeDSProject
-from d4s2_api.serializers import validate_delivery_data
-
 from rest_framework import serializers
 
 
-class DeliverySerializer(serializers.ModelSerializer):
-    def validate(self, data):
-        return validate_delivery_data(data)
+class DDSUserSerializer(serializers.Serializer):
+    """
+    Serializer for DukeDS users API
+    """
+    id = serializers.UUIDField()
+    username = serializers.CharField()
+    full_name = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()
 
     class Meta:
-        model = Delivery
-        resource_name = 'deliveries'
-        fields = '__all__'
-
-class DukeDSUserSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = DukeDSUser
         resource_name = 'duke-ds-users'
-        fields = '__all__'
 
-class DukeDSProjectSerializer(serializers.ModelSerializer):
+
+class DDSProjectSerializer(serializers.Serializer):
+    """
+    Serializer for DukeDS projects API
+    """
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    description = serializers.CharField()
 
     class Meta:
-        model = DukeDSProject
         resource_name = 'duke-ds-projects'
-        fields = '__all__'

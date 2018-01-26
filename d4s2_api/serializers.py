@@ -1,74 +1,79 @@
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-from django.utils.encoding import smart_text
 from rest_framework import serializers
 
-from d4s2_api.models import Delivery, Share, DukeDSUser, DukeDSProject
+from d4s2_api.models import Delivery, Share, DukeDSUser, DeliveryShareUser
 SHARE_USERS_INVALID_MSG = "to_user cannot be part of share_to_users."
-
-
-class CreatableSlugRelatedField(serializers.SlugRelatedField):
-    """
-    SlugRelatedField (parent) is a read-write field that represents the target of a
-    relationship by a unique 'slug' attribute.
-
-    For example, serialized Delivery objects include the project's DukeDS UUID. This UUID is not stored
-    in the Delivery model, it is stored in the DukeDSProject model. SlugRelatedField makes this UUID part
-    of the serialized Delivery.
-
-    SlugRelatedField supports reading and writing. Changing a Delivery's project_id through the REST API
-    will associate the delivery with a different DukeDSProject object.
-
-    CreatableSlugRelatedField extends SlugRelatedField with the ability to create new model objects
-    with the slug data when they don't already exist.
-
-    From http://stackoverflow.com/a/28011896
-    """
-
-    def to_internal_value(self, data):
-        try:
-            return self.get_queryset().get_or_create(**{self.slug_field: data})[0]
-        except ObjectDoesNotExist:
-            self.fail('does_not_exist', slug_name=self.slug_field, value=smart_text(data))
-        except (TypeError, ValueError):
-            self.fail('invalid')
 
 
 def validate_delivery_data(data):
     """
     Check that to_user_id is not accidentally included in share_user_ids
     """
-    to_user_id = data['to_user'].id
-    share_to_users = data.get('share_to_users', [])
-    if share_to_users:
-        share_to_users_ids = [user.id for user in share_to_users]
-        if to_user_id in share_to_users_ids:
+    to_user_id = data['to_user_id']
+    share_user_ids = data.get('share_user_ids', [])
+    if share_user_ids:
+        if to_user_id in share_user_ids:
             raise serializers.ValidationError(SHARE_USERS_INVALID_MSG)
     return data
 
 
 class DeliverySerializer(serializers.HyperlinkedModelSerializer):
-    project_id = CreatableSlugRelatedField(source='project', slug_field='project_id',
-                                           queryset=DukeDSProject.objects.all())
-    from_user_id = CreatableSlugRelatedField(source='from_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
-    to_user_id = CreatableSlugRelatedField(source='to_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
-    share_user_ids = CreatableSlugRelatedField(source='share_to_users', many=True,
-                                               slug_field='dds_id', queryset=DukeDSUser.objects.all(), required=False)
+    share_user_ids = serializers.ListField(child=serializers.CharField(), required=False)
 
     def validate(self, data):
         return validate_delivery_data(data)
 
+    def to_representation(self, instance):
+        """
+        Converts our object instance (Delivery) into a dict of primitive datatypes.
+        We add array of shared user ids to the resulting dict.
+        :param instance: Delivery: object to be serialized into a string.
+        :return: dict
+        """
+        ret = super(DeliverySerializer, self).to_representation(instance)
+        ret['share_user_ids'] = [share_user.dds_id for share_user in instance.share_users.all()]
+        return ret
+
+    def create(self, validated_data):
+        def super_create(delivery_data):
+            return super(DeliverySerializer, self).create(delivery_data)
+        return self._save_delivery_data(validated_data, super_create)
+
+    def update(self, instance, validated_data):
+        def super_update(delivery_data):
+            return super(DeliverySerializer, self).update(instance, delivery_data)
+        return self._save_delivery_data(validated_data, super_update)
+
+    def _save_delivery_data(self, validated_data, func):
+        delivery_data = self._remove_share_user_ids_from_dict(validated_data)
+        instance = func(delivery_data)
+        if 'share_user_ids' in validated_data:
+            self._update_share_users(validated_data['share_user_ids'], instance)
+        return instance
+
+    @staticmethod
+    def _remove_share_user_ids_from_dict(validated_data):
+        delivery_data = dict(validated_data)
+        if 'share_user_ids' in delivery_data:
+            delivery_data.pop('share_user_ids')
+        return delivery_data
+
+    @staticmethod
+    def _update_share_users(share_user_ids, delivery):
+        DeliveryShareUser.objects.filter(delivery=delivery).delete()
+        for share_user_id in share_user_ids:
+            DeliveryShareUser.objects.create(delivery=delivery, dds_id=share_user_id)
+
     class Meta:
         model = Delivery
+        resource_name = 'deliveries'
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',
                   'share_user_ids')
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
-    project_id = CreatableSlugRelatedField(source='project', slug_field='project_id',
-                                           queryset=DukeDSProject.objects.all())
-    from_user_id = CreatableSlugRelatedField(source='from_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
-    to_user_id = CreatableSlugRelatedField(source='to_user', slug_field='dds_id', queryset=DukeDSUser.objects.all())
+    def validate(self, data):
+        return validate_delivery_data(data)
 
     class Meta:
         model = Share
@@ -81,3 +86,5 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = DukeDSUser
         fields = ('id', 'user_id', 'url', 'dds_id', 'full_name', 'email')
+
+

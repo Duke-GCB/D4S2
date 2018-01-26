@@ -4,11 +4,12 @@ from gcb_web_auth.models import DukeDSSettings
 from simple_history.admin import SimpleHistoryAdmin
 
 admin.site.register(DukeDSUser)
-admin.site.register(DukeDSProject)
 admin.site.register(EmailTemplate)
+
 
 class ShareAdmin(SimpleHistoryAdmin):
     pass
+
 
 admin.site.register(Share, ShareAdmin)
 
@@ -16,5 +17,7 @@ admin.site.register(Share, ShareAdmin)
 class DeliveryAdmin(SimpleHistoryAdmin):
     pass
 
+
 admin.site.register(Delivery, DeliveryAdmin)
+admin.site.register(DeliveryShareUser)
 admin.site.register(DukeDSSettings)

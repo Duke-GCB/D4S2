@@ -60,62 +60,92 @@ class DDSUtil(object):
     def share_project_with_user(self, project_id, dds_user_id, auth_role):
         return self.remote_store.data_service.set_user_project_permission(project_id, dds_user_id, auth_role)
 
+    def get_users(self, full_name_contains=None):
+        if full_name_contains:
+            return self.remote_store.data_service.get_users_by_full_name(full_name_contains)
+        else:
+            return self.remote_store.data_service.get_all_users()
 
-class ModelPopulator(object):
+    def get_user(self, user_id):
+        return self.remote_store.data_service.get_user_by_id(user_id)
+
+    def get_projects(self):
+        return self.remote_store.data_service.get_projects()
+
+    def get_project(self, project_id):
+        return self.remote_store.data_service.get_project_by_id(project_id)
+
+    def get_current_user(self):
+        return self.remote_store.get_current_user()
+
+
+class DDSBase(object):
+    @classmethod
+    def from_list(cls, project_dicts):
+        return [cls(p) for p in project_dicts]
+
+
+class DDSUser(DDSBase):
     """
-    Populates local models from DukeDS API
+    A simple object to represent a DDSProject
     """
-    def __init__(self, dds_util):
-        self.dds_util = dds_util
 
-    def populate_user(self, dds_user):
-        """
-        Populates a DukeDSUser calling the DukeDS API if needed
-        :param dds_user: A DukeDSUser model object that has been saved, but may not be populated
-        :return: None
-        """
-        if not dds_user.populated():
-            remote_user = self.dds_util.get_remote_user(dds_user.dds_id)
-            dds_user.email = dds_user.email or remote_user.email
-            dds_user.full_name = dds_user.full_name or remote_user.full_name
-            dds_user.save()
+    def __init__(self, user_dict):
+        self.id = user_dict.get('id')
+        self.username = user_dict.get('username')
+        self.full_name = user_dict.get('full_name')
+        self.first_name = user_dict.get('first_name')
+        self.last_name = user_dict.get('last_name')
+        self.email = user_dict.get('email')
 
-    def populate_project(self, dds_project):
-        """
-        Populates a DukeDSProjectcalling the DukeDS API if needed
-        :param dds_user:
-        :return: None
-        """
-        if not dds_project.populated():
-            remote_project = self.dds_util.get_remote_project(dds_project.project_id)
-            dds_project.name = dds_project.name or remote_project.name
-            dds_project.save()
+    @staticmethod
+    def fetch_list(dds_util, full_name_contains):
+        response = dds_util.get_users(full_name_contains).json()
+        return DDSUser.from_list(response['results'])
 
-    def update_delivery(self, delivery):
-        project_transfer = self.dds_util.get_project_transfer(delivery.transfer_id)
-        delivery.update_state_from_project_transfer(project_transfer)
+    @staticmethod
+    def fetch_one(dds_util, dds_user_id):
+        response = dds_util.get_user(dds_user_id).json()
+        return DDSUser(response)
+
+
+class DDSProject(DDSBase):
+    """
+    A simple object to represent a DDSProject
+    """
+
+    def __init__(self, project_dict):
+        self.id = project_dict.get('id')
+        self.name = project_dict.get('name')
+        self.description = project_dict.get('description')
+
+    @staticmethod
+    def fetch_list(dds_util):
+        response = dds_util.get_projects().json()
+        return DDSProject.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_user_id):
+        response = dds_util.get_project(dds_user_id).json()
+        return DDSProject(response)
 
 
 class DeliveryDetails(object):
     def __init__(self, delivery_or_share, user):
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
-        self.model_populator = ModelPopulator(self.ddsutil)
 
     def get_from_user(self):
-        self.model_populator.populate_user(self.delivery.from_user)
-        return self.delivery.from_user
+        return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
 
     def get_to_user(self):
-        self.model_populator.populate_user(self.delivery.to_user)
-        return self.delivery.to_user
+        return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
     def get_project(self):
-        self.model_populator.populate_project(self.delivery.project)
-        return self.delivery.project
+        return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
 
     def get_project_url(self):
-        return self.ddsutil.get_project_url(self.delivery.project.project_id)
+        return self.ddsutil.get_project_url(self.delivery.project_id)
 
     def get_user_message(self):
         return self.delivery.user_message
@@ -135,7 +165,6 @@ class DeliveryDetails(object):
             raise RuntimeError('No email template found')
 
     def get_delivery(self):
-        self.model_populator.update_delivery(self.delivery)
         return self.delivery
 
     @classmethod
