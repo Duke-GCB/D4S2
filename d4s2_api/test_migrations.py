@@ -3,12 +3,12 @@ Tests migrations that move DukeDS uuids around.
 TestMigrations from https://www.caktusgroup.com/blog/2016/02/02/writing-unit-tests-django-migrations/
 """
 from django.apps import apps
-from django.test import TestCase
+from django.test import TransactionTestCase
 from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
 
 
-class TestMigrations(TestCase):
+class TestMigrations(TransactionTestCase):
     """
     Modifies setUp to migrate to the migration name in `migrate_from` then run `setUpBeforeMigration(apps)`
     finally finishes migrating to `migrate_to`. Use app apps.get_model to create model objects.
@@ -51,7 +51,7 @@ class DukeDSIDMigrationTestCase(TestMigrations):
     the data has successfully migrated.
     """
     migrate_from = '0007_delivery_share_to_users'
-    migrate_to = '0012_remove_dukeds_project'
+    migrate_to = '0013_dds_id_fields_not_null'
 
     def setUpBeforeMigration(self, apps):
         Delivery = apps.get_model('d4s2_api', 'Delivery')
