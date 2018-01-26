@@ -35,15 +35,18 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
         return ret
 
     def create(self, validated_data):
-        delivery_data = self._remove_share_user_ids_from_dict(validated_data)
-        instance = super(DeliverySerializer, self).create(delivery_data)
-        if 'share_user_ids' in validated_data:
-            self._update_share_users(validated_data['share_user_ids'], instance)
-        return instance
+        def super_create(delivery_data):
+            return super(DeliverySerializer, self).create(delivery_data)
+        return self._save_delivery_data(validated_data, super_create)
 
     def update(self, instance, validated_data):
+        def super_update(delivery_data):
+            return super(DeliverySerializer, self).update(instance, delivery_data)
+        return self._save_delivery_data(validated_data, super_update)
+
+    def _save_delivery_data(self, validated_data, func):
         delivery_data = self._remove_share_user_ids_from_dict(validated_data)
-        instance = super(DeliverySerializer, self).update(instance, delivery_data)
+        instance = func(delivery_data)
         if 'share_user_ids' in validated_data:
             self._update_share_users(validated_data['share_user_ids'], instance)
         return instance
