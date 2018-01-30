@@ -166,7 +166,7 @@ class Delivery(models.Model):
 
 
 class DeliveryShareUser(models.Model):
-    dds_id = models.CharField(max_length=36, unique=True)
+    dds_id = models.CharField(max_length=36)
     delivery = models.ForeignKey(Delivery, related_name='share_users')
 
     class Meta:
