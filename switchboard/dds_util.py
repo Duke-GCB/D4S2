@@ -46,7 +46,10 @@ class DDSUtil(object):
         self.remote_store.revoke_user_project_permission(project, user)
 
     def get_project_transfer(self, transfer_id):
-        return self.remote_store.data_service.get_project_transfer(transfer_id).json()
+        return self.remote_store.data_service.get_project_transfer(transfer_id)
+
+    def get_project_transfers(self):
+        return self.remote_store.data_service.get_all_project_transfers()
 
     def create_project_transfer(self, project_id, to_user_ids):
         return self.remote_store.data_service.create_project_transfer(project_id, to_user_ids).json()
@@ -125,9 +128,30 @@ class DDSProject(DDSBase):
         return DDSProject.from_list(response['results'])
 
     @staticmethod
-    def fetch_one(dds_util, dds_user_id):
-        response = dds_util.get_project(dds_user_id).json()
+    def fetch_one(dds_util, dds_project_id):
+        response = dds_util.get_project(dds_project_id).json()
         return DDSProject(response)
+
+
+class DDSProjectTransfer(DDSBase):
+
+    def __init__(self, transfer_dict):
+        self.id = transfer_dict.get('id')
+        self.status = transfer_dict.get('status')
+        self.status_comment = transfer_dict.get('status_comment')
+        self.to_users = DDSUser.from_list(transfer_dict.get('to_users'))
+        self.from_user = DDSUser(transfer_dict.get('from_user'))
+        self.project = DDSProject(transfer_dict.get('project'))
+
+    @staticmethod
+    def fetch_list(dds_util):
+        response = dds_util.get_project_transfers().json()
+        return DDSProjectTransfer.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_project_transfer_id):
+        response = dds_util.get_project_transfer(dds_project_transfer_id).json()
+        return DDSProjectTransfer(response)
 
 
 class DeliveryDetails(object):
