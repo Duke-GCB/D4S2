@@ -71,8 +71,8 @@ class DDSUtilTestCase(TestCase):
     def testGetProjectTransfer(self, mockRemoteStore):
         transfer_id = 'abvcca-123'
         mock_project_transfer = {'id': transfer_id, 'status': 'accepted'}
-        get_project_transfer = MagicMock(return_value=MagicMock(json=MagicMock(return_value=mock_project_transfer)))
-        mockRemoteStore.return_value = MagicMock(data_service=MagicMock(get_project_transfer=get_project_transfer))
+        get_project_transfer = mockRemoteStore.return_value.data_service.get_project_transfer
+        get_project_transfer.return_value = mock_project_transfer
         ddsutil = DDSUtil(self.user)
         project_transfer = ddsutil.get_project_transfer(transfer_id)
         self.assertTrue(get_project_transfer.called_with(transfer_id))
