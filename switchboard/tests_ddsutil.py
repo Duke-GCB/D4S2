@@ -78,6 +78,16 @@ class DDSUtilTestCase(TestCase):
         self.assertTrue(get_project_transfer.called_with(transfer_id))
         self.assertEqual(project_transfer.get('status'), 'accepted')
 
+    @patch('switchboard.dds_util.RemoteStore')
+    def testGetProjectTransfers(self, mockRemoteStore):
+        mock_response = MagicMock()
+        mock_data_service = mockRemoteStore.return_value.data_service
+        mock_data_service.get_all_project_transfers.return_value = mock_response
+        ddsutil = DDSUtil(self.user)
+        project_transfers_response = ddsutil.get_project_transfers()
+        self.assertTrue(mock_data_service.get_all_project_transfers.called)
+        self.assertEqual(project_transfers_response, mock_response)
+
 
 class TestDeliveryDetails(TestCase):
 
