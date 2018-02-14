@@ -48,6 +48,30 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(set([share_user.dds_id for share_user in share_users]),
                          set(['user3', 'user4']))
 
+    def test_user_can_be_shared_multiple_deliveries(self):
+        delivery1 = Delivery.objects.create(project_id='projectA',
+                                            from_user_id='user1',
+                                            to_user_id='user2',
+                                            transfer_id='123-123')
+        delivery2 = Delivery.objects.create(project_id='projectB',
+                                            from_user_id='user3',
+                                            to_user_id='user4',
+                                            transfer_id='456-789')
+        DeliveryShareUser.objects.create(delivery=delivery1, dds_id='user3')
+        DeliveryShareUser.objects.create(delivery=delivery2, dds_id='user3')
+        self.assertEqual(DeliveryShareUser.objects.count(), 2)
+        self.assertEqual(set([share_user.dds_id for share_user in DeliveryShareUser.objects.all()]),
+                         set(['user3']))
+
+    def test_user_cannot_be_shared_delivery_twice(self):
+        delivery = Delivery.objects.create(project_id='projectA',
+                                           from_user_id='user1',
+                                           to_user_id='user2',
+                                           transfer_id='123-123')
+        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        with self.assertRaises(IntegrityError):
+            DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+
     def test_mark_notified(self):
         delivery = Delivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
