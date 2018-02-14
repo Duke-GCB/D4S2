@@ -69,24 +69,24 @@ class DDSUtilTestCase(TestCase):
 
     @patch('switchboard.dds_util.RemoteStore')
     def testGetProjectTransfer(self, mockRemoteStore):
+        mock_requests_response = MagicMock()
         transfer_id = 'abvcca-123'
-        mock_project_transfer = {'id': transfer_id, 'status': 'accepted'}
         get_project_transfer = mockRemoteStore.return_value.data_service.get_project_transfer
-        get_project_transfer.return_value = mock_project_transfer
+        get_project_transfer.return_value = mock_requests_response
         ddsutil = DDSUtil(self.user)
-        project_transfer = ddsutil.get_project_transfer(transfer_id)
+        project_transfer_response = ddsutil.get_project_transfer(transfer_id)
         self.assertTrue(get_project_transfer.called_with(transfer_id))
-        self.assertEqual(project_transfer.get('status'), 'accepted')
+        self.assertEqual(project_transfer_response, mock_requests_response)
 
     @patch('switchboard.dds_util.RemoteStore')
     def testGetProjectTransfers(self, mockRemoteStore):
-        mock_response = MagicMock()
+        mock_requests_response = MagicMock()
         mock_data_service = mockRemoteStore.return_value.data_service
-        mock_data_service.get_all_project_transfers.return_value = mock_response
+        mock_data_service.get_all_project_transfers.return_value = mock_requests_response
         ddsutil = DDSUtil(self.user)
         project_transfers_response = ddsutil.get_project_transfers()
         self.assertTrue(mock_data_service.get_all_project_transfers.called)
-        self.assertEqual(project_transfers_response, mock_response)
+        self.assertEqual(project_transfers_response, mock_requests_response)
 
 
 class TestDeliveryDetails(TestCase):
