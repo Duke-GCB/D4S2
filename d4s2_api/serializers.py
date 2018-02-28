@@ -68,7 +68,8 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
         model = Delivery
         resource_name = 'deliveries'
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',
-                  'share_user_ids')
+                  'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text')
+        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text',)
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
