@@ -27,7 +27,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         delivery = self.get_object()
-        if not delivery.is_new():
+        if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_path = reverse('ownership-prompt') + "?transfer_id=" + str(delivery.transfer_id)
         accept_url = request.build_absolute_uri(accept_path)
@@ -61,13 +61,22 @@ class ShareViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         share = self.get_object()
-        if 'force' in request.data:
-            force = request.data['force']
-        else:
-            force = False
-        if share.is_notified() and not force:
+        if share.is_notified() and not get_force_param(request):
             raise AlreadyNotifiedException()
         message = ShareMessage(share, request.user)
         message.send()
         share.mark_notified(message.email_text)
         return self.retrieve(request)
+
+
+def get_force_param(request):
+    """
+    Return value of 'force' in request or False if not found.
+    :param request: request that may contain 'force' data param
+    :return: boolean
+    """
+    if 'force' in request.data:
+        force = request.data['force']
+    else:
+        force = False
+    return force
