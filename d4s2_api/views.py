@@ -75,8 +75,11 @@ def get_force_param(request):
     :param request: request that may contain 'force' data param
     :return: boolean
     """
-    if 'force' in request.data:
-        force = request.data['force']
+    field_name = 'force'
+    if field_name in request.query_params:
+        force = request.query_params[field_name]
+    elif 'force' in request.data:
+        force = request.data[field_name]
     else:
         force = False
     return force
