@@ -78,3 +78,35 @@ class DeliverySerializerTestCase(TestCase):
         self.assertTrue(serializer.is_valid(raise_exception=True), 'serializer should be valid with a user message')
         delivery = serializer.save()
         self.assertEqual(delivery.user_message, user_message)
+
+    def test_serializer_includes_read_only_fields_in_output(self):
+        delivery = Delivery.objects.create(project_id='projectA',
+                                           from_user_id='user1',
+                                           to_user_id='user2',
+                                           transfer_id='123-123',
+                                           decline_reason='Wrong person',
+                                           performed_by='Bob Robertson',
+                                           delivery_email_text='here you go')
+        mock_request = MagicMock()
+        serializer = DeliverySerializer(delivery, context={'request': mock_request})
+
+        self.assertEqual(serializer.data['decline_reason'], 'Wrong person')
+        self.assertEqual(serializer.data['performed_by'], 'Bob Robertson')
+        self.assertEqual(serializer.data['delivery_email_text'], 'here you go')
+
+    def test_serializer_ignores_read_only_fields_on_input(self):
+        self.data = {
+            'project_id': 'project-1234',
+            'from_user_id': 'user-5678',
+            'to_user_id': 'user-9999',
+            'transfer_id': 'abcd-1234-efgh-5678',
+            'decline_reason': 'wrong',
+            'performed_by': 'george',
+            'delivery_email_text': 'here',
+        }
+        serializer = DeliverySerializer(data=self.data)
+        serializer.is_valid(raise_exception=True)
+        delivery = serializer.save()
+        self.assertEqual(delivery.decline_reason, '')
+        self.assertEqual(delivery.performed_by, '')
+        self.assertEqual(delivery.delivery_email_text, '')

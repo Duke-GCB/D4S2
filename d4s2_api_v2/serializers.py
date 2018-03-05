@@ -26,3 +26,15 @@ class DDSProjectSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'duke-ds-projects'
+
+
+class DDSProjectTransferSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    status = serializers.CharField()
+    status_comment = serializers.CharField(allow_null=True)
+    to_users = DDSUserSerializer(many=True)
+    from_user = DDSUserSerializer()
+    project = DDSProjectSerializer()
+
+    class Meta:
+        resource_name = 'duke-ds-project-transfers'

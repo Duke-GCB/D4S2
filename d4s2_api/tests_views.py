@@ -166,6 +166,19 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
+    @patch('d4s2_api.views.DeliveryMessage')
+    def test_force_send_share(self, mock_delivery_message):
+        instance = mock_delivery_message.return_value
+        instance.send = Mock()
+        instance.email_text = 'email text'
+        d = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d.mark_notified('email text')
+        url = reverse('delivery-send', args=(d.pk,))
+        response = self.client.post(url, data={'force': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(mock_delivery_message.called)
+        self.assertTrue(instance.send.called)
+
 
 class ShareViewTestCase(AuthenticatedResourceTestCase):
 

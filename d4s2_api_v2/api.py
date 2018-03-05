@@ -2,9 +2,9 @@ from d4s2_api.views import DeliveryViewSet
 
 from rest_framework import viewsets, permissions
 from rest_framework.exceptions import APIException
-from switchboard.dds_util import DDSUser, DDSProject
+from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
 from switchboard.dds_util import DDSUtil
-from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer
+from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer
 from d4s2_api.models import Delivery, Share, DeliveryShareUser
 
 
@@ -107,6 +107,20 @@ class DDSProjectsViewSet(DDSViewSet):
         return self._ds_operation(DDSProject.fetch_list, dds_util)
 
     def get_object(self):
-        dds_user_id = self.kwargs.get('pk')
+        dds_project_id = self.kwargs.get('pk')
         dds_util = DDSUtil(self.request.user)
-        return self._ds_operation(DDSProject.fetch_one, dds_util, dds_user_id)
+        return self._ds_operation(DDSProject.fetch_one, dds_util, dds_project_id)
+
+
+class DDSProjectTransfersViewSet(DDSViewSet):
+
+    serializer_class = DDSProjectTransferSerializer
+
+    def get_queryset(self):
+        dds_util = DDSUtil(self.request.user)
+        return self._ds_operation(DDSProjectTransfer.fetch_list, dds_util)
+
+    def get_object(self):
+        dds_project_transfer_id = self.kwargs.get('pk')
+        dds_util = DDSUtil(self.request.user)
+        return self._ds_operation(DDSProjectTransfer.fetch_one, dds_util, dds_project_transfer_id)
