@@ -261,7 +261,8 @@ class EmailTemplate(models.Model):
 
     @classmethod
     def for_operation(cls, operation, template_type_name):
-        user = operation.from_user.user
+        dds_user = DukeDSUser.objects.get(dds_id=operation.from_user_id)
+        user = dds_user.user
         if user is None:
             raise EmailTemplateException('User object not found in {}'.format(operation))
         user_set = UserEmailTemplateSet.objects.get(user=user)

@@ -18,6 +18,14 @@ def copy_email_template_group_to_sets(apps, schema_editor):
         email_template.save()
 
 
+def reverse_email_template_group_to_sets(apps, schema_editor):
+    """
+    Since we just copy data above reversing should just be a no-op
+    Added this in so we can test migrations.
+    """
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -25,5 +33,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(copy_email_template_group_to_sets),
+        migrations.RunPython(copy_email_template_group_to_sets, reverse_email_template_group_to_sets),
     ]
