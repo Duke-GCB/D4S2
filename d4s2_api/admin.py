@@ -21,3 +21,5 @@ class DeliveryAdmin(SimpleHistoryAdmin):
 admin.site.register(Delivery, DeliveryAdmin)
 admin.site.register(DeliveryShareUser)
 admin.site.register(DukeDSSettings)
+admin.site.register(EmailTemplateSet)
+admin.site.register(UserEmailTemplateSet)
