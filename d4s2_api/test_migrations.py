@@ -6,6 +6,7 @@ from django.apps import apps
 from django.test import TransactionTestCase
 from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
+from django.contrib.auth.models import Group, User
 
 
 class TestMigrations(TransactionTestCase):
@@ -100,3 +101,68 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         self.assertEqual(share.project_id, 'mn-123')
         self.assertEqual(share.from_user_id, 'op-456')
         self.assertEqual(share.to_user_id, 'qr-789')
+
+
+class EmailTemplateGropuMigrationTestCase(TestMigrations):
+    """
+    Runs migrations to the point where EmailTemplate has both group and template_set fields.
+    Sets up some sample EmailTemplates that have group filled in.
+    Finishes migrations to where only template_set remains.
+    """
+    migrate_from = '0015_auto_20180323_1757'
+    migrate_to = '0017_auto_20180323_1833'
+
+    def setUpBeforeMigration(self, apps):
+        EmailTemplate = apps.get_model('d4s2_api', 'EmailTemplate')
+        EmailTemplateType = apps.get_model('d4s2_api', 'EmailTemplateType')
+
+        user1 = User.objects.create_user('user1')
+        group1 = Group.objects.create(name='group1')
+        group1.user_set.add(user1)
+
+        user2 = User.objects.create_user('user2')
+        group2 = Group.objects.create(name='group2')
+        group2.user_set.add(user2)
+
+        delivery_type = EmailTemplateType.objects.create(name='delivery')
+        share_project_viewer_type = EmailTemplateType.objects.create(name='share_project_viewer')
+
+        # NOTE: Had to assign group and owner by id any other method failed with error message like:
+        # Cannot assign "<Group: group1>": "EmailTemplate.group" must be a "Group" instance.
+        EmailTemplate.objects.create(
+            group_id=group1.id,
+            owner_id=user1.id,
+            template_type=delivery_type,
+            body='some text',
+            subject='title1',
+        )
+        EmailTemplate.objects.create(
+            group_id=group1.id,
+            owner_id=user1.id,
+            template_type=share_project_viewer_type,
+            body='some text',
+            subject='title2',
+        )
+        EmailTemplate.objects.create(
+            group_id=group2.id,
+            owner_id=user2.id,
+            template_type=delivery_type,
+            body='some text',
+            subject='title3',
+        )
+
+    def test_delivery_ids_migrated(self):
+        """
+        The group field should migrated to the template_set.
+        Testing migration 0016_email_group_to_set.
+        """
+        EmailTemplate = apps.get_model('d4s2_api', 'EmailTemplate')
+        email_templates = EmailTemplate.objects.all()
+        self.assertEqual(len(email_templates), 3)
+        template_info = [(email_template.subject, email_template.template_set.name)
+                         for email_template in email_templates]
+        self.assertEqual({
+            ('title1', 'group1'),
+            ('title2', 'group1'),
+            ('title3', 'group2'),
+        }, set(template_info))
