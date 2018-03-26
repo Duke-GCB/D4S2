@@ -10,12 +10,16 @@ def copy_email_template_group_to_sets(apps, schema_editor):
     """
     EmailTemplate = apps.get_model('d4s2_api', 'EmailTemplate')
     EmailTemplateSet = apps.get_model('d4s2_api', 'EmailTemplateSet')
+    UserEmailTemplateSet = apps.get_model('d4s2_api', 'UserEmailTemplateSet')
+    User = apps.get_model('auth', 'User')
 
     for email_template in EmailTemplate.objects.all():
         group_name = email_template.group.name
         email_template_set, _ = EmailTemplateSet.objects.get_or_create(name=group_name)
         email_template.template_set = email_template_set
         email_template.save()
+        for user in User.objects.filter(groups__name=group_name):
+            UserEmailTemplateSet.objects.get_or_create(user=user, email_template_set=email_template_set)
 
 
 class Migration(migrations.Migration):

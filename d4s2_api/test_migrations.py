@@ -166,3 +166,13 @@ class EmailTemplateGropuMigrationTestCase(TestMigrations):
             ('title2', 'group1'),
             ('title3', 'group2'),
         }, set(template_info))
+
+    def test_user_email_template_sets_migrated(self):
+        UserEmailTemplateSet = apps.get_model('d4s2_api', 'UserEmailTemplateSet')
+        user_email_template_sets = UserEmailTemplateSet.objects.all()
+        user_email_template_sets_info = [
+            (user_email_template_set.user.username, user_email_template_set.email_template_set.name)
+            for user_email_template_set in user_email_template_sets
+        ]
+        self.assertEqual(set(user_email_template_sets_info),
+                         {('user1', u'group1'), ('user2', u'group2')})
