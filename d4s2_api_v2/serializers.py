@@ -35,6 +35,7 @@ class DDSProjectTransferSerializer(serializers.Serializer):
     to_users = DDSUserSerializer(many=True)
     from_user = DDSUserSerializer()
     project = DDSProjectSerializer()
+    delivery = serializers.UUIDField()
 
     class Meta:
         resource_name = 'duke-ds-project-transfers'
