@@ -269,6 +269,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_transfers(self, mock_dds_util):
         mock_response = Mock()
+        delivery = Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                           transfer_id='transfer1')
         mock_response.json.return_value = {
             'results': [
                 {
@@ -328,6 +330,7 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['to_users'][0]['id'], 'user1')
         self.assertEqual(transfer['from_user']['id'], 'user2')
         self.assertEqual(transfer['project']['name'], 'Mouse')
+        self.assertEqual(transfer['delivery'], str(delivery.id))
 
         transfer = response.data[1]
         self.assertEqual(transfer['id'], 'transfer2')
@@ -337,6 +340,7 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['to_users'][0]['id'], 'user1')
         self.assertEqual(transfer['from_user']['id'], 'user3')
         self.assertEqual(transfer['project']['name'], 'Rat')
+        self.assertEqual(transfer['delivery'], None)
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_get_project(self, mock_dds_util):

@@ -142,6 +142,14 @@ class DDSProjectTransfer(DDSBase):
         self.to_users = DDSUser.from_list(transfer_dict.get('to_users'))
         self.from_user = DDSUser(transfer_dict.get('from_user'))
         self.project = DDSProject(transfer_dict.get('project'))
+        self.delivery = DDSProjectTransfer._lookup_delivery_id(self.id)
+
+    @staticmethod
+    def _lookup_delivery_id(transfer_id):
+        delivery = Delivery.objects.filter(transfer_id=transfer_id).first()
+        if delivery:
+            return delivery.id
+        return None
 
     @staticmethod
     def fetch_list(dds_util):
