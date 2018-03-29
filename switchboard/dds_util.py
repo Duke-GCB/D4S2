@@ -111,6 +111,11 @@ class DDSUser(DDSBase):
         response = dds_util.get_user(dds_user_id).json()
         return DDSUser(response)
 
+    @staticmethod
+    def fetch_current_user(dds_util):
+        response = dds_util.get_current_user_as_response().json()
+        return DDSUser(response)
+
 
 class DDSProject(DDSBase):
     """
