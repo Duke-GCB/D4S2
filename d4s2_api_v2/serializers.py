@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
+from switchboard.dds_util import DDSUtil
 
 
 class DDSUserSerializer(serializers.Serializer):
@@ -39,3 +41,16 @@ class DDSProjectTransferSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'duke-ds-project-transfers'
+
+
+class UserSerializer(serializers.ModelSerializer):
+    duke_ds_user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        resource_name = 'users'
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'duke_ds_user',)
+
+    @staticmethod
+    def get_duke_ds_user(user):
+        return DDSUtil(user).get_current_user().id
