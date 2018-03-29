@@ -50,5 +50,6 @@ class UserSerializer(serializers.ModelSerializer):
         resource_name = 'users'
         fields = ('id', 'username', 'first_name', 'last_name', 'email', 'duke_ds_user',)
 
-    def get_duke_ds_user(self, user):
+    @staticmethod
+    def get_duke_ds_user(user):
         return DDSUtil(user).get_current_user().id
