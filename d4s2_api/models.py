@@ -296,7 +296,7 @@ class EmailTemplate(models.Model):
             if user:
                 return UserEmailTemplateSet.objects.get(user=user)
             return None
-        except (DukeDSUser.DoesNotExist, UserEmailTemplateSet):
+        except (DukeDSUser.DoesNotExist, UserEmailTemplateSet.DoesNotExist):
             return None
 
     @classmethod
