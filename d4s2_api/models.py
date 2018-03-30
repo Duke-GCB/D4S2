@@ -281,7 +281,7 @@ class UserEmailTemplateSet(models.Model):
     Specifies default email template to use for a user
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=False)
-    email_template_set = models.OneToOneField(EmailTemplateSet, on_delete=models.CASCADE, null=False)
+    email_template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE, null=False)
 
     def __str__(self):
         return 'User Email Template Set user <{}>, set: <{}>'.format(self.user.username, self.email_template_set.name)
