@@ -319,13 +319,51 @@ class EmailTemplateTestCase(TestCase):
         self.assertIsNotNone(t)
         self.assertEqual(t.subject, 'Acceptance Email Subject')
 
-    def test_no_templates(self):
+    def test_no_templates_in_template_set(self):
         share = Share.objects.create(project_id='project1',
                                      from_user_id='user1',
                                      to_user_id='user2',
                                      role=ShareRole.DOWNLOAD)
-        with self.assertRaises(EmailTemplate.DoesNotExist):
+        with self.assertRaises(EmailTemplateException) as raised_exception:
             EmailTemplate.for_share(share)
+        self.assertEqual(str(raised_exception.exception),
+                         'Setup Error: Unable to find email template for type share_file_downloader')
+
+    def test_no_template_set_for_user(self):
+        share = Share.objects.create(project_id='project1',
+                                     from_user_id='user2',
+                                     to_user_id='user1',
+                                     role=ShareRole.DOWNLOAD)
+        with self.assertRaises(EmailTemplateException) as raised_exception:
+            EmailTemplate.for_share(share)
+        self.assertEqual(str(raised_exception.exception),
+                         'Setup Error: Unable to find email template for type share_file_downloader')
+        """        share = Share.objects.create(project_id='project1',
+                                     from_user_id='user2',
+                                     to_user_id='user1',
+                                     role=ShareRole.DOWNLOAD)
+        default_email_template_set = EmailTemplateSet.objects.create(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
+        some_email_template = EmailTemplate.objects.create(template_set=default_email_template_set,
+                                                           owner=self.user,
+                                                           template_type=self.download_type,
+                                                           subject='Subject',
+                                                           body='email body')
+        email_template = EmailTemplate.for_share(share)
+        self.assertEqual(email_template.id, some_email_template.id)"""
+
+    def test_no_template_set_for_user_if_default_setup(self):
+        share = Share.objects.create(project_id='project1',
+                                     from_user_id='user2',
+                                     to_user_id='user1',
+                                     role=ShareRole.DOWNLOAD)
+        default_email_template_set = EmailTemplateSet.objects.create(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
+        some_email_template = EmailTemplate.objects.create(template_set=default_email_template_set,
+                                                           owner=self.user,
+                                                           template_type=self.download_type,
+                                                           subject='Subject',
+                                                           body='email body')
+        email_template = EmailTemplate.for_share(share)
+        self.assertEqual(email_template.id, some_email_template.id)
 
     def test_user_not_found(self):
         # dds_user2 is not bound to a django user, so we can't find templates
@@ -333,5 +371,22 @@ class EmailTemplateTestCase(TestCase):
                                      from_user_id='user2',
                                      to_user_id='user1',
                                      role=ShareRole.DOWNLOAD)
-        with self.assertRaises(DukeDSUser.DoesNotExist):
+        with self.assertRaises(EmailTemplateException) as raised_exception:
             EmailTemplate.for_share(share)
+        self.assertEqual(str(raised_exception.exception),
+                         'Setup Error: Unable to find email template for type share_file_downloader')
+
+    def test_user_not_found_if_we_create_default(self):
+        # dds_user2 is not bound to a django user, so we can't find templates
+        share = Share.objects.create(project_id='project1',
+                                     from_user_id='user2',
+                                     to_user_id='user1',
+                                     role=ShareRole.DOWNLOAD)
+        default_email_template_set = EmailTemplateSet.objects.create(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
+        some_email_template = EmailTemplate.objects.create(template_set=default_email_template_set,
+                                                           owner=self.user,
+                                                           template_type=self.download_type,
+                                                           subject='Subject',
+                                                           body='email body')
+        email_template = EmailTemplate.for_share(share)
+        self.assertEqual(email_template.id, some_email_template.id)
