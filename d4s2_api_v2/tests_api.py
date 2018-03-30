@@ -1,4 +1,5 @@
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, NoReverseMatch
+from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase
 from d4s2_api.tests_views import AuthenticatedResourceTestCase
@@ -268,6 +269,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_transfers(self, mock_dds_util):
         mock_response = Mock()
+        delivery = Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                           transfer_id='transfer1')
         mock_response.json.return_value = {
             'results': [
                 {
@@ -327,6 +330,7 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['to_users'][0]['id'], 'user1')
         self.assertEqual(transfer['from_user']['id'], 'user2')
         self.assertEqual(transfer['project']['name'], 'Mouse')
+        self.assertEqual(transfer['delivery'], str(delivery.id))
 
         transfer = response.data[1]
         self.assertEqual(transfer['id'], 'transfer2')
@@ -336,6 +340,7 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['to_users'][0]['id'], 'user1')
         self.assertEqual(transfer['from_user']['id'], 'user3')
         self.assertEqual(transfer['project']['name'], 'Rat')
+        self.assertEqual(transfer['delivery'], None)
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_get_project(self, mock_dds_util):
@@ -375,3 +380,92 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['to_users'][0]['id'], 'user1')
         self.assertEqual(transfer['from_user']['id'], 'user2')
         self.assertEqual(transfer['project']['name'], 'Mouse')
+
+
+class UserLogin(object):
+    """
+    Wraps up different user states for tests.
+    """
+    def __init__(self, client):
+        self.client = client
+
+    def become_unauthorized(self):
+        self.client.logout()
+
+    def become_normal_user(self):
+        username = "user"
+        password = "resu"
+        user = django_user.objects.create_user(username=username, password=password)
+        self.client.login(username=username, password=password)
+        return user
+
+    def become_other_normal_user(self):
+        username = "user2"
+        password = "resu2"
+        user = django_user.objects.create_user(username=username, password=password)
+        self.client.login(username=username, password=password)
+        return user
+
+    def become_admin_user(self):
+        username = "myadmin"
+        password = "nimda"
+        user = django_user.objects.create_superuser(username=username, email='', password=password)
+        self.client.login(username=username, password=password)
+        return user
+
+
+class UserTestCase(APITestCase):
+
+    def setUp(self):
+        self.user_login = UserLogin(self.client)
+        self.mock_user = Mock()
+        self.mock_user.id = '123-414-123'
+
+    def test_requires_login(self):
+        self.user_login.become_unauthorized()
+        url = reverse('v2-user-current-user')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_list(self):
+        with self.assertRaises(NoReverseMatch):
+            reverse('v2-user-list')
+
+    @patch('d4s2_api_v2.serializers.DDSUtil')
+    def test_get_current_user(self, mock_dds_util):
+        mock_dds_util.return_value.get_current_user.return_value = self.mock_user
+        self.user_login.become_normal_user()
+        url = reverse('v2-user-current-user')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], 'user')
+
+        self.user_login.become_other_normal_user()
+        url = reverse('v2-user-current-user')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], 'user2')
+
+    def test_cannot_change(self):
+        self.user_login.become_normal_user()
+        url = reverse('v2-user-current-user')
+        response = self.client.put(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        response = self.client.delete(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch('d4s2_api_v2.serializers.DDSUtil')
+    def test_cannot_get_by_id(self, mock_dds_util):
+        mock_dds_util.return_value.get_current_user.return_value = self.mock_user
+        self.user_login.become_normal_user()
+        url = reverse('v2-user-current-user')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], 'user')
+        user_id = response.data['id']
+        self.assertIsNotNone(django_user.objects.get(id=user_id))
+        detail_url = '{}/{}'.format(url, user_id)
+        response = self.client.get(detail_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

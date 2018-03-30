@@ -1,10 +1,13 @@
 from d4s2_api.views import DeliveryViewSet
 
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.exceptions import APIException
+from rest_framework.decorators import list_route
+from rest_framework.response import Response
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
 from switchboard.dds_util import DDSUtil
-from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer
+from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
+    UserSerializer
 from d4s2_api.models import Delivery, Share, DeliveryShareUser
 
 
@@ -124,3 +127,14 @@ class DDSProjectTransfersViewSet(DDSViewSet):
         dds_project_transfer_id = self.kwargs.get('pk')
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSProjectTransfer.fetch_one, dds_util, dds_project_transfer_id)
+
+
+class UserViewSet(viewsets.GenericViewSet):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = UserSerializer
+
+    @list_route(methods=['get'], url_path='current-user')
+    def current_user(self, request):
+        current_user = self.request.user
+        serializer = UserSerializer(self.request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
