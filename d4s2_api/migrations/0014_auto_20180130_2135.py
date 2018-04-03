@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('d4s2_api', '0013_dds_id_fields_not_null'),
+        ('d4s2_api', '0013_1_dds_id_fields_not_null'),
     ]
 
     operations = [
