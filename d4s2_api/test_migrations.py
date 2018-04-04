@@ -51,7 +51,7 @@ class DukeDSIDMigrationTestCase(TestMigrations):
     the data has successfully migrated.
     """
     migrate_from = '0007_delivery_share_to_users'
-    migrate_to = '0013_dds_id_fields_not_null'
+    migrate_to = '0013_1_dds_id_fields_not_null'
 
     def setUpBeforeMigration(self, apps):
         Delivery = apps.get_model('d4s2_api', 'Delivery')
