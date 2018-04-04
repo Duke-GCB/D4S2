@@ -6,6 +6,8 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, 
 from django.contrib.auth.models import User, Group
 from simple_history.models import HistoricalRecords
 
+DEFAULT_EMAIL_TEMPLATE_SET_NAME = 'default'
+
 
 class DukeDSUser(models.Model):
     """
@@ -211,6 +213,17 @@ class Share(models.Model):
 class EmailTemplateException(BaseException):
     pass
 
+
+class EmailTemplateSet(models.Model):
+    """
+    Set of email templates with unique template types.
+    """
+    name = models.CharField(max_length=64, null=False, blank=False, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class EmailTemplateType(models.Model):
     """
     Type of email template, e.g. share_project_viewer, delivery, final_notification
@@ -230,38 +243,74 @@ class EmailTemplate(models.Model):
     Represents a base email message that can be sent
     """
     history = HistoricalRecords()
-    group = models.ForeignKey(Group)
+    template_set = models.ForeignKey(EmailTemplateSet)
     owner = models.ForeignKey(User)
     template_type = models.ForeignKey(EmailTemplateType)
     body = models.TextField(null=False, blank=False)
     subject = models.TextField(null=False, blank=False)
 
     def __str__(self):
-        return 'Email Template in group <{}>, type <{}>: {}'.format(
+        return 'Email Template in set <{}>, type <{}>: {}'.format(
+            self.template_set,
             self.template_type,
-            self.group,
             self.subject,
         )
+
     class Meta:
         unique_together = (
-            ('group','template_type'),
+            ('template_set', 'template_type'),
         )
 
     @classmethod
     def for_operation(cls, operation, template_type_name):
-        from_user = DukeDSUser.objects.filter(dds_id=operation.from_user_id).first()
-        if from_user is None:
-            raise EmailTemplateException('User object not found in {}'.format(operation))
-        user = from_user.user
-        matches = cls.objects.filter(group__in=user.groups.all(), template_type__name=template_type_name)
-        if len(matches) == 0:
+        """
+        Lookup the EmailTemplate for the provided operation and template_type_name.
+        Returns per user EmailTemplateSet specified in the database or falls back to DEFAULT_EMAIL_TEMPLATE_SET_NAME.
+        :param operation: Delivery/Share: object with from_user_id field
+        :param template_type_name: str: name specifying what specific operation within a template set to use
+        :return: EmailTemplate
+        """
+        try:
+            user_email_template_set = EmailTemplate.get_user_email_template_set(operation.from_user_id)
+            if user_email_template_set:
+                email_template_set = user_email_template_set.email_template_set
+            else:
+                email_template_set = EmailTemplateSet.objects.get(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
+            return EmailTemplate.objects.get(
+                template_set=email_template_set,
+                template_type__name=template_type_name)
+        except (EmailTemplate.DoesNotExist, EmailTemplateSet.DoesNotExist):
+            raise EmailTemplateException(
+                "Setup Error: Unable to find email template for type {}".format(template_type_name))
+
+    @staticmethod
+    def get_user_email_template_set(from_user_id):
+        """
+        Lookup the UserEmailTemplateSet based on from_user_id or None if not found.
+        :param from_user_id: str: DukeDS uuid of the from user
+        :return: UserEmailTemplateSet or None
+        """
+        try:
+            dds_user = DukeDSUser.objects.get(dds_id=from_user_id)
+            user = dds_user.user
+            if user:
+                return UserEmailTemplateSet.objects.get(user=user)
             return None
-        elif len(matches) > 1:
-            raise EmailTemplateException('Multiple email templates found for type {}'.format(template_type_name))
-        else:
-            return matches.first()
+        except (DukeDSUser.DoesNotExist, UserEmailTemplateSet.DoesNotExist):
+            return None
 
     @classmethod
     def for_share(cls, share):
         type_name = 'share_{}'.format(share.role)
         return cls.for_operation(share, type_name)
+
+
+class UserEmailTemplateSet(models.Model):
+    """
+    Specifies an email template to use for a user
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=False)
+    email_template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE, null=False)
+
+    def __str__(self):
+        return 'User Email Template Set user <{}>, set: <{}>'.format(self.user.username, self.email_template_set.name)
