@@ -1,6 +1,6 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import DeliveryDetails, DDSUtil
-from d4s2_api.models import ShareRole, Share, DukeDSUser
+from d4s2_api.models import ShareRole, Share
 from ddsc.core.ddsapi import DataServiceError
 
 

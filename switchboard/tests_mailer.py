@@ -1,6 +1,6 @@
 from django.test import TestCase
 from switchboard.mailer import generate_message
-from d4s2_api.models import DukeDSUser
+
 
 class MailerTestCase(TestCase):
 

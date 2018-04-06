@@ -2,7 +2,7 @@ from mock import patch, Mock, call
 from django.test import TestCase
 from d4s2_api.utils import decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
     MessageDirection, DeliveryUtil, Message
-from d4s2_api.models import Delivery, Share, DukeDSUser, State, DeliveryShareUser
+from d4s2_api.models import Delivery, Share, State, DeliveryShareUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
 

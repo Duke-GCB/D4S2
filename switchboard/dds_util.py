@@ -166,6 +166,7 @@ class DeliveryDetails(object):
     def __init__(self, delivery_or_share, user):
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
+        self.user = user
 
     def get_from_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
@@ -183,14 +184,14 @@ class DeliveryDetails(object):
         return self.delivery.user_message
 
     def get_share_template_text(self):
-        email_template = EmailTemplate.for_share(self.delivery)
+        email_template = EmailTemplate.for_share(self.delivery, self.user)
         if email_template:
             return email_template.subject, email_template.body
         else:
             raise RuntimeError('No email template found')
 
     def get_action_template_text(self, action_name):
-        email_template = EmailTemplate.for_operation(self.delivery, action_name)
+        email_template = EmailTemplate.for_user(self.user, action_name)
         if email_template:
             return email_template.subject, email_template.body
         else:
