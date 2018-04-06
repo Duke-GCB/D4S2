@@ -97,7 +97,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'd4s2_api.dukeds_auth.D4S2DukeDSAuthBackend',
-    'd4s2_api.dukeds_auth.D4S2OAuth2Backend',
+    'gcb_web_auth.backends.oauth.OAuth2Backend',
 ]
 
 # Internationalization
