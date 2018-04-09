@@ -194,7 +194,7 @@ class DeliveryUtil(object):
         :return: str: end user warning message
         """
         failed_share_users_str = ', '.join(self.failed_share_users)
-        warning_message = None
+        warning_message = ''
         if failed_share_users_str:
             warning_message = "Failed to share with the following user(s): " + failed_share_users_str
         return warning_message
