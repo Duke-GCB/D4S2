@@ -142,6 +142,7 @@ class DDSProjectTransfer(DDSBase):
         self.to_users = DDSUser.from_list(transfer_dict.get('to_users'))
         self.from_user = DDSUser(transfer_dict.get('from_user'))
         self.project = DDSProject(transfer_dict.get('project'))
+        self.project_dict = transfer_dict.get('project')
         self.delivery = DDSProjectTransfer._lookup_delivery_id(self.id)
 
     @staticmethod
@@ -175,7 +176,8 @@ class DeliveryDetails(object):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
     def get_project(self):
-        return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
+        transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
+        return DDSProject(transfer.project_dict)
 
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.delivery.project_id)
