@@ -3,7 +3,7 @@ from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, Delivery
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token
-from gcb_web_auth.models import DukeDSSettings
+from gcb_web_auth.models import DDSEndpoint
 
 
 class DDSUtil(object):
@@ -32,8 +32,8 @@ class DDSUtil(object):
         return self.remote_store.fetch_remote_project(project.name, must_exist=True)
 
     def get_project_url(self, project_id):
-        duke_ds_settings = DukeDSSettings.objects.first()
-        return '{}/portal/#/project/{}'.format(duke_ds_settings.portal_root, project_id)
+        endpoint = DDSEndpoint.objects.first()
+        return '{}/portal/#/project/{}'.format(endpoint.portal_root, project_id)
 
     def add_user(self, user_id, project_id, auth_role):
         project = self.remote_store.fetch_remote_project_by_id(project_id)
