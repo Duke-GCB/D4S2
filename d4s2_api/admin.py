@@ -3,7 +3,6 @@ from d4s2_api.models import *
 from gcb_web_auth.models import DukeDSSettings
 from simple_history.admin import SimpleHistoryAdmin
 
-admin.site.register(DukeDSUser)
 admin.site.register(EmailTemplate)
 
 

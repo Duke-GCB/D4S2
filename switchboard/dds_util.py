@@ -142,6 +142,7 @@ class DDSProjectTransfer(DDSBase):
         self.to_users = DDSUser.from_list(transfer_dict.get('to_users'))
         self.from_user = DDSUser(transfer_dict.get('from_user'))
         self.project = DDSProject(transfer_dict.get('project'))
+        self.project_dict = transfer_dict.get('project')
         self.delivery = DDSProjectTransfer._lookup_delivery_id(self.id)
 
     @staticmethod
@@ -166,6 +167,7 @@ class DeliveryDetails(object):
     def __init__(self, delivery_or_share, user):
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
+        self.user = user
 
     def get_from_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
@@ -174,7 +176,8 @@ class DeliveryDetails(object):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
     def get_project(self):
-        return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
+        transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
+        return DDSProject(transfer.project_dict)
 
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.delivery.project_id)
@@ -183,14 +186,14 @@ class DeliveryDetails(object):
         return self.delivery.user_message
 
     def get_share_template_text(self):
-        email_template = EmailTemplate.for_share(self.delivery)
+        email_template = EmailTemplate.for_share(self.delivery, self.user)
         if email_template:
             return email_template.subject, email_template.body
         else:
             raise RuntimeError('No email template found')
 
     def get_action_template_text(self, action_name):
-        email_template = EmailTemplate.for_operation(self.delivery, action_name)
+        email_template = EmailTemplate.for_user(self.user, action_name)
         if email_template:
             return email_template.subject, email_template.body
         else:

@@ -2,7 +2,7 @@ from mock import patch, Mock, call
 from django.test import TestCase
 from d4s2_api.utils import decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
     MessageDirection, DeliveryUtil, Message
-from d4s2_api.models import Delivery, Share, DukeDSUser, State, DeliveryShareUser
+from d4s2_api.models import Delivery, Share, State, DeliveryShareUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
 
@@ -152,6 +152,14 @@ class DeliveryUtilTestCase(TestCase):
         self.assertEqual(self.delivery.to_user_id, share2.from_user_id)
         self.assertEqual(State.NOTIFIED, share2.state)
 
+    def test_get_warning_message(self):
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        self.assertEqual(delivery_util.get_warning_message(), '')
+
+        delivery_util.failed_share_users.append('joe')
+        delivery_util.failed_share_users.append('bob')
+        self.assertEqual(delivery_util.get_warning_message(), 'Failed to share with the following user(s): joe, bob')
+
 
 class MessageTestCase(TestCase):
     def setUp(self):
@@ -161,17 +169,17 @@ class MessageTestCase(TestCase):
         DeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
 
     @patch('switchboard.dds_util.DDSUtil')
-    @patch('switchboard.dds_util.DDSProject')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('switchboard.dds_util.DDSUser')
     @patch('d4s2_api.utils.generate_message')
-    def test_delivery_context(self, generate_message, mock_ddsuser, mock_dds_project, mock_dds_util):
+    def test_delivery_context(self, generate_message, mock_ddsuser, mock_dds_project_transfer, mock_dds_util):
         mock_ddsuser.fetch_one.side_effect = [
             Mock(full_name='Joe Sender', email='joe@joe.joe'),
             Mock(full_name='Bob Receiver', email='bob@bob.bob'),
         ]
-        mock_project = Mock()
-        mock_project.name = 'Mouse'
-        mock_dds_project.fetch_one.return_value = mock_project
+        mock_project_transfer = Mock()
+        mock_project_transfer.project_dict = {'name': 'Mouse'}
+        mock_dds_project_transfer.fetch_one.return_value = mock_project_transfer
         message = Message(self.delivery, self.user)
 
         # constructor above uses generate_message to build up context
