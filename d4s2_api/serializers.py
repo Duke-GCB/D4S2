@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from d4s2_api.models import Delivery, Share, DukeDSUser, DeliveryShareUser
+from d4s2_api.models import Delivery, Share, DeliveryShareUser
 SHARE_USERS_INVALID_MSG = "to_user cannot be part of share_to_users."
 
 
@@ -79,13 +79,3 @@ class ShareSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Share
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',)
-
-
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-    user_id = serializers.PrimaryKeyRelatedField(source='user', queryset=User.objects.all())
-
-    class Meta:
-        model = DukeDSUser
-        fields = ('id', 'user_id', 'url', 'dds_id', 'full_name', 'email')
-
-

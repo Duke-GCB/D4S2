@@ -1,5 +1,4 @@
 from django.test import TestCase
-from d4s2_api.models import DukeDSUser
 from mock import patch, Mock, MagicMock
 from switchboard.dds_util import DDSUtil, DeliveryDetails
 from d4s2_api.models import User
@@ -38,7 +37,6 @@ class DDSUtilTestCase(TestCase):
         remote_project.name = project_name
         instance = mockRemoteStore.return_value
         instance.fetch_remote_project_by_id.return_value = remote_project
-        DukeDSUser.objects.create(dds_id=self.user_id)
         ddsutil = DDSUtil(self.user)
         self.assertEqual(ddsutil.get_remote_project(project_id).name, project_name)
         self.assertTrue(instance.fetch_remote_project_by_id.called)
@@ -47,7 +45,6 @@ class DDSUtilTestCase(TestCase):
     def testAddUser(self, mockRemoteStore):
         instance = mockRemoteStore.return_value
         instance.set_user_project_permission = Mock()
-        DukeDSUser.objects.create(dds_id=self.user_id)
         ddsutil = DDSUtil(self.user)
         ddsutil.add_user('userid','projectid','auth_role')
         self.assertTrue(instance.set_user_project_permission.called)
@@ -56,13 +53,11 @@ class DDSUtilTestCase(TestCase):
     def testRemoveUser(self, mockRemoteStore):
         instance = mockRemoteStore.return_value
         instance.set_user_project_permission = Mock()
-        DukeDSUser.objects.create(dds_id=self.user_id)
         ddsutil = DDSUtil(self.user)
         ddsutil.remove_user('userid','projectid')
         self.assertTrue(instance.revoke_user_project_permission.called)
 
     def testFailsWithoutUser(self):
-        self.assertEqual(len(DukeDSUser.objects.all()), 0)
         with self.assertRaises(ValueError):
             ddsutil = DDSUtil('')
             ddsutil.remote_store
@@ -104,7 +99,7 @@ class TestDeliveryDetails(TestCase):
 
     @patch('switchboard.dds_util.EmailTemplate')
     def test_gets_action_template(self, MockEmailTemplate):
-        MockEmailTemplate.for_operation = Mock(return_value=MagicMock(subject='action subject', body='action body'))
+        MockEmailTemplate.for_user = Mock(return_value=MagicMock(subject='action subject', body='action body'))
         delivery = Mock()
         user = Mock()
         details = DeliveryDetails(delivery, user)

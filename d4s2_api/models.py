@@ -9,20 +9,6 @@ from simple_history.models import HistoricalRecords
 DEFAULT_EMAIL_TEMPLATE_SET_NAME = 'default'
 
 
-class DukeDSUser(models.Model):
-    """
-    Represents a DukeDS user.
-    is used when the corresponding user invokes an action that requires
-    communication with DukeDS (e.g. sharing a project or performing delivery)
-
-    """
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
-    dds_id = models.CharField(max_length=36, null=False, unique=True)
-
-    def __str__(self):
-        return "{} - {}".format(self.user.username, self.dds_id)
-
-
 class DDSProjectTransferDetails(object):
     class Fields(object):
         """
@@ -274,16 +260,17 @@ class EmailTemplate(models.Model):
         )
 
     @classmethod
-    def for_operation(cls, operation, template_type_name):
+    def for_user(cls, user, template_type_name):
         """
         Lookup the EmailTemplate for the provided operation and template_type_name.
         Returns per user EmailTemplateSet specified in the database or falls back to DEFAULT_EMAIL_TEMPLATE_SET_NAME.
-        :param operation: Delivery/Share: object with from_user_id field
+        :param user: User: django user to lookup a template for
         :param template_type_name: str: name specifying what specific operation within a template set to use
         :return: EmailTemplate
         """
         try:
-            user_email_template_set = EmailTemplate.get_user_email_template_set(operation.from_user_id)
+
+            user_email_template_set = EmailTemplate.get_user_email_template_set(user)
             if user_email_template_set:
                 email_template_set = user_email_template_set.email_template_set
             else:
@@ -296,25 +283,21 @@ class EmailTemplate(models.Model):
                 "Setup Error: Unable to find email template for type {}".format(template_type_name))
 
     @staticmethod
-    def get_user_email_template_set(from_user_id):
+    def get_user_email_template_set(user):
         """
         Lookup the UserEmailTemplateSet based on from_user_id or None if not found.
-        :param from_user_id: str: DukeDS uuid of the from user
+        :param user: django user
         :return: UserEmailTemplateSet or None
         """
         try:
-            dds_user = DukeDSUser.objects.get(dds_id=from_user_id)
-            user = dds_user.user
-            if user:
-                return UserEmailTemplateSet.objects.get(user=user)
-            return None
-        except (DukeDSUser.DoesNotExist, UserEmailTemplateSet.DoesNotExist):
+            return UserEmailTemplateSet.objects.get(user=user)
+        except (UserEmailTemplateSet.DoesNotExist):
             return None
 
     @classmethod
-    def for_share(cls, share):
+    def for_share(cls, share, user):
         type_name = 'share_{}'.format(share.role)
-        return cls.for_operation(share, type_name)
+        return cls.for_user(user, type_name)
 
 
 class UserEmailTemplateSet(models.Model):

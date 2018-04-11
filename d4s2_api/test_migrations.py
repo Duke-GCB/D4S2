@@ -7,6 +7,7 @@ from django.test import TransactionTestCase
 from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
 from django.contrib.auth.models import Group, User
+from django.core.management import call_command
 
 
 class TestMigrations(TransactionTestCase):
@@ -20,6 +21,7 @@ class TestMigrations(TransactionTestCase):
 
     migrate_from = None
     migrate_to = None
+    django_application = None
 
     def setUp(self):
         assert self.migrate_from and self.migrate_to, \
@@ -43,6 +45,12 @@ class TestMigrations(TransactionTestCase):
 
     def setUpBeforeMigration(self, apps):
         pass
+
+    def tearDown(self):
+        # Leave the db in the final state so that the test runner doesn't
+        # error when truncating the database.
+        # https://micknelson.wordpress.com/2013/03/01/testing-django-migrations/
+        call_command('migrate', self.django_application, verbosity=0)
 
 
 class DukeDSIDMigrationTestCase(TestMigrations):

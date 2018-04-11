@@ -24,8 +24,8 @@ class AuthenticatedResourceTestCase(APITestCase, ResponseStatusCodeTestCase):
         password = 'secret'
         self.user = django_user.objects.create_user(username, password=password, is_staff=True)
         self.client.login(username=username, password=password)
-        self.ddsuser1 = DukeDSUser.objects.create(user=self.user, dds_id='user1')
-        self.ddsuser2 = DukeDSUser.objects.create(dds_id='user2')
+        self.dds_id1 = 'user1'
+        self.dds_id2 = 'user2'
         self.transfer_id1 = 'abcd-1234'
         self.transfer_id2 = 'efgh-5678'
 
@@ -93,7 +93,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         setup_mock_ddsutil(mock_ddsutil)
         h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
-        updated = {'from_user_id': self.ddsuser1.dds_id, 'to_user_id': self.ddsuser2.dds_id, 'project_id': 'project3',
+        updated = {'from_user_id': self.dds_id1, 'to_user_id': self.dds_id2, 'project_id': 'project3',
                    'transfer_id': h.transfer_id}
         url = reverse('delivery-detail', args=(h.pk,))
         response = self.client.put(url, data=updated, format='json')
@@ -273,7 +273,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
     def test_filter_shares(self):
         Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         url = reverse('share-list')
-        response=self.client.get(url, {'to_user_id': self.ddsuser2.dds_id}, format='json')
+        response=self.client.get(url, {'to_user_id': 'user2'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         response=self.client.get(url, {'project_id': 'project23'}, format='json')
