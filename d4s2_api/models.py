@@ -30,7 +30,6 @@ class DDSProjectTransferDetails(object):
         CANCELED = 'canceled'
 
 
-
 class State(object):
     """
     States for delivery and share objects
@@ -123,7 +122,7 @@ class DeliveryBase(models.Model):
     class Meta:
         abstract = True
 
-
+# TODO rename to DDS Delivery
 class Delivery(DeliveryBase):
     """
     Represents a delivery of a project from one user to another
@@ -311,34 +310,66 @@ class UserEmailTemplateSet(models.Model):
         return 'User Email Template Set user <{}>, set: <{}>'.format(self.user.username, self.email_template_set.name)
 
 
-class S3Repository(models.Model):
+class S3EndpointManager(models.Manager):
+    def get_by_natural_key(self, url):
+        return self.get(url=url)
+
+
+class S3Endpoint(models.Model):
     """
     Defines S3 service provider
     """
-    endpoint_url = models.CharField(max_length=255, help_text='URL of S3 service', unique=True)
+    objects = S3EndpointManager()
+    url = models.CharField(max_length=255, help_text='URL of S3 service', unique=True)
 
     def __str__(self):
-        return 'S3 Repository endpoint_url: {}'.format(self.endpoint_url)
+        return 'S3 Endpoint url: {}'.format(self.url)
+
+
+class S3UserTypes(object):
+    NORMAL = 0
+    AGENT = 1
+    CHOICES = (
+        (NORMAL, 'Normal'),
+        (AGENT, 'Agent'),
+    )
+
+
+class S3User(models.Model):
+    endpoint = models.ForeignKey(S3Endpoint, on_delete=models.CASCADE, null=False)
+    s3_id = models.CharField(max_length=255, help_text='S3 user ID (aws_access_key_id)')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
+    type = models.IntegerField(choices=S3UserTypes.CHOICES, default=S3UserTypes.NORMAL, null=False)
+
+    def get_type_label(self):
+        type_choice = S3UserTypes.CHOICES[self.type]
+        if type_choice:
+            return type_choice[1]
+        return ''
+
+    def __str__(self):
+        return 'S3User s3_id: {} user: {} type: {}'.format(self.s3_id, self.user, self.get_type_label())
 
 
 class S3UserCredential(models.Model):
-    """
-    S3 credentials for a particular user/repository. Long term this will only be used to store an S3 agent user's
-    credentials. Until a method to request S3 authorization keys will be stored here for a limited set of users
-    """
-    repository = models.ForeignKey(S3Repository, on_delete=models.CASCADE, null=False)
-    key_id = models.CharField(max_length=255, help_text='S3 user ID (aws_access_key_id)')
+    s3_user = models.OneToOneField(S3User, related_name='credential')
     aws_secret_access_key = models.CharField(max_length=255, help_text='S3 user ID (aws_access_key_id)')
-    is_agent = models.BooleanField(help_text='Is this a agent user that is responsible for making the project transfer',
-                                   default=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=False)
 
     def __str__(self):
-        return 'S3 User Credential key_id: {} is_agent: {}'.format(self.key_id, self.is_agent)
+        return 'S3UserCredential user: {}'.format(self.s3_user)
 
-    # TODO: Add this back in when we have a separate agent ID (right now we only have 2 S3 credentials)
-    #class Meta:
-    #    unique_together = ('repository', 'key_id')
+
+class S3Bucket(models.Model):
+    """
+    Represents a bucket that exists in an s3 service.
+    This is duplicated to allow us to show bucket names to users receiving deliveries.
+    """
+    name = models.CharField(max_length=255, help_text='Name of S3 bucket')
+    owner = models.ForeignKey(S3User, related_name='owned_buckets')
+    endpoint = models.ForeignKey(S3Endpoint, on_delete=models.CASCADE, null=False)
+
+    def __str__(self):
+        return 'S3 Bucket: {} Endpoint: {} '.format(self.name, self.endpoint)
 
 
 class S3Delivery(DeliveryBase):
@@ -349,15 +380,14 @@ class S3Delivery(DeliveryBase):
     to a new bucket owned by the recipient.
     """
     history = HistoricalRecords()
-    repository = models.ForeignKey(S3Repository, on_delete=models.CASCADE, null=False)
-    bucket_name = models.CharField(max_length=255, help_text='Name of S3 bucket to deliver')
-    from_user_id = models.CharField(max_length=255, help_text='S3 aws_access_key_id of user sending delivery')
-    to_user_id = models.CharField(max_length=255, help_text='S3 aws_access_key_id of user receiving delivery')
+    bucket = models.ForeignKey(S3Bucket, related_name='deliveries')
+    from_user = models.ForeignKey(S3User, related_name='sent_deliveries')
+    to_user = models.ForeignKey(S3User, related_name='received_deliveries')
 
     def __str__(self):
         return 'S3 Delivery bucket: {} State: {} Performed by: {}'.format(
-            self.bucket_name, State.DELIVERY_CHOICES[self.state][1], self.performed_by
+            self.bucket, State.DELIVERY_CHOICES[self.state][1], self.performed_by
         )
 
     class Meta:
-        unique_together = ('bucket_name', 'from_user_id', 'to_user_id')
+        unique_together = ('bucket', 'from_user', 'to_user')
