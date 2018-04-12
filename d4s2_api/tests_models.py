@@ -1,7 +1,9 @@
 from django.db import IntegrityError
+from django.core import serializers
 from django.test import TestCase
 from d4s2_api.models import *
 from django.contrib.auth.models import User
+import json
 
 
 class TransferBaseTestCase(TestCase):
@@ -375,3 +377,124 @@ class EmailTemplateTestCase(TestCase):
                                                            body='email body')
         email_template = EmailTemplate.for_share(share, self.other_user)
         self.assertEqual(email_template.id, some_email_template.id)
+
+
+class S3EndpointTestCase(TestCase):
+    def test_create_and_read(self):
+        s3_url = 'https://s3service.com/'
+        S3Endpoint.objects.create(url=s3_url)
+        s3_endpoints = S3Endpoint.objects.all()
+        self.assertEqual(len(s3_endpoints), 1)
+        self.assertEqual(s3_endpoints[0].url, s3_url)
+
+    def test_deserialization_with_get_by_natural_key(self):
+        s3_endpoint_json_ary = '[{"model": "d4s2_api.s3endpoint", "fields": {"url": "https://s3.com/"}}]'
+        s3_endpoint_list = list(serializers.deserialize("json", s3_endpoint_json_ary))
+        self.assertEqual(len(s3_endpoint_list), 1)
+        s3_endpoint_list[0].save()
+        s3_endpoints = S3Endpoint.objects.all()
+        self.assertEqual(len(s3_endpoints), 1)
+        self.assertEqual(s3_endpoints[0].url, s3_url)
+
+
+class S3UserTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.user2 = User.objects.create(username='user2')
+
+    def test_create_and_read(self):
+        endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        s3_user1 = S3User.objects.create(endpoint=endpoint,
+                                         s3_id='user1_s3_id',
+                                         user=self.user1)
+        self.assertEqual(s3_user1.type, S3UserTypes.NORMAL)
+        self.assertEqual(s3_user1.get_type_label(), 'Normal')
+
+        s3_user2 = S3User.objects.create(endpoint=endpoint,
+                                         s3_id='user1_s3_id',
+                                         user=self.user2,
+                                         type=S3UserTypes.AGENT)
+        self.assertEqual(s3_user2.type, S3UserTypes.AGENT)
+        self.assertEqual(s3_user2.get_type_label(), 'Agent')
+
+        s3_users = S3User.objects.order_by('s3_id')
+        self.assertEqual(len(s3_users), 2)
+        self.assertEqual([s3_user.s3_id for s3_user in s3_users],
+                         ['user1_s3_id','user1_s3_id'])
+
+    def test_duplicating_endoint_and_user(self):
+        # One django user can have multiple S3Users as long as the endpoints are different
+        endpoint1 = S3Endpoint.objects.create(url='https://s3service1.com/')
+        endpoint2 = S3Endpoint.objects.create(url='https://s3service2.com/')
+
+        S3User.objects.create(endpoint=endpoint1, s3_id='user1_s3_id', user=self.user1)
+        S3User.objects.create(endpoint=endpoint2, s3_id='user1_s3_2id', user=self.user1)
+
+        with self.assertRaises(IntegrityError):
+            S3User.objects.create(endpoint=endpoint1, s3_id='user1_s3_3id', user=self.user1)
+
+
+class S3UserCredentialTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user1_s3_id',
+                                              user=self.user1)
+
+    def test_create_and_read(self):
+        S3UserCredential.objects.create(s3_user=self.s3_user1, aws_secret_access_key='secret123')
+        s3_user_credentials = S3UserCredential.objects.all()
+        self.assertEqual(len(s3_user_credentials), 1)
+        self.assertEqual(s3_user_credentials[0].aws_secret_access_key, 'secret123')
+        self.assertEqual(s3_user_credentials[0].s3_user, self.s3_user1)
+
+    def test_creating_multiple_credentials_for_one_user(self):
+        S3UserCredential.objects.create(s3_user=self.s3_user1, aws_secret_access_key='secret123')
+        with self.assertRaises(IntegrityError):
+            S3UserCredential.objects.create(s3_user=self.s3_user1, aws_secret_access_key='secret124')
+
+
+class S3BucketCredentialTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user1_s3_id',
+                                              user=self.user1)
+
+    def test_create_and_read(self):
+        S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+        S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
+        S3Bucket.objects.create(name='mouse3', owner=self.s3_user1, endpoint=self.endpoint)
+        s3_buckets = S3Bucket.objects.order_by('name')
+        self.assertEqual(len(s3_buckets), 3)
+        self.assertEqual([s3_bucket.name for s3_bucket in s3_buckets],
+                         ['mouse', 'mouse2', 'mouse3'])
+
+
+class S3DeliveryCredentialTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.user2 = User.objects.create(username='user2')
+        self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user1_s3_id',
+                                              user=self.user1)
+        self.s3_user2 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user2_s3_id',
+                                              user=self.user2)
+        self.s3_bucket = S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+        self.s3_bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
+
+    def test_create_and_read(self):
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        S3Delivery.objects.create(bucket=self.s3_bucket2, from_user=self.s3_user1, to_user=self.s3_user2)
+        s3_deliveries = S3Delivery.objects.order_by('bucket__name')
+        self.assertEqual([s3_delivery.bucket.name for s3_delivery in s3_deliveries],
+                         ['mouse', 'mouse2'])
+
+    def test_prevents_creating_same_delivery_twice(self):
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        with self.assertRaises(IntegrityError):
+            S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
