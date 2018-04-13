@@ -2,7 +2,7 @@ from django.test import TestCase
 from mock import patch, Mock, MagicMock
 from switchboard.dds_util import DDSUtil, DeliveryDetails
 from d4s2_api.models import User
-from gcb_web_auth.models import DukeDSSettings
+from gcb_web_auth.models import DDSEndpoint
 
 
 class DDSUtilTestCase(TestCase):
@@ -10,7 +10,7 @@ class DDSUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='ddsutil_user')
         self.user_id = 'abcd-1234-efgh-8876'
-        DukeDSSettings.objects.create(url='', portal_root='', openid_provider_id='')
+        DDSEndpoint.objects.create(api_root='', portal_root='', openid_provider_id='')
 
         patcher = patch('switchboard.dds_util.get_dds_token')
         mock_get_dds_token = patcher.start()
