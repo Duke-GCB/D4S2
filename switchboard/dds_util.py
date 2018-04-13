@@ -168,12 +168,18 @@ class DeliveryDetails(object):
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
         self.user = user
+        self._from_user = None
+        self._to_user = None
 
     def get_from_user(self):
-        return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
+        if not self._from_user:
+            self._from_user = DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
+        return self._from_user
 
     def get_to_user(self):
-        return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
+        if not self._to_user:
+            self._to_user =  DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
+        return self._to_user
 
     def get_project(self):
         transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
@@ -213,3 +219,27 @@ class DeliveryDetails(object):
 
         delivery = Delivery.objects.get(transfer_id=transfer_id)
         return DeliveryDetails(delivery, user)
+
+    def get_email_context(self, user, accept_url, process_type, reason, warning_message=''):
+        try:
+            sender = self.get_from_user()
+            receiver = self.get_to_user()
+            project = self.get_project()
+            project_url = self.get_project_url()
+            user_message = self.get_user_message()
+        except ValueError as e:
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+
+        return {
+            'project_name': project.name,
+            'recipient_name': receiver.full_name,
+            'recipient_email': receiver.email,
+            'sender_email': sender.email,
+            'sender_name': sender.full_name,
+            'project_url': project_url,
+            'accept_url': accept_url,
+            'type': process_type,  # accept or decline
+            'message': reason,  # decline reason
+            'user_message': user_message,
+            'warning_message': warning_message,
+        }

@@ -3,15 +3,15 @@ from rest_framework.exceptions import APIException
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
-#from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
 from switchboard.dds_util import DDSUtil
-#from switchboard.s3_util import S3DeliveryUtil
+from switchboard.s3_util import S3DeliveryUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
 from d4s2_api.models import Delivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
-#from d4s2_api.utils import S3DeliveryMessage
+from d4s2_api.utils import S3DeliveryMessage
 
 
 class DataServiceUnavailable(APIException):
@@ -188,16 +188,16 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         """
         return S3Delivery.objects.filter(Q(from_user__user=self.request.user) | Q(to_user__user=self.request.user))
 
-    # @detail_route(methods=['POST'])
-    # def send(self, request, pk=None):
-    #     s3_delivery = self.get_object()
-    #     if not s3_delivery.is_new() and not get_force_param(request):
-    #         raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
-    #     accept_path = reverse('s3ownership-prompt') + "?s3_delivery_id=" + str(s3_delivery.id)
-    #     accept_url = request.build_absolute_uri(accept_path)
-    #     s3_delivery_util = S3DeliveryUtil(s3_delivery, request.user)
-    #     s3_delivery_util.give_agent_permissions()
-    #     message = S3DeliveryMessage(s3_delivery, request.user, accept_url)
-    #     message.send()
-    #     s3_delivery.mark_notified(message.email_text)
-    #     return self.retrieve(request)
+    @detail_route(methods=['POST'])
+    def send(self, request, pk=None):
+        s3_delivery = self.get_object()
+        if not s3_delivery.is_new() and not get_force_param(request):
+            raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
+        accept_path = reverse('s3ownership-prompt') + "?s3_delivery_id=" + str(s3_delivery.id)
+        accept_url = request.build_absolute_uri(accept_path)
+        s3_delivery_util = S3DeliveryUtil(s3_delivery, request.user)
+        s3_delivery_util.give_agent_permissions()
+        message = S3DeliveryMessage(s3_delivery, request.user, accept_url)
+        message.send()
+        s3_delivery.mark_notified(message.email_text)
+        return self.retrieve(request)

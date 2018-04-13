@@ -1,5 +1,6 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import DeliveryDetails, DDSUtil
+from switchboard.s3_util import S3DeliveryDetails
 from d4s2_api.models import ShareRole, Share
 from ddsc.core.ddsapi import DataServiceError
 
@@ -17,7 +18,6 @@ class MessageDirection(object):
 
 
 class Message(object):
-
     def __init__(self, deliverable, user, accept_url=None, reason=None, process_type=None,
                  direction=MessageDirection.ToRecipient, warning_message=''):
         """
@@ -25,36 +25,22 @@ class Message(object):
         in a models.Share or models.Delivery object. Then calls generate_message with email addresses, subject, and the details to
         generate an EmailMessage object, which can be .send()ed.
         """
-
         self.deliverable = deliverable
         try:
-            delivery_details = DeliveryDetails(self.deliverable, user)
-            sender = delivery_details.get_from_user()
-            receiver = delivery_details.get_to_user()
-            project = delivery_details.get_project()
-            project_url = delivery_details.get_project_url()
-            user_message = delivery_details.get_user_message()
+            delivery_details = self.make_delivery_details(self.deliverable, user)
+            context = delivery_details.get_email_context(user, accept_url, process_type, reason, warning_message)
             template_subject, template_body = self.get_templates(delivery_details)
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
 
-        context = {
-            'project_name': project.name,
-            'recipient_name': receiver.full_name,
-            'recipient_email': receiver.email,
-            'sender_email': sender.email,
-            'sender_name': sender.full_name,
-            'project_url': project_url,
-            'accept_url': accept_url,
-            'type': process_type,  # accept or decline
-            'message': reason,  # decline reason
-            'user_message': user_message,
-            'warning_message': warning_message,
-        }
-
+        sender = delivery_details.get_from_user()
+        receiver = delivery_details.get_to_user()
         # Delivery confirmation emails should go back to the delivery sender
         from_email, to_email = MessageDirection.email_addresses(sender, receiver, direction)
         self._message = generate_message(from_email, to_email, template_subject, template_body, context)
+
+    def make_delivery_details(self, deliverable, user):
+        return DeliveryDetails(deliverable, user)
 
     def get_templates(self, delivery_details):
         return (None, None)
@@ -130,6 +116,16 @@ class ProcessedMessage(Message):
                                                warning_message=warning_message)
 
 
+class S3ProcessedMessage(ProcessedMessage):
+    def make_delivery_details(self, deliverable, user):
+        return S3DeliveryDetails(deliverable, user)
+
+
+class S3DeliveryMessage(DeliveryMessage):
+    def make_delivery_details(self, deliverable, user):
+        return S3DeliveryDetails(deliverable, user)
+
+
 class DeliveryUtil(object):
     """
     Communicates with DukeDS via DDSUtil to accept the project transfer.
@@ -143,7 +139,6 @@ class DeliveryUtil(object):
         :param share_user_message: str: reason for sharing to this user
         """
         self.delivery = delivery
-        self.project_id = delivery.project_id
         self.user = user
         self.dds_util = DDSUtil(user)
         self.share_role = share_role
@@ -166,8 +161,9 @@ class DeliveryUtil(object):
 
     def _share_with_additional_user(self, share_to_user):
         try:
-            self.dds_util.share_project_with_user(self.project_id, share_to_user.dds_id, self.share_role)
-            self._create_and_send_share_message(share_to_user)
+            project_id = self.delivery.project_id
+            self.dds_util.share_project_with_user(project_id, share_to_user.dds_id, self.share_role)
+            self._create_and_send_share_message(share_to_user, project_id)
         except DataServiceError:
             self.failed_share_users.append(self._try_lookup_user_name(share_to_user.dds_id))
 
@@ -178,8 +174,8 @@ class DeliveryUtil(object):
         except DataServiceError:
             return user_id
 
-    def _create_and_send_share_message(self, share_to_user):
-        share = Share.objects.create(project_id=self.project_id,
+    def _create_and_send_share_message(self, share_to_user, project_id):
+        share = Share.objects.create(project_id=project_id,
                                      from_user_id=self.delivery.to_user_id,
                                      to_user_id=share_to_user.dds_id,
                                      role=self.share_role,
