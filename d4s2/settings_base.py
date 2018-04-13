@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     's3ownership',
     'simple_history',
     'corsheaders',
+    'background_task',
 ]
 
 MIDDLEWARE_CLASSES = [

@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
-from d4s2_api.models import Delivery, State, ShareRole
+from django.contrib.auth.models import User
+from d4s2_api.models import Delivery, State, ShareRole, S3Delivery
 from d4s2_api.utils import DeliveryUtil, decline_delivery, S3ProcessedMessage
 from switchboard.s3_util import S3DeliveryDetails, S3DeliveryUtil
 from ddsc.core.ddsapi import DataServiceError
@@ -9,6 +10,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from ownership.views import MISSING_TRANSFER_ID_MSG, INVALID_TRANSFER_ID, TRANSFER_ID_NOT_FOUND, \
     REASON_REQUIRED_MSG, SHARE_IN_RESPONSE_TO_DELIVERY_MSG
+from background_task import background
 
 
 @login_required
@@ -52,16 +54,26 @@ def accept_project_redirect(request, s3_delivery):
     Accept delivery and redirect user to look at the project.
     """
     try:
-        delivery_util = S3DeliveryUtil(s3_delivery, request.user)
-        delivery_util.accept_project_transfer()
-        message = S3ProcessedMessage(s3_delivery, request.user, "accepted")
-        message.send()
-        s3_delivery.mark_accepted(request.user.get_username(), message.email_text)
-    #except DataServiceError as e:
-    #    raise RuntimeError('Unable to transfer ownership: {}'.format(e.message))
+        deliver_project_and_send_emails(request.user.id, s3_delivery.id)
     except Exception as e:
         return general_error(request, msg=str(e), status=500)
     return redirect(reverse('s3ownership-accepted') + '?s3_delivery_id=' + str(s3_delivery.id))
+
+
+@background
+def deliver_project_and_send_emails(user_id, s3_delivery_id):
+    """
+    In background deliver a project to the specified user.
+    :param user_id:
+    :param s3_delivery_id:
+    """
+    user = User.objects.get(pk=user_id)
+    s3_delivery = S3Delivery.objects.get(pk=s3_delivery_id)
+    delivery_util = S3DeliveryUtil(s3_delivery, user)
+    delivery_util.accept_project_transfer()
+    message = S3ProcessedMessage(s3_delivery, user, "accepted")
+    message.send()
+    s3_delivery.mark_accepted(user.get_username(), message.email_text)
 
 
 def render_decline_reason_prompt(request, delivery):
@@ -77,10 +89,9 @@ def decline_project(request, s3_delivery):
     """
     reason = request.POST.get('decline_reason')
     if not reason:
-        context = build_delivery_context(delivery, request.user)
+        context = build_delivery_context(s3_delivery, request.user)
         context['error_message'] = REASON_REQUIRED_MSG
         return render(request, 's3ownership/decline_reason.html', context, status=400)
-
     try:
         delivery_util = S3DeliveryUtil(s3_delivery, request.user)
         delivery_util.decline_delivery()
@@ -89,8 +100,7 @@ def decline_project(request, s3_delivery):
         s3_delivery.mark_declined(request.user.get_username(), reason, message.email_text)
         return render(request, 's3ownership/decline_done.html', build_delivery_context(s3_delivery, request.user))
     except Exception as e:
-        raise e
-        #return general_error(request, msg=str(e), status=500)
+        return general_error(request, msg=str(e), status=500)
 
 
 @login_required
