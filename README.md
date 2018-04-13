@@ -29,7 +29,7 @@ Installation - Local
           endpoint-name \
           https://api.dataservice.duke.edu/api/v1 \
           registered-application-agent-key \
-          https://api.dataservice.duke.edu \
+          https://dataservice.duke.edu \
           openid-provider-id
 
 7. Start the app:
