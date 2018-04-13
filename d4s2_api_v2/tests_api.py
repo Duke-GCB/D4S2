@@ -395,14 +395,24 @@ class UserLogin(object):
     def become_normal_user(self):
         username = "user"
         password = "resu"
-        user = django_user.objects.create_user(username=username, password=password)
+        email = "user@resu.com"
+        user = django_user.objects.create_user(username=username, password=password, email=email)
         self.client.login(username=username, password=password)
         return user
 
     def become_other_normal_user(self):
         username = "user2"
         password = "resu2"
-        user = django_user.objects.create_user(username=username, password=password)
+        email = "user2@resu2.com"
+        user = django_user.objects.create_user(username=username, password=password, email=email)
+        self.client.login(username=username, password=password)
+        return user
+
+    def become_third_normal_user(self):
+        username = "user3"
+        password = "resu3"
+        email = "user3@resu3.com"
+        user = django_user.objects.create_user(username=username, password=password, email=email)
         self.client.login(username=username, password=password)
         return user
 
@@ -469,3 +479,338 @@ class UserTestCase(APITestCase):
         detail_url = '{}/{}'.format(url, user_id)
         response = self.client.get(detail_url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class S3EndpointViewSetTestCase(AuthenticatedResourceTestCase):
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('v2-s3endpoint-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertUnauthorized(response)
+
+    def test_post_not_permitted(self):
+        url = reverse('v2-s3endpoint-list')
+        data = {}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_put_not_permitted(self):
+        url = reverse('v2-s3endpoint-list')
+        data = {}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_list_endpoints(self):
+        S3Endpoint.objects.create(url='http://s3.com')
+        S3Endpoint.objects.create(url='http://s3.org')
+        S3Endpoint.objects.create(url='http://s3.net')
+
+        url = reverse('v2-s3endpoint-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+        self.assertEqual(set([endpoint['url'] for endpoint in  response.data]),
+                         set(['http://s3.com', 'http://s3.org', 'http://s3.net']))
+
+
+class S3UserViewSetTestCase(AuthenticatedResourceTestCase):
+    def setUp(self):
+        self.user_login = UserLogin(self.client)
+        self.endpoint = S3Endpoint.objects.create(url='http://s3.com')
+        self.normal_user1 = self.user_login.become_normal_user()
+        self.normal_user2 = self.user_login.become_other_normal_user()
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('v2-s3user-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertUnauthorized(response)
+
+    def test_post_not_permitted(self):
+        url = reverse('v2-s3user-list')
+        data = {}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_put_not_permitted(self):
+        url = reverse('v2-s3user-list')
+        data = {}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_list_s3users(self):
+        s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
+        s3_user2 = S3User.objects.create(endpoint=self.endpoint, s3_id='def', user=self.normal_user2)
+
+        expected_data = {
+            s3_user1.id: {
+                'email': s3_user1.user.email,
+                'type': 'Normal'
+            },
+            s3_user2.id: {
+                'email': s3_user2.user.email,
+                'type': 'Normal'
+            }
+        }
+
+        url = reverse('v2-s3user-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        for s3_user_resp in response.data:
+            s3_id = s3_user_resp['id']
+            expected_dict = expected_data[s3_id]
+            self.assertEqual(s3_user_resp['email'], expected_dict['email'])
+            self.assertEqual(s3_user_resp['type'], expected_dict['type'])
+
+    def test_list_s3users_hides_agents(self):
+        s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
+        S3User.objects.create(endpoint=self.endpoint, s3_id='def', user=self.normal_user2, type=S3UserTypes.AGENT)
+
+        expected_data = {
+            s3_user1.id: {
+                'email': s3_user1.user.email,
+                'type': 'Normal'
+            },
+        }
+
+        url = reverse('v2-s3user-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        for s3_user_resp in response.data:
+            s3_id = s3_user_resp['id']
+            expected_dict = expected_data[s3_id]
+            self.assertEqual(s3_user_resp['email'], expected_dict['email'])
+            self.assertEqual(s3_user_resp['type'], expected_dict['type'])
+
+    def test_list_s3users_email_filter(self):
+        S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
+        s3_user2 = S3User.objects.create(endpoint=self.endpoint, s3_id='def', user=self.normal_user2)
+
+        expected_data = {
+            s3_user2.id: {
+                'email': s3_user2.user.email,
+                'type': 'Normal'
+            }
+        }
+
+        url = reverse('v2-s3user-list') + '?email=' + s3_user2.user.email
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        for s3_user_resp in response.data:
+            s3_id = s3_user_resp['id']
+            expected_dict = expected_data[s3_id]
+            self.assertEqual(s3_user_resp['email'], expected_dict['email'])
+            self.assertEqual(s3_user_resp['type'], expected_dict['type'])
+
+
+class S3BucketViewSetTestCase(AuthenticatedResourceTestCase):
+    def setUp(self):
+        self.user_login = UserLogin(self.client)
+        self.endpoint = S3Endpoint.objects.create(url='http://s3.com')
+        self.normal_user1 = self.user_login.become_normal_user()
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('v2-s3bucket-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertUnauthorized(response)
+
+    def test_list_s3buckets_shows_owned_buckets(self):
+        bucket = S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
+        url = reverse('v2-s3bucket-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        bucket_response = response.data[0]
+        self.assertEqual(bucket_response['id'], bucket.id)
+        self.assertEqual(bucket_response['name'], 'mouse1')
+        self.assertEqual(bucket_response['owner'], self.s3_user1.id)
+        self.assertEqual(bucket_response['endpoint'], self.endpoint.id)
+
+    def test_list_s3buckets_hides_from_other_users(self):
+        S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
+        self.user_login.become_other_normal_user()
+
+        url = reverse('v2-s3bucket-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_list_s3buckets_shown_to_other_users_receiving_deliveries(self):
+        bucket = S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
+        other_normal_user = self.user_login.become_other_normal_user()
+        s3_other_user = S3User.objects.create(endpoint=self.endpoint, s3_id='cde', user=other_normal_user)
+        S3Delivery.objects.create(bucket=bucket, from_user=self.s3_user1, to_user=s3_other_user)
+
+        url = reverse('v2-s3bucket-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        bucket_response = response.data[0]
+        self.assertEqual(bucket_response['id'], bucket.id)
+        self.assertEqual(bucket_response['name'], 'mouse1')
+        self.assertEqual(bucket_response['owner'], self.s3_user1.id)
+        self.assertEqual(bucket_response['endpoint'], self.endpoint.id)
+
+    def test_create_s3_buckets(self):
+        url = reverse('v2-s3bucket-list')
+        data = {'name': 'mouse2', 'owner': self.s3_user1.id, 'endpoint': self.endpoint.id}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        bucket = S3Bucket.objects.get(name='mouse2')
+        self.assertEqual(bucket.owner, self.s3_user1)
+
+    def test_create_s3_buckets_if_not_owner(self):
+        url = reverse('v2-s3bucket-list')
+        data = {'name': 'mouse2', 'owner': self.s3_user1.id, 'endpoint': self.endpoint.id}
+        self.user_login.become_other_normal_user()
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_put_s3_bucket(self):
+        bucket = S3Bucket.objects.create(name='mouseOops', owner=self.s3_user1, endpoint=self.endpoint)
+        url = reverse('v2-s3bucket-list') + str(bucket.id) + '/'
+        data = {'name': 'mouseFixed', 'owner': bucket.owner.id, 'endpoint': bucket.endpoint.id}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(S3Bucket.objects.get(pk=bucket.id).name, 'mouseFixed')
+
+    def test_delete_own_s3_buckets(self):
+        bucket = S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
+        url = reverse('v2-s3bucket-list') + str(bucket.id) + '/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_delete_own_s3_buckets(self):
+        bucket = S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
+        self.user_login.become_other_normal_user()
+        url = reverse('v2-s3bucket-list') + str(bucket.id) + '/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class S3DeliveryViewSetTestCase(APITestCase):
+    def setUp(self):
+        # create some django users
+        self.normal_user1 = user = django_user.objects.create_user(username='user1', password='user1')
+        self.normal_user2 = user = django_user.objects.create_user(username='user2', password='user2')
+        self.normal_user3 = user = django_user.objects.create_user(username='user3', password='user3')
+
+        # create and endpoint and some S3Users
+        self.endpoint = S3Endpoint.objects.create(url='http://s1.com')
+        self.endpoint2 = S3Endpoint.objects.create(url='http://s2.com')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
+        self.s3_user2 = S3User.objects.create(endpoint=self.endpoint, s3_id='def', user=self.normal_user2)
+        self.s3_user3 = S3User.objects.create(endpoint=self.endpoint, s3_id='hij', user=self.normal_user3)
+        self.other_endpoint_s3_user = S3User.objects.create(endpoint=self.endpoint2, s3_id='klm',
+                                                            user=self.normal_user3)
+
+        # create some buckets
+        self.mouse1_bucket = S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
+        self.mouse2_bucket = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
+        self.mouse3_bucket = S3Bucket.objects.create(name='mouse3', owner=self.s3_user2, endpoint=self.endpoint)
+        self.other_endpoint_bucket = S3Bucket.objects.create(name='otherEndpointBucket',
+                                                             owner=self.other_endpoint_s3_user,
+                                                             endpoint=self.endpoint2)
+
+    def login_user1(self):
+        self.client.login(username='user1', password='user1')
+
+    def login_user2(self):
+        self.client.login(username='user2', password='user2')
+
+    def login_user3(self):
+        self.client.login(username='user3', password='user3')
+
+    def test_fails_unauthenticated(self):
+        url = reverse('v2-s3delivery-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_list_deliveries(self):
+        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        self.login_user1()
+        url = reverse('v2-s3delivery-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        delivery_response = response.data[0]
+        self.assertEqual(delivery_response['id'], delivery.id)
+        self.assertEqual(delivery_response['bucket'], self.mouse1_bucket.id)
+        self.assertEqual(delivery_response['from_user'], self.s3_user1.id)
+        self.assertEqual(delivery_response['to_user'], self.s3_user2.id)
+        self.assertEqual(delivery_response['state'], State.NEW)
+
+    def test_list_deliveries_seen_by_to_from_users(self):
+        S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+
+        self.login_user1()
+        url = reverse('v2-s3delivery-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        self.login_user2()
+        url = reverse('v2-s3delivery-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        self.login_user3()
+        url = reverse('v2-s3delivery-list')
+        response = self.client.get(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_create_delivery_only_as_from_user(self):
+        self.login_user1()
+        url = reverse('v2-s3delivery-list')
+        data = {
+            'bucket': self.mouse1_bucket.id,
+            'from_user': self.s3_user1.id,
+            'to_user': self.s3_user2.id,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        s3_deliveries = S3Delivery.objects.all()
+        self.assertEqual(len(s3_deliveries), 1)
+        self.assertEqual(s3_deliveries[0].bucket, self.mouse1_bucket)
+
+        data = {
+            'bucket': self.mouse1_bucket.id,
+            'from_user': self.s3_user2.id,
+            'to_user': self.s3_user1.id,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_delivery_with_mismatched_endpoints(self):
+        self.login_user1()
+        url = reverse('v2-s3delivery-list')
+        data = {
+            'bucket': self.other_endpoint_bucket.id,
+            'from_user': self.s3_user1.id,
+            'to_user': self.s3_user2.id,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        data = {
+            'bucket': self.mouse1_bucket.id,
+            'from_user': self.other_endpoint_s3_user.id,
+            'to_user': self.s3_user2.id,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        data = {
+            'bucket': self.mouse1_bucket.id,
+            'from_user': self.s3_user1.id,
+            'to_user': self.other_endpoint_s3_user.id,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
