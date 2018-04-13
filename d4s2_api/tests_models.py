@@ -394,7 +394,7 @@ class S3EndpointTestCase(TestCase):
         s3_endpoint_list[0].save()
         s3_endpoints = S3Endpoint.objects.all()
         self.assertEqual(len(s3_endpoints), 1)
-        self.assertEqual(s3_endpoints[0].url, s3_url)
+        self.assertEqual(s3_endpoints[0].url, "https://s3.com/")
 
 
 class S3UserTestCase(TestCase):
