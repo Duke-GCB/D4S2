@@ -338,7 +338,7 @@ class S3UserTypes(object):
 class S3User(models.Model):
     endpoint = models.ForeignKey(S3Endpoint)
     s3_id = models.CharField(max_length=255, help_text='S3 user ID (aws_access_key_id)')
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.IntegerField(choices=S3UserTypes.CHOICES, default=S3UserTypes.NORMAL)
 
     def get_type_label(self):
@@ -369,7 +369,7 @@ class S3Bucket(models.Model):
     """
     name = models.CharField(max_length=255, help_text='Name of S3 bucket')
     owner = models.ForeignKey(S3User, related_name='owned_buckets')
-    endpoint = models.ForeignKey(S3Endpoint)
+    endpoint = models.ForeignKey(S3Endpoint, on_delete=models.CASCADE, null=False)
 
     def __str__(self):
         return 'S3 Bucket: {} Endpoint: {} '.format(self.name, self.endpoint)
