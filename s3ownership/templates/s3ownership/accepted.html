@@ -1,0 +1,16 @@
+{%  extends "base.html" %}
+{% block title %}Project Accepted{% endblock %}
+{% block content %}
+<h4>Delivery Service</h4>
+<p>
+    Project {{ project_title }} has been accepted.
+</p>
+{% if failed_share_users %}
+    <p>
+        Warning: Failed to give permissions to user(s): {{ failed_share_users }}
+    </p>
+{%  endif %}
+<p>
+    View this project in Duke Data Service at <a href="{{ project_url }}">{{ project_url }}.</a>
+</p>
+{% endblock %}

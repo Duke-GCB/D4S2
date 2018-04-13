@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Project Delivery{% endblock %}
+{%  block content %}
+<h4>Acknowledge Receipt of Final Results</h4>
+<hr/>
+<table>
+    <tr>
+        <td>
+            <span class="details_label">Project:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ project_title }}</span>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <span class="details_label">From:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ from_name }} </span>
+            <a href="mailto:{{ from_email }}">
+                <span class="details_data">{{ from_email }}</span>
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <span class="details_label">To:</span>
+        </td>
+        <td>
+            <span class="details_data">{{ to_name }} </span>
+        </td>
+    </tr>
+</table>
+<div class="blurb">
+    <div>
+        <span>Click accept to make the final results available to you.</span>
+    </div>
+    <div>
+        <span>This will transfer ownership of the data to you.</span>
+    </div>
+</div>
+<br/>
+<form action="{% url 's3ownership-process' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="s3_delivery_id" value="{{ s3_delivery_id }}">
+
+    <input type="submit" value="Accept"
+           name="accept"
+           class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored standard_button mdl-js-ripple-effect">
+
+    <input type="submit" value="Decline"
+           name="decline"
+           class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent standard_button mdl-js-ripple-effect">
+</form>
+
+{% endblock %}
+
