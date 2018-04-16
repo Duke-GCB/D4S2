@@ -219,7 +219,7 @@ class DeliveryDetails(object):
         delivery = DDSDelivery.objects.get(transfer_id=transfer_id)
         return DeliveryDetails(delivery, user)
 
-    def get_email_context(self, user, accept_url, process_type, reason, warning_message=''):
+    def get_email_context(self, accept_url, process_type, reason, warning_message=''):
         try:
             sender = self.get_from_user()
             receiver = self.get_to_user()

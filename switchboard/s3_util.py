@@ -103,7 +103,7 @@ class S3DeliveryDetails(object):
             'project_url': 's://{}'.format(bucket_name)
         }
 
-    def get_email_context(self, user, accept_url, process_type, reason, warning_message=''):
+    def get_email_context(self, accept_url, process_type, reason, warning_message=''):
         base_context = self.get_context()
         return {
             'project_name': base_context['project_title'],
