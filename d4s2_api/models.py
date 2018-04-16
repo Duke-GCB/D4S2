@@ -95,12 +95,6 @@ class DeliveryBase(models.Model):
     def is_complete(self):
         return self.state == State.ACCEPTED or self.state == State.DECLINED or self.state == State.FAILED
 
-    def is_new(self):
-        return self.state == State.NEW
-
-    def is_complete(self):
-        return self.state == State.ACCEPTED or self.state == State.DECLINED or self.state == State.FAILED
-
     def mark_notified(self, email_text, save=True):
         self.state = State.NOTIFIED
         self.delivery_email_text = email_text
