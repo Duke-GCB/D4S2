@@ -19,7 +19,6 @@ class DeliveryAdmin(SimpleHistoryAdmin):
 
 admin.site.register(DDSDelivery, DeliveryAdmin)
 admin.site.register(DDSDeliveryShareUser)
-admin.site.register(DDSDeliveryShareUser)
 admin.site.register(DDSEndpoint)
 admin.site.register(DDSUserCredential)
 admin.site.register(EmailTemplateSet)
