@@ -3,7 +3,6 @@ backports.shutil-get-terminal-size==1.0.0
 boto3==1.7.4
 decorator==4.0.10
 Django==1.9.4
-django-background-tasks==1.1.13
 django-cors-headers==2.1.0
 django-crispy-forms==1.6.0
 django-extensions==1.7.9

@@ -38,10 +38,8 @@ INSTALLED_APPS = [
     'switchboard',
     'crispy_forms',
     'ownership',
-    's3ownership',
     'simple_history',
     'corsheaders',
-    'background_task',
 ]
 
 MIDDLEWARE_CLASSES = [
