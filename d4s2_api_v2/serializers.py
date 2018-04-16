@@ -44,13 +44,6 @@ class DDSProjectTransferSerializer(serializers.Serializer):
         resource_name = 'duke-ds-project-transfers'
 
 
-class SimpleUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        resource_name = 'users'
-        fields = ('id', 'username', 'first_name', 'last_name', 'email',)
-
-
 class UserSerializer(serializers.ModelSerializer):
     duke_ds_user = serializers.SerializerMethodField()
 
