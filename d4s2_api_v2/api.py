@@ -11,7 +11,7 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
 from d4s2_api.models import Delivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
-from d4s2_api.utils import S3DeliveryMessage
+from switchboard.s3_util import S3DeliveryMessage
 
 
 class DataServiceUnavailable(APIException):

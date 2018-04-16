@@ -1,6 +1,5 @@
 from switchboard.mailer import generate_message
 from switchboard.dds_util import DeliveryDetails, DDSUtil
-from switchboard.s3_util import S3DeliveryDetails
 from d4s2_api.models import ShareRole, Share
 from ddsc.core.ddsapi import DataServiceError
 
@@ -114,16 +113,6 @@ class ProcessedMessage(Message):
         super(ProcessedMessage, self).__init__(delivery, user, process_type=process_type, reason=reason,
                                                direction=MessageDirection.ToSender,
                                                warning_message=warning_message)
-
-
-class S3ProcessedMessage(ProcessedMessage):
-    def make_delivery_details(self, deliverable, user):
-        return S3DeliveryDetails(deliverable, user)
-
-
-class S3DeliveryMessage(DeliveryMessage):
-    def make_delivery_details(self, deliverable, user):
-        return S3DeliveryDetails(deliverable, user)
 
 
 class DeliveryUtil(object):

@@ -1,4 +1,5 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
+from d4s2_api.utils import ProcessedMessage, DeliveryMessage
 import boto3
 
 
@@ -192,3 +193,13 @@ class S3Resource(object):
         if not args:
             raise ValueError("Programmer should specify grant_full_control_user or grant_read_user")
         return args
+
+
+class S3ProcessedMessage(ProcessedMessage):
+    def make_delivery_details(self, deliverable, user):
+        return S3DeliveryDetails(deliverable, user)
+
+
+class S3DeliveryMessage(DeliveryMessage):
+    def make_delivery_details(self, deliverable, user):
+        return S3DeliveryDetails(deliverable, user)
