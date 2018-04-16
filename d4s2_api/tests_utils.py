@@ -32,10 +32,9 @@ class UtilsTestCase(TestCase):
     def test_delivery_message(self, MockDeliveryDetails):
         mock_details = setup_mock_delivery_details(MockDeliveryDetails)
         message = DeliveryMessage(self.delivery, self.user, 'http://localhost/accept')
-        self.assertEqual(mock_details.get_project.call_count, 1)
+        self.assertEqual(mock_details.get_email_context.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
-        self.assertEqual(mock_details.get_user_message.call_count, 1)
         self.assertEqual(mock_details.get_action_template_text.call_count, 1)
         self.assertTrue(mock_details.get_action_template_text.called_with('delivery'))
         self.assertIn('Action Subject Template project', message.email_text)
@@ -46,10 +45,9 @@ class UtilsTestCase(TestCase):
     def test_share_message(self, MockDeliveryDetails):
         mock_details = setup_mock_delivery_details(MockDeliveryDetails)
         message = ShareMessage(self.share, self.user)
-        self.assertEqual(mock_details.get_project.call_count, 1)
+        self.assertEqual(mock_details.get_email_context.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
-        self.assertEqual(mock_details.get_user_message.call_count, 1)
         self.assertEqual(mock_details.get_share_template_text.call_count, 1)
         self.assertIn('Share Subject Template project', message.email_text)
         self.assertIn('Share Body Template bob', message.email_text)
@@ -61,10 +59,9 @@ class UtilsTestCase(TestCase):
         process_type = 'decline'
         reason = 'sample reason'
         message = ProcessedMessage(self.delivery, self.user, process_type, reason)
-        self.assertEqual(mock_details.get_project.call_count, 1)
+        self.assertEqual(mock_details.get_email_context.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
-        self.assertEqual(mock_details.get_user_message.call_count, 1)
         self.assertEqual(mock_details.get_action_template_text.call_count, 1)
         self.assertTrue(mock_details.get_action_template_text.called_with('process_type'))
         self.assertIn('Action Subject Template project', message.email_text)

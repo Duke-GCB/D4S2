@@ -193,8 +193,10 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         s3_delivery = self.get_object()
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
-        accept_path = reverse('s3ownership-prompt') + "?s3_delivery_id=" + str(s3_delivery.id)
-        accept_url = request.build_absolute_uri(accept_path)
+        # TODO create app to handle s3ownership UI
+        # accept_path = reverse('s3ownership-prompt') + "?s3_delivery_id=" + str(s3_delivery.id)
+        # accept_url = request.build_absolute_uri(accept_path)
+        accept_url = 'TODO'
         s3_delivery_util = S3DeliveryUtil(s3_delivery, request.user)
         s3_delivery_util.give_agent_permissions()
         message = S3DeliveryMessage(s3_delivery, request.user, accept_url)
