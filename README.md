@@ -23,9 +23,14 @@ Installation - Local
 
         $ python manage.py createsuperuser
 
-6 . Create DukeDS settings
+6 . Register an application with a Duke DS instance and create a DDSEndpoint with the URLs, agent key, and provider id
 
-        $ python manage.py createddssettings https://api.dataservice.duke.edu/api/v1 https://dev.dataservice.duke.edu <openid
+        $ python manage.py createddsendpoint \
+          endpoint-name \
+          https://api.dataservice.duke.edu/api/v1 \
+          registered-application-agent-key \
+          https://dataservice.duke.edu \
+          openid-provider-id
 
 7. Start the app:
 
