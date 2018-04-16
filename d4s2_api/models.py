@@ -116,8 +116,8 @@ class DeliveryBase(models.Model):
     class Meta:
         abstract = True
 
-# TODO rename to DDS Delivery
-class Delivery(DeliveryBase):
+
+class DDSDelivery(DeliveryBase):
     """
     Represents a delivery of a project from one user to another
     Deliveries keep track of the project, sender, and recipient by their DukeDS IDs.
@@ -158,9 +158,9 @@ class Delivery(DeliveryBase):
         unique_together = ('project_id', 'from_user_id', 'to_user_id')
 
 
-class DeliveryShareUser(models.Model):
+class DDSDeliveryShareUser(models.Model):
     dds_id = models.CharField(max_length=36)
-    delivery = models.ForeignKey(Delivery, related_name='share_users')
+    delivery = models.ForeignKey(DDSDelivery, related_name='share_users')
 
     class Meta:
         unique_together = ('dds_id', 'delivery')

@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TRANSFER_ID_MSG, INVALID_TRANSFER_ID, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG
-from d4s2_api.models import Delivery, State
+from d4s2_api.models import DDSDelivery, State
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from django.contrib.auth.models import User as django_user
 from django.utils.encoding import escape_uri_path
@@ -18,8 +18,8 @@ def url_with_transfer_id(name, transfer_id=None):
 
 
 def create_delivery():
-    return Delivery.objects.create(project_id='project1', from_user_id='fromuser1',
-                                   to_user_id='touser1', transfer_id='abc123')
+    return DDSDelivery.objects.create(project_id='project1', from_user_id='fromuser1',
+                                      to_user_id='touser1', transfer_id='abc123')
 
 
 def create_delivery_get_transfer_id():
@@ -78,7 +78,8 @@ class AcceptTestCase(AuthenticatedTestCase):
     def test_normal_with_valid_transfer_id(self, mock_delivery_details):
         setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
+            transfer_id=transfer_id)
         url = url_with_transfer_id('ownership-prompt', transfer_id)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -173,11 +174,13 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryDetails')
     def test_normal_with_decline(self, mock_delivery_details):
         transfer_id = create_delivery_get_transfer_id()
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
+            transfer_id=transfer_id)
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline':'decline'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('reason for declining project', str(response.content))
+
 
 class DeclineReasonTestCase(AuthenticatedTestCase):
 
@@ -207,7 +210,8 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         mock_processed_message.return_value.email_text = 'email text'
         setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
+            transfer_id=transfer_id)
         url = reverse('ownership-decline')
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason':'Wrong person.'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -220,7 +224,8 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
     def test_decline_with_blank(self, mock_delivery_details):
         setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
+            transfer_id=transfer_id)
         url = reverse('ownership-decline')
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason': ''})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -233,7 +238,8 @@ class AcceptedPageTestCase(AuthenticatedTestCase):
     def test_renders_accepted_page_with_project_url(self, mock_delivery_details):
         setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = Delivery.objects.get(transfer_id=transfer_id)
+        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
+            transfer_id=transfer_id)
         url = reverse('ownership-accepted')
         response = self.client.get(url, {'transfer_id': transfer_id})
         self.assertEqual(response.status_code, status.HTTP_200_OK)

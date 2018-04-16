@@ -110,18 +110,18 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_users_with_recent(self, mock_dds_util):
-        delivery = Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
-                                           transfer_id='transfer1')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
+        delivery = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                              transfer_id='transfer1')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
 
-        Delivery.objects.create(project_id='project2', from_user_id='user5', to_user_id='user1',
-                                transfer_id='transfer2')
+        DDSDelivery.objects.create(project_id='project2', from_user_id='user5', to_user_id='user1',
+                                   transfer_id='transfer2')
 
-        delivery3 = Delivery.objects.create(project_id='project4', from_user_id='user1', to_user_id='user6',
-                                            transfer_id='transfer3')
+        delivery3 = DDSDelivery.objects.create(project_id='project4', from_user_id='user1', to_user_id='user6',
+                                               transfer_id='transfer3')
         # share with self after delivery
-        DeliveryShareUser.objects.create(delivery=delivery3, dds_id='user1')
+        DDSDeliveryShareUser.objects.create(delivery=delivery3, dds_id='user1')
 
         mock_current_user = Mock()
         mock_current_user.id = 'user1'
@@ -269,7 +269,7 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_transfers(self, mock_dds_util):
         mock_response = Mock()
-        delivery = Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+        delivery = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
                                            transfer_id='transfer1')
         mock_response.json.return_value = {
             'results': [

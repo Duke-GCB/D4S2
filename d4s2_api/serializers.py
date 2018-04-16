@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from d4s2_api.models import Delivery, Share, DeliveryShareUser
+from d4s2_api.models import DDSDelivery, Share, DDSDeliveryShareUser
 SHARE_USERS_INVALID_MSG = "to_user cannot be part of share_to_users."
 
 
@@ -25,9 +25,9 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
 
     def to_representation(self, instance):
         """
-        Converts our object instance (Delivery) into a dict of primitive datatypes.
+        Converts our object instance (DDSDelivery) into a dict of primitive datatypes.
         We add array of shared user ids to the resulting dict.
-        :param instance: Delivery: object to be serialized into a string.
+        :param instance: DDSDelivery: object to be serialized into a string.
         :return: dict
         """
         ret = super(DeliverySerializer, self).to_representation(instance)
@@ -60,12 +60,12 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
 
     @staticmethod
     def _update_share_users(share_user_ids, delivery):
-        DeliveryShareUser.objects.filter(delivery=delivery).delete()
+        DDSDeliveryShareUser.objects.filter(delivery=delivery).delete()
         for share_user_id in share_user_ids:
-            DeliveryShareUser.objects.create(delivery=delivery, dds_id=share_user_id)
+            DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id=share_user_id)
 
     class Meta:
-        model = Delivery
+        model = DDSDelivery
         resource_name = 'deliveries'
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',
                   'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text')

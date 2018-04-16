@@ -9,7 +9,7 @@ from switchboard.dds_util import DDSUtil
 from switchboard.s3_util import S3DeliveryUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
-from d4s2_api.models import Delivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
+from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
 from switchboard.s3_util import S3DeliveryMessage
 
@@ -75,7 +75,7 @@ class DDSUsersViewSet(DDSViewSet):
         """
         current_dds_user = dds_util.get_current_user()
         to_user_ids = set()
-        for delivery in Delivery.objects.filter(from_user_id=current_dds_user.id):
+        for delivery in DDSDelivery.objects.filter(from_user_id=current_dds_user.id):
             to_user_ids.add(delivery.to_user_id)
             for share_user in delivery.share_users.all():
                 if share_user.dds_id != current_dds_user.id:

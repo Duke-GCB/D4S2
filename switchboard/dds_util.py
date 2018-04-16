@@ -1,6 +1,6 @@
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import EmailTemplate, Delivery
+from d4s2_api.models import EmailTemplate, DDSDelivery
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token
 from gcb_web_auth.models import DukeDSSettings
@@ -147,7 +147,7 @@ class DDSProjectTransfer(DDSBase):
 
     @staticmethod
     def _lookup_delivery_id(transfer_id):
-        delivery = Delivery.objects.filter(transfer_id=transfer_id).first()
+        delivery = DDSDelivery.objects.filter(transfer_id=transfer_id).first()
         if delivery:
             return delivery.id
         return None
@@ -211,13 +211,12 @@ class DeliveryDetails(object):
     @classmethod
     def from_transfer_id(self, transfer_id, user):
         """
-        Finds a local delivery by transfer id and ensures it's up-to-date with the server
+        Builds DeliveryDetails based on DukeDS transfer id
         :param transfer_id: a DukeDS Project Transfer ID
         :param user: a Django user with related DukeDS credentials
-        :return: a d4s2_api.models.Delivery
+        :return: DeliveryDetails
         """
-
-        delivery = Delivery.objects.get(transfer_id=transfer_id)
+        delivery = DDSDelivery.objects.get(transfer_id=transfer_id)
         return DeliveryDetails(delivery, user)
 
     def get_email_context(self, user, accept_url, process_type, reason, warning_message=''):

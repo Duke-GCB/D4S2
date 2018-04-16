@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
-from d4s2_api.models import Delivery, State, ShareRole
+from d4s2_api.models import State, ShareRole
 from d4s2_api.utils import DeliveryUtil, decline_delivery, ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError

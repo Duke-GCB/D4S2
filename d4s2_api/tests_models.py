@@ -19,70 +19,70 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(DeliveryTestCase, self).setUp()
-        Delivery.objects.create(project_id='project1',
+        DDSDelivery.objects.create(project_id='project1',
                                 from_user_id='user1',
                                 to_user_id='user2',
                                 transfer_id=self.transfer_id)
 
     def test_initial_state(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW, 'New deliveries should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(IntegrityError):
-            Delivery.objects.create(project_id=None, from_user_id=None, to_user_id=None, transfer_id=None)
+            DDSDelivery.objects.create(project_id=None, from_user_id=None, to_user_id=None, transfer_id=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Delivery.objects.create(project_id='project1',
+            DDSDelivery.objects.create(project_id='project1',
                                     from_user_id='user1',
                                     to_user_id='user2',
                                     transfer_id=self.transfer_id)
 
     def test_can_add_share_users(self):
-        delivery = Delivery.objects.create(project_id='projectA',
+        delivery = DDSDelivery.objects.create(project_id='projectA',
                                            from_user_id='user1',
                                            to_user_id='user2',
                                            transfer_id='123-123')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
         share_users = delivery.share_users.all()
         self.assertEqual(set([share_user.dds_id for share_user in share_users]),
                          set(['user3', 'user4']))
 
     def test_user_can_be_shared_multiple_deliveries(self):
-        delivery1 = Delivery.objects.create(project_id='projectA',
+        delivery1 = DDSDelivery.objects.create(project_id='projectA',
                                             from_user_id='user1',
                                             to_user_id='user2',
                                             transfer_id='123-123')
-        delivery2 = Delivery.objects.create(project_id='projectB',
+        delivery2 = DDSDelivery.objects.create(project_id='projectB',
                                             from_user_id='user3',
                                             to_user_id='user4',
                                             transfer_id='456-789')
-        DeliveryShareUser.objects.create(delivery=delivery1, dds_id='user3')
-        DeliveryShareUser.objects.create(delivery=delivery2, dds_id='user3')
-        self.assertEqual(DeliveryShareUser.objects.count(), 2)
-        self.assertEqual(set([share_user.dds_id for share_user in DeliveryShareUser.objects.all()]),
+        DDSDeliveryShareUser.objects.create(delivery=delivery1, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery2, dds_id='user3')
+        self.assertEqual(DDSDeliveryShareUser.objects.count(), 2)
+        self.assertEqual(set([share_user.dds_id for share_user in DDSDeliveryShareUser.objects.all()]),
                          set(['user3']))
 
     def test_user_cannot_be_shared_delivery_twice(self):
-        delivery = Delivery.objects.create(project_id='projectA',
+        delivery = DDSDelivery.objects.create(project_id='projectA',
                                            from_user_id='user1',
                                            to_user_id='user2',
                                            transfer_id='123-123')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         with self.assertRaises(IntegrityError):
-            DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+            DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
 
     def test_mark_notified(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
         delivery.mark_notified(DeliveryTestCase.DELIVERY_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.NOTIFIED)
 
     def test_mark_accepted(self):
         performed_by = 'performer'
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
         delivery.mark_accepted(performed_by, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.ACCEPTED)
@@ -91,7 +91,7 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_mark_declined(self):
         performed_by = 'performer'
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
         delivery.mark_declined(performed_by, 'Wrong person.',  DeliveryTestCase.DECLINE_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.DECLINED)
@@ -100,7 +100,7 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.completion_email_text, DeliveryTestCase.DECLINE_EMAIL_TEXT)
 
     def test_is_complete(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.is_complete(), False)
         delivery.mark_notified('')
         self.assertEqual(delivery.is_complete(), False)
@@ -113,7 +113,7 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.is_complete(), True)
 
     def setup_incomplete_delivery(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         delivery.transfer_id = self.transfer_id
         delivery.save()
         self.assertFalse(delivery.is_complete())
@@ -150,12 +150,12 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.decline_reason, 'Bad Data', 'Should not change when status doesnt change')
 
     def test_user_message(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertIsNone(delivery.user_message)
         user_message = 'This is the final result of analysis xyz123'
         delivery.user_message = user_message
         delivery.save()
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.user_message, user_message)
 
 
@@ -294,7 +294,7 @@ class EmailTemplateTestCase(TestCase):
 
     def test_for_operation(self):
         # Create an email template
-        delivery = Delivery.objects.create(project_id='project1',
+        delivery = DDSDelivery.objects.create(project_id='project1',
                                            from_user_id='user1',
                                            to_user_id='user2',
                                            transfer_id=self.transfer_id)

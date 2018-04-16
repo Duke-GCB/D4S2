@@ -1,5 +1,5 @@
 from django.test import TestCase
-from d4s2_api.models import Delivery, DeliveryShareUser
+from d4s2_api.models import DDSDelivery, DDSDeliveryShareUser
 from d4s2_api.serializers import DeliverySerializer, SHARE_USERS_INVALID_MSG
 from mock import MagicMock
 
@@ -42,12 +42,12 @@ class DeliverySerializerTestCase(TestCase):
         self.assertIn(SHARE_USERS_INVALID_MSG, serializer.errors['non_field_errors'])
 
     def test_serializes_share_user_ids_from_db(self):
-        delivery = Delivery.objects.create(project_id='projectA',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id='123-123')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
+        delivery = DDSDelivery.objects.create(project_id='projectA',
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id='123-123')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
         mock_request = MagicMock()
         serializer = DeliverySerializer(delivery, context={'request': mock_request})
 
@@ -80,13 +80,13 @@ class DeliverySerializerTestCase(TestCase):
         self.assertEqual(delivery.user_message, user_message)
 
     def test_serializer_includes_read_only_fields_in_output(self):
-        delivery = Delivery.objects.create(project_id='projectA',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id='123-123',
-                                           decline_reason='Wrong person',
-                                           performed_by='Bob Robertson',
-                                           delivery_email_text='here you go')
+        delivery = DDSDelivery.objects.create(project_id='projectA',
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id='123-123',
+                                              decline_reason='Wrong person',
+                                              performed_by='Bob Robertson',
+                                              delivery_email_text='here you go')
         mock_request = MagicMock()
         serializer = DeliverySerializer(delivery, context={'request': mock_request})
 

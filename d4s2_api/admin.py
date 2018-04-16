@@ -17,8 +17,8 @@ class DeliveryAdmin(SimpleHistoryAdmin):
     pass
 
 
-admin.site.register(Delivery, DeliveryAdmin)
-admin.site.register(DeliveryShareUser)
+admin.site.register(DDSDelivery, DeliveryAdmin)
+admin.site.register(DDSDeliveryShareUser)
 admin.site.register(DukeDSSettings)
 admin.site.register(EmailTemplateSet)
 admin.site.register(UserEmailTemplateSet)

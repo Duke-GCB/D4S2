@@ -34,83 +34,83 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     def test_fails_unauthenticated(self):
         self.client.logout()
-        url = reverse('delivery-list')
+        url = reverse('ddsdelivery-list')
         response = self.client.post(url, {}, format='json')
         self.assertUnauthorized(response)
 
     @patch('d4s2_api.views.DDSUtil')
     def test_create_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        url = reverse('delivery-list')
+        url = reverse('ddsdelivery-list')
         data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Delivery.objects.count(), 1)
-        self.assertEqual(Delivery.objects.get().from_user_id, 'user1')
+        self.assertEqual(DDSDelivery.objects.count(), 1)
+        self.assertEqual(DDSDelivery.objects.get().from_user_id, 'user1')
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
     @patch('d4s2_api.views.DDSUtil')
     def test_create_delivery_with_shared_ids(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        url = reverse('delivery-list')
+        url = reverse('ddsdelivery-list')
         data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Delivery.objects.count(), 1)
-        self.assertEqual(Delivery.objects.get().from_user_id, 'user1')
+        self.assertEqual(DDSDelivery.objects.count(), 1)
+        self.assertEqual(DDSDelivery.objects.get().from_user_id, 'user1')
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
     def test_list_deliveries(self):
-        Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+        DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
                                 transfer_id=self.transfer_id1)
-        Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+        DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                 transfer_id=self.transfer_id2)
-        url = reverse('delivery-list')
+        url = reverse('ddsdelivery-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
     def test_get_delivery(self):
-        h = Delivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+        h = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
-        url = reverse('delivery-detail', args=(h.pk,))
+        url = reverse('ddsdelivery-detail', args=(h.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['project_id'], 'project1')
 
     def test_delete_delivery(self):
-        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
-        url = reverse('delivery-detail', args=(h.pk,))
+        url = reverse('ddsdelivery-detail', args=(h.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Delivery.objects.count(), 0)
+        self.assertEqual(DDSDelivery.objects.count(), 0)
 
     @patch('d4s2_api.views.DDSUtil')
     def test_update_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
         updated = {'from_user_id': self.dds_id1, 'to_user_id': self.dds_id2, 'project_id': 'project3',
                    'transfer_id': h.transfer_id}
-        url = reverse('delivery-detail', args=(h.pk,))
+        url = reverse('ddsdelivery-detail', args=(h.pk,))
         response = self.client.put(url, data=updated, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        h = Delivery.objects.get(pk=h.pk)
+        h = DDSDelivery.objects.get(pk=h.pk)
         self.assertEqual(h.project_id, 'project3')
 
     def test_create_delivery_fails_with_transfer_id(self):
-        url = reverse('delivery-list')
+        url = reverse('ddsdelivery-list')
         data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'transfer_id': 'transfer123'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_filter_deliveries(self):
-        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id=self.transfer_id1)
-        url = reverse('delivery-list')
+        url = reverse('ddsdelivery-list')
         response=self.client.get(url, {'project_id': 'project2'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -123,13 +123,13 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                     transfer_id='abcd')
         self.assertTrue(h.is_new())
-        url = reverse('delivery-send', args=(h.pk,))
+        url = reverse('ddsdelivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        h = Delivery.objects.get(pk=h.pk)
+        h = DDSDelivery.objects.get(pk=h.pk)
         self.assertFalse(h.is_new())
         self.assertTrue(mock_delivery_message.called)
         # Make sure transfer_id is in the email message
@@ -143,10 +143,10 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         self.assertTrue(h.is_new())
         h.mark_notified('email text')
-        url = reverse('delivery-send', args=(h.pk,))
+        url = reverse('ddsdelivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(mock_delivery_message.called)
@@ -155,13 +155,13 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
     @patch('d4s2_api.views.DDSUtil')
     def test_deliver_with_user_message(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
-        url = reverse('delivery-list')
+        url = reverse('ddsdelivery-list')
         user_message = 'User-specified delivery message'
         data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'user_message': user_message}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Delivery.objects.count(), 1)
-        self.assertEqual(Delivery.objects.get().user_message, user_message)
+        self.assertEqual(DDSDelivery.objects.count(), 1)
+        self.assertEqual(DDSDelivery.objects.get().user_message, user_message)
         # create_project_transfer should be called once
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
@@ -171,9 +171,9 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        d = Delivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         d.mark_notified('email text')
-        url = reverse('delivery-send', args=(d.pk,))
+        url = reverse('ddsdelivery-send', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(mock_delivery_message.called)
