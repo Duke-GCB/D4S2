@@ -27,13 +27,13 @@ class Message(object):
         self.deliverable = deliverable
         try:
             delivery_details = self.make_delivery_details(self.deliverable, user)
+            sender = delivery_details.get_from_user()
+            receiver = delivery_details.get_to_user()
             context = delivery_details.get_email_context(user, accept_url, process_type, reason, warning_message)
             template_subject, template_body = self.get_templates(delivery_details)
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
 
-        sender = delivery_details.get_from_user()
-        receiver = delivery_details.get_to_user()
         # Delivery confirmation emails should go back to the delivery sender
         from_email, to_email = MessageDirection.email_addresses(sender, receiver, direction)
         self._message = generate_message(from_email, to_email, template_subject, template_body, context)
