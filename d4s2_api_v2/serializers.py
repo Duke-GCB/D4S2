@@ -81,6 +81,7 @@ class S3BucketSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'owner', 'endpoint')
 
     def validate_owner(self, owner):
+        # this method is automatically picked up and run by the serializer for validating the owner field
         if owner.user != self.context['request'].user:
             raise serializers.ValidationError(str("You must be the owner of buckets you create."))
         return owner
