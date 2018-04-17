@@ -65,21 +65,13 @@ class S3EndpointSerializer(serializers.ModelSerializer):
 
 
 class S3UserSerializer(serializers.ModelSerializer):
-    email = serializers.SerializerMethodField()
-    type = serializers.SerializerMethodField()
+    email = serializers.CharField(source='user.email')
+    type = serializers.CharField(source='get_type_label')
 
     class Meta:
         model = S3User
         resource_name = 's3users'
         fields = ('id', 'user', 'endpoint', 'email', 'type')
-
-    @staticmethod
-    def get_email(s3_user):
-        return s3_user.user.email
-
-    @staticmethod
-    def get_type(s3_user):
-        return s3_user.get_type_label()
 
 
 class S3BucketSerializer(serializers.ModelSerializer):
