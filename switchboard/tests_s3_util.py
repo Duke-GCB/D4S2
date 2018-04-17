@@ -1,14 +1,23 @@
 from django.test import TestCase
 from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint
-from switchboard.s3_util import S3Resource, S3DeliveryUtil
+from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails
 
 
-class S3DeliveryUtilTestCase(TestCase):
+class S3DeliveryTestBase(TestCase):
     def setUp(self):
-        self.user_agent = User.objects.create(username='agent')
-        self.from_user = User.objects.create(username='from_user')
-        self.to_user = User.objects.create(username='to_user')
+        self.user_agent = User.objects.create(username='agent',
+                                              email='agent@agent.com',
+                                              first_name='Agent',
+                                              last_name='007')
+        self.from_user = User.objects.create(username='from_user',
+                                             email='from_user@from_user.com',
+                                             first_name='From',
+                                             last_name='User')
+        self.to_user = User.objects.create(username='to_user',
+                                           email='to_user@to_user.com',
+                                           first_name='To',
+                                           last_name='User')
         self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
         self.s3_agent_user = S3User.objects.create(endpoint=self.endpoint,
                                                    s3_id='agent_s3_id',
@@ -22,11 +31,16 @@ class S3DeliveryUtilTestCase(TestCase):
                                                 s3_id='to_user_s3_id',
                                                 user=self.to_user,
                                                 type=S3UserTypes.NORMAL)
-        self.s3_bucket = S3Bucket.objects.create(name='mouse', owner=self.s3_from_user, endpoint=self.endpoint)
+        self.s3_bucket = S3Bucket.objects.create(name='mouse',
+                                                 owner=self.s3_from_user,
+                                                 endpoint=self.endpoint)
         self.s3_delivery = S3Delivery.objects.create(bucket=self.s3_bucket,
                                                      from_user=self.s3_from_user,
-                                                     to_user=self.s3_to_user)
+                                                     to_user=self.s3_to_user,
+                                                     user_message='user message')
 
+
+class S3DeliveryUtilTestCase(S3DeliveryTestBase):
     def test_s3_agent_property(self):
         s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
         s3_agent = s3_delivery_util.s3_agent
@@ -102,6 +116,71 @@ class S3DeliveryUtilTestCase(TestCase):
         mock_s3_resource.return_value.grant_bucket_acl.assert_called_with(
             'mouse', grant_full_control_user=self.s3_from_user
         )
+
+
+class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
+    def test_simple_getters(self):
+        s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
+        self.assertEqual(s3_delivery_details.get_delivery(), self.s3_delivery)
+        self.assertEqual(s3_delivery_details.get_from_user(), self.from_user)
+        self.assertEqual(s3_delivery_details.get_to_user(), self.to_user)
+
+    def test_get_context(self):
+        s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
+        context = s3_delivery_details.get_context()
+        expected_context = {
+            'to_email': 'to_user@to_user.com',
+            'from_name': 'From User',
+            'project_title': 'mouse',
+            'project_url': 's://mouse',
+            'from_email': 'from_user@from_user.com',
+            'to_name': 'To User',
+            's3_delivery_id': str(self.s3_delivery.id)
+        }
+        self.assertEqual(context, expected_context)
+
+    def test_get_email_context(self):
+        s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
+        context = s3_delivery_details.get_email_context(
+            accept_url='accepturl',
+            process_type='accept',
+            reason='somereason',
+            warning_message='oops'
+        )
+        expected_context = {
+            'accept_url': 'accepturl',
+            'message': 'somereason',
+            'project_name': 'mouse',
+            'project_url': 's://mouse',
+            'recipient_email': 'to_user@to_user.com',
+            'recipient_name': 'To User',
+            'sender_email': 'from_user@from_user.com',
+            'sender_name': 'From User',
+            'type': 'accept',
+            'user_message': 'user message',
+            'warning_message': 'oops'
+        }
+        self.assertEqual(context, expected_context)
+
+    def test_from_s3_delivery_id(self):
+        s3_delivery_details = S3DeliveryDetails.from_s3_delivery_id(self.s3_delivery.id, self.to_user)
+        self.assertEqual(s3_delivery_details.get_delivery(), self.s3_delivery)
+        self.assertEqual(s3_delivery_details.get_from_user(), self.from_user)
+        self.assertEqual(s3_delivery_details.get_to_user(), self.to_user)
+
+    @patch('switchboard.s3_util.EmailTemplate')
+    def test_get_action_template_text(self, mock_email_template):
+        mock_email_template.for_user.return_value = Mock(subject='email subject', body='email body')
+
+        s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
+        subject, body = s3_delivery_details.get_action_template_text(action_name='accept')
+
+        self.assertEqual(subject, 'email subject')
+        self.assertEqual(body, 'email body')
+
+        mock_email_template.for_user.return_value = None
+        with self.assertRaises(RuntimeError):
+            s3_delivery_details.get_action_template_text(action_name='accept')
 
 
 class S3ResourceTestCase(TestCase):
