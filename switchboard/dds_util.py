@@ -168,18 +168,12 @@ class DeliveryDetails(object):
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
         self.user = user
-        self._from_user = None
-        self._to_user = None
 
     def get_from_user(self):
-        if not self._from_user:
-            self._from_user = DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
-        return self._from_user
+        return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
 
     def get_to_user(self):
-        if not self._to_user:
-            self._to_user =  DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
-        return self._to_user
+        return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
     def get_project(self):
         transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)

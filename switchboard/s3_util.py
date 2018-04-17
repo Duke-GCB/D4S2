@@ -9,27 +9,9 @@ class S3DeliveryUtil(object):
         self.endpoint = s3_delivery.bucket.endpoint
         self.source_bucket_name = s3_delivery.bucket.name
         self.user = user
-        self._s3_agent = None
-        self._current_s3_user = None
-        self._destination_bucket_name = None
-
-    @property
-    def s3_agent(self):
-        if not self._s3_agent:
-            self._s3_agent = S3User.objects.get(type=S3UserTypes.AGENT, endpoint=self.endpoint)
-        return self._s3_agent
-
-    @property
-    def current_s3_user(self):
-        if not self._current_s3_user:
-            self._current_s3_user = S3User.objects.get(user=self.user, endpoint=self.endpoint)
-        return self._current_s3_user
-
-    @property
-    def destination_bucket_name(self):
-        if not self._destination_bucket_name:
-            self._destination_bucket_name = 'delivery_{}'.format(self.source_bucket_name)
-        return self._destination_bucket_name
+        self.s3_agent = S3User.objects.get(type=S3UserTypes.AGENT, endpoint=self.endpoint)
+        self.current_s3_user = S3User.objects.get(user=self.user, endpoint=self.endpoint)
+        self.destination_bucket_name = 'delivery_{}'.format(self.source_bucket_name)
 
     def give_agent_permissions(self):
         s3 = S3Resource(self.current_s3_user)

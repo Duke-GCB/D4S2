@@ -170,7 +170,10 @@ class MessageTestCase(TestCase):
     @patch('switchboard.dds_util.DDSUser')
     @patch('d4s2_api.utils.generate_message')
     def test_delivery_context(self, generate_message, mock_ddsuser, mock_dds_project_transfer, mock_dds_util):
+        # This data is fetched twice
         mock_ddsuser.fetch_one.side_effect = [
+            Mock(full_name='Joe Sender', email='joe@joe.joe'),
+            Mock(full_name='Bob Receiver', email='bob@bob.bob'),
             Mock(full_name='Joe Sender', email='joe@joe.joe'),
             Mock(full_name='Bob Receiver', email='bob@bob.bob'),
         ]
