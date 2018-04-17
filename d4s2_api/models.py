@@ -345,6 +345,8 @@ class S3User(models.Model):
         return 'S3User s3_id: {} user: {} type: {}'.format(self.s3_id, self.user, self.get_type_label())
 
     class Meta:
+        # TODO: put below in once we have an actual separate agent credential
+        # unique_together = (('endpoint', 'user'), ('endpoint', 's3_id'))
         unique_together = ('endpoint', 'user')
 
 
