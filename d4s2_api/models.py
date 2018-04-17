@@ -370,6 +370,9 @@ class S3Bucket(models.Model):
     def __str__(self):
         return 'S3 Bucket: {} Endpoint: {} '.format(self.name, self.endpoint)
 
+    class Meta:
+        unique_together = ('endpoint', 'name')
+
 
 class S3Delivery(DeliveryBase):
     """

@@ -455,7 +455,7 @@ class S3UserCredentialTestCase(TestCase):
             S3UserCredential.objects.create(s3_user=self.s3_user1, aws_secret_access_key='secret124')
 
 
-class S3BucketCredentialTestCase(TestCase):
+class S3BucketTestCase(TestCase):
     def setUp(self):
         self.user1 = User.objects.create(username='user1')
         self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
@@ -471,6 +471,11 @@ class S3BucketCredentialTestCase(TestCase):
         self.assertEqual(len(s3_buckets), 3)
         self.assertEqual([s3_bucket.name for s3_bucket in s3_buckets],
                          ['mouse', 'mouse2', 'mouse3'])
+
+    def test_prevents_duplicate_name_endpoint(self):
+        S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+        with self.assertRaises(IntegrityError):
+            S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
 
 
 class S3DeliveryCredentialTestCase(TestCase):
