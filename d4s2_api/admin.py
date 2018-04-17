@@ -13,11 +13,11 @@ class ShareAdmin(SimpleHistoryAdmin):
 admin.site.register(Share, ShareAdmin)
 
 
-class DeliveryAdmin(SimpleHistoryAdmin):
+class DDSDeliveryAdmin(SimpleHistoryAdmin):
     pass
 
 
-admin.site.register(DDSDelivery, DeliveryAdmin)
+admin.site.register(DDSDelivery, DDSDeliveryAdmin)
 admin.site.register(DDSDeliveryShareUser)
 admin.site.register(DDSEndpoint)
 admin.site.register(DDSUserCredential)
@@ -27,4 +27,10 @@ admin.site.register(S3Endpoint)
 admin.site.register(S3User)
 admin.site.register(S3UserCredential)
 admin.site.register(S3Bucket)
-admin.site.register(S3Delivery)
+
+
+class S3DeliveryAdmin(SimpleHistoryAdmin):
+    pass
+
+
+admin.site.register(S3Delivery, S3DeliveryAdmin)
