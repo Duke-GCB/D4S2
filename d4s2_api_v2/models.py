@@ -1,1 +1,1 @@
-from d4s2_api.models import Delivery, DeliveryShareUser
+from d4s2_api.models import DDSDelivery, DDSDeliveryShareUser

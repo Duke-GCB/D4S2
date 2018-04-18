@@ -2,7 +2,7 @@ from mock import patch, Mock, call
 from django.test import TestCase
 from d4s2_api.utils import decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
     MessageDirection, DeliveryUtil, Message
-from d4s2_api.models import Delivery, Share, State, DeliveryShareUser
+from d4s2_api.models import DDSDelivery, Share, State, DDSDeliveryShareUser
 from ownership.test_views import setup_mock_delivery_details
 from django.contrib.auth.models import User, Group
 
@@ -14,9 +14,9 @@ class UtilsTestCase(TestCase):
         group = Group.objects.create(name='test_group')
         self.user = User.objects.create(username='test_user')
         group.user_set.add(self.user)
-        self.delivery = Delivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
-        DeliveryShareUser.objects.create(delivery=self.delivery, dds_id='jkl888')
-        DeliveryShareUser.objects.create(delivery=self.delivery, dds_id='mno999')
+        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        DDSDeliveryShareUser.objects.create(delivery=self.delivery, dds_id='jkl888')
+        DDSDeliveryShareUser.objects.create(delivery=self.delivery, dds_id='mno999')
         self.share = Share.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
 
     @patch('d4s2_api.utils.DDSUtil')
@@ -32,10 +32,9 @@ class UtilsTestCase(TestCase):
     def test_delivery_message(self, MockDeliveryDetails):
         mock_details = setup_mock_delivery_details(MockDeliveryDetails)
         message = DeliveryMessage(self.delivery, self.user, 'http://localhost/accept')
-        self.assertEqual(mock_details.get_project.call_count, 1)
+        self.assertEqual(mock_details.get_email_context.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
-        self.assertEqual(mock_details.get_user_message.call_count, 1)
         self.assertEqual(mock_details.get_action_template_text.call_count, 1)
         self.assertTrue(mock_details.get_action_template_text.called_with('delivery'))
         self.assertIn('Action Subject Template project', message.email_text)
@@ -46,10 +45,9 @@ class UtilsTestCase(TestCase):
     def test_share_message(self, MockDeliveryDetails):
         mock_details = setup_mock_delivery_details(MockDeliveryDetails)
         message = ShareMessage(self.share, self.user)
-        self.assertEqual(mock_details.get_project.call_count, 1)
+        self.assertEqual(mock_details.get_email_context.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
-        self.assertEqual(mock_details.get_user_message.call_count, 1)
         self.assertEqual(mock_details.get_share_template_text.call_count, 1)
         self.assertIn('Share Subject Template project', message.email_text)
         self.assertIn('Share Body Template bob', message.email_text)
@@ -61,10 +59,9 @@ class UtilsTestCase(TestCase):
         process_type = 'decline'
         reason = 'sample reason'
         message = ProcessedMessage(self.delivery, self.user, process_type, reason)
-        self.assertEqual(mock_details.get_project.call_count, 1)
+        self.assertEqual(mock_details.get_email_context.call_count, 1)
         self.assertEqual(mock_details.get_from_user.call_count, 1)
         self.assertEqual(mock_details.get_to_user.call_count, 1)
-        self.assertEqual(mock_details.get_user_message.call_count, 1)
         self.assertEqual(mock_details.get_action_template_text.call_count, 1)
         self.assertTrue(mock_details.get_action_template_text.called_with('process_type'))
         self.assertIn('Action Subject Template project', message.email_text)
@@ -119,9 +116,9 @@ class MessageDirectionTestCase(TestCase):
 class DeliveryUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='test_user')
-        self.delivery = Delivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
-        DeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
-        DeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
+        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        DDSDeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
+        DDSDeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
 
     @patch('d4s2_api.utils.DDSUtil')
     def test_accept_project_transfer(self, mock_ddsutil):
@@ -164,16 +161,19 @@ class DeliveryUtilTestCase(TestCase):
 class MessageTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='test_user')
-        self.delivery = Delivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
-        DeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
-        DeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
+        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        DDSDeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
+        DDSDeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
 
     @patch('switchboard.dds_util.DDSUtil')
     @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('switchboard.dds_util.DDSUser')
     @patch('d4s2_api.utils.generate_message')
     def test_delivery_context(self, generate_message, mock_ddsuser, mock_dds_project_transfer, mock_dds_util):
+        # This data is fetched twice
         mock_ddsuser.fetch_one.side_effect = [
+            Mock(full_name='Joe Sender', email='joe@joe.joe'),
+            Mock(full_name='Bob Receiver', email='bob@bob.bob'),
             Mock(full_name='Joe Sender', email='joe@joe.joe'),
             Mock(full_name='Bob Receiver', email='bob@bob.bob'),
         ]

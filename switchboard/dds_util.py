@@ -1,6 +1,6 @@
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import EmailTemplate, Delivery
+from d4s2_api.models import EmailTemplate, DDSDelivery
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token
 from gcb_web_auth.models import DDSEndpoint
@@ -147,7 +147,7 @@ class DDSProjectTransfer(DDSBase):
 
     @staticmethod
     def _lookup_delivery_id(transfer_id):
-        delivery = Delivery.objects.filter(transfer_id=transfer_id).first()
+        delivery = DDSDelivery.objects.filter(transfer_id=transfer_id).first()
         if delivery:
             return delivery.id
         return None
@@ -205,11 +205,34 @@ class DeliveryDetails(object):
     @classmethod
     def from_transfer_id(self, transfer_id, user):
         """
-        Finds a local delivery by transfer id and ensures it's up-to-date with the server
+        Builds DeliveryDetails based on DukeDS transfer id
         :param transfer_id: a DukeDS Project Transfer ID
         :param user: a Django user with related DukeDS credentials
-        :return: a d4s2_api.models.Delivery
+        :return: DeliveryDetails
         """
-
-        delivery = Delivery.objects.get(transfer_id=transfer_id)
+        delivery = DDSDelivery.objects.get(transfer_id=transfer_id)
         return DeliveryDetails(delivery, user)
+
+    def get_email_context(self, accept_url, process_type, reason, warning_message=''):
+        try:
+            sender = self.get_from_user()
+            receiver = self.get_to_user()
+            project = self.get_project()
+            project_url = self.get_project_url()
+            user_message = self.get_user_message()
+        except ValueError as e:
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+
+        return {
+            'project_name': project.name,
+            'recipient_name': receiver.full_name,
+            'recipient_email': receiver.email,
+            'sender_email': sender.email,
+            'sender_name': sender.full_name,
+            'project_url': project_url,
+            'accept_url': accept_url,
+            'type': process_type,  # accept or decline
+            'message': reason,  # decline reason
+            'user_message': user_message,
+            'warning_message': warning_message,
+        }

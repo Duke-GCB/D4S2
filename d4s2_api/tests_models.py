@@ -1,7 +1,9 @@
 from django.db import IntegrityError
+from django.core import serializers
 from django.test import TestCase
 from d4s2_api.models import *
 from django.contrib.auth.models import User
+import json
 
 
 class TransferBaseTestCase(TestCase):
@@ -17,70 +19,70 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(DeliveryTestCase, self).setUp()
-        Delivery.objects.create(project_id='project1',
+        DDSDelivery.objects.create(project_id='project1',
                                 from_user_id='user1',
                                 to_user_id='user2',
                                 transfer_id=self.transfer_id)
 
     def test_initial_state(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW, 'New deliveries should be in initiated state')
 
     def test_required_fields(self):
         with self.assertRaises(IntegrityError):
-            Delivery.objects.create(project_id=None, from_user_id=None, to_user_id=None, transfer_id=None)
+            DDSDelivery.objects.create(project_id=None, from_user_id=None, to_user_id=None, transfer_id=None)
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Delivery.objects.create(project_id='project1',
+            DDSDelivery.objects.create(project_id='project1',
                                     from_user_id='user1',
                                     to_user_id='user2',
                                     transfer_id=self.transfer_id)
 
     def test_can_add_share_users(self):
-        delivery = Delivery.objects.create(project_id='projectA',
+        delivery = DDSDelivery.objects.create(project_id='projectA',
                                            from_user_id='user1',
                                            to_user_id='user2',
                                            transfer_id='123-123')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
         share_users = delivery.share_users.all()
         self.assertEqual(set([share_user.dds_id for share_user in share_users]),
                          set(['user3', 'user4']))
 
     def test_user_can_be_shared_multiple_deliveries(self):
-        delivery1 = Delivery.objects.create(project_id='projectA',
+        delivery1 = DDSDelivery.objects.create(project_id='projectA',
                                             from_user_id='user1',
                                             to_user_id='user2',
                                             transfer_id='123-123')
-        delivery2 = Delivery.objects.create(project_id='projectB',
+        delivery2 = DDSDelivery.objects.create(project_id='projectB',
                                             from_user_id='user3',
                                             to_user_id='user4',
                                             transfer_id='456-789')
-        DeliveryShareUser.objects.create(delivery=delivery1, dds_id='user3')
-        DeliveryShareUser.objects.create(delivery=delivery2, dds_id='user3')
-        self.assertEqual(DeliveryShareUser.objects.count(), 2)
-        self.assertEqual(set([share_user.dds_id for share_user in DeliveryShareUser.objects.all()]),
+        DDSDeliveryShareUser.objects.create(delivery=delivery1, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery2, dds_id='user3')
+        self.assertEqual(DDSDeliveryShareUser.objects.count(), 2)
+        self.assertEqual(set([share_user.dds_id for share_user in DDSDeliveryShareUser.objects.all()]),
                          set(['user3']))
 
     def test_user_cannot_be_shared_delivery_twice(self):
-        delivery = Delivery.objects.create(project_id='projectA',
+        delivery = DDSDelivery.objects.create(project_id='projectA',
                                            from_user_id='user1',
                                            to_user_id='user2',
                                            transfer_id='123-123')
-        DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+        DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         with self.assertRaises(IntegrityError):
-            DeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
+            DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
 
     def test_mark_notified(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
         delivery.mark_notified(DeliveryTestCase.DELIVERY_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.NOTIFIED)
 
     def test_mark_accepted(self):
         performed_by = 'performer'
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
         delivery.mark_accepted(performed_by, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.ACCEPTED)
@@ -89,7 +91,7 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_mark_declined(self):
         performed_by = 'performer'
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
         delivery.mark_declined(performed_by, 'Wrong person.',  DeliveryTestCase.DECLINE_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.DECLINED)
@@ -98,7 +100,7 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.completion_email_text, DeliveryTestCase.DECLINE_EMAIL_TEXT)
 
     def test_is_complete(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.is_complete(), False)
         delivery.mark_notified('')
         self.assertEqual(delivery.is_complete(), False)
@@ -111,7 +113,7 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.is_complete(), True)
 
     def setup_incomplete_delivery(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         delivery.transfer_id = self.transfer_id
         delivery.save()
         self.assertFalse(delivery.is_complete())
@@ -148,12 +150,12 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.decline_reason, 'Bad Data', 'Should not change when status doesnt change')
 
     def test_user_message(self):
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertIsNone(delivery.user_message)
         user_message = 'This is the final result of analysis xyz123'
         delivery.user_message = user_message
         delivery.save()
-        delivery = Delivery.objects.first()
+        delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.user_message, user_message)
 
 
@@ -292,7 +294,7 @@ class EmailTemplateTestCase(TestCase):
 
     def test_for_operation(self):
         # Create an email template
-        delivery = Delivery.objects.create(project_id='project1',
+        delivery = DDSDelivery.objects.create(project_id='project1',
                                            from_user_id='user1',
                                            to_user_id='user2',
                                            transfer_id=self.transfer_id)
@@ -375,3 +377,129 @@ class EmailTemplateTestCase(TestCase):
                                                            body='email body')
         email_template = EmailTemplate.for_share(share, self.other_user)
         self.assertEqual(email_template.id, some_email_template.id)
+
+
+class S3EndpointTestCase(TestCase):
+    def test_create_and_read(self):
+        s3_url = 'https://s3service.com/'
+        S3Endpoint.objects.create(url=s3_url)
+        s3_endpoints = S3Endpoint.objects.all()
+        self.assertEqual(len(s3_endpoints), 1)
+        self.assertEqual(s3_endpoints[0].url, s3_url)
+
+    def test_deserialization_with_get_by_natural_key(self):
+        s3_endpoint_json_ary = '[{"model": "d4s2_api.s3endpoint", "fields": {"url": "https://s3.com/"}}]'
+        s3_endpoint_list = list(serializers.deserialize("json", s3_endpoint_json_ary))
+        self.assertEqual(len(s3_endpoint_list), 1)
+        s3_endpoint_list[0].save()
+        s3_endpoints = S3Endpoint.objects.all()
+        self.assertEqual(len(s3_endpoints), 1)
+        self.assertEqual(s3_endpoints[0].url, "https://s3.com/")
+
+
+class S3UserTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.user2 = User.objects.create(username='user2')
+
+    def test_create_and_read(self):
+        endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        s3_user1 = S3User.objects.create(endpoint=endpoint,
+                                         s3_id='user1_s3_id',
+                                         user=self.user1)
+        self.assertEqual(s3_user1.type, S3UserTypes.NORMAL)
+        self.assertEqual(s3_user1.get_type_label(), 'Normal')
+
+        s3_user2 = S3User.objects.create(endpoint=endpoint,
+                                         s3_id='user1_s3_id',
+                                         user=self.user2,
+                                         type=S3UserTypes.AGENT)
+        self.assertEqual(s3_user2.type, S3UserTypes.AGENT)
+        self.assertEqual(s3_user2.get_type_label(), 'Agent')
+
+        s3_users = S3User.objects.order_by('s3_id')
+        self.assertEqual(len(s3_users), 2)
+        self.assertEqual([s3_user.s3_id for s3_user in s3_users],
+                         ['user1_s3_id','user1_s3_id'])
+
+    def test_duplicating_endoint_and_user(self):
+        # One django user can have multiple S3Users as long as the endpoints are different
+        endpoint1 = S3Endpoint.objects.create(url='https://s3service1.com/')
+        endpoint2 = S3Endpoint.objects.create(url='https://s3service2.com/')
+
+        S3User.objects.create(endpoint=endpoint1, s3_id='user1_s3_id', user=self.user1)
+        S3User.objects.create(endpoint=endpoint2, s3_id='user1_s3_2id', user=self.user1)
+
+        with self.assertRaises(IntegrityError):
+            S3User.objects.create(endpoint=endpoint1, s3_id='user1_s3_3id', user=self.user1)
+
+
+class S3UserCredentialTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user1_s3_id',
+                                              user=self.user1)
+
+    def test_create_and_read(self):
+        S3UserCredential.objects.create(s3_user=self.s3_user1, aws_secret_access_key='secret123')
+        s3_user_credentials = S3UserCredential.objects.all()
+        self.assertEqual(len(s3_user_credentials), 1)
+        self.assertEqual(s3_user_credentials[0].aws_secret_access_key, 'secret123')
+        self.assertEqual(s3_user_credentials[0].s3_user, self.s3_user1)
+
+    def test_creating_multiple_credentials_for_one_user(self):
+        S3UserCredential.objects.create(s3_user=self.s3_user1, aws_secret_access_key='secret123')
+        with self.assertRaises(IntegrityError):
+            S3UserCredential.objects.create(s3_user=self.s3_user1, aws_secret_access_key='secret124')
+
+
+class S3BucketTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user1_s3_id',
+                                              user=self.user1)
+
+    def test_create_and_read(self):
+        S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+        S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
+        S3Bucket.objects.create(name='mouse3', owner=self.s3_user1, endpoint=self.endpoint)
+        s3_buckets = S3Bucket.objects.order_by('name')
+        self.assertEqual(len(s3_buckets), 3)
+        self.assertEqual([s3_bucket.name for s3_bucket in s3_buckets],
+                         ['mouse', 'mouse2', 'mouse3'])
+
+    def test_prevents_duplicate_name_endpoint(self):
+        S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+        with self.assertRaises(IntegrityError):
+            S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+
+
+class S3DeliveryCredentialTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.user2 = User.objects.create(username='user2')
+        self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user1_s3_id',
+                                              user=self.user1)
+        self.s3_user2 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user2_s3_id',
+                                              user=self.user2)
+        self.s3_bucket = S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+        self.s3_bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
+
+    def test_create_and_read(self):
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        S3Delivery.objects.create(bucket=self.s3_bucket2, from_user=self.s3_user1, to_user=self.s3_user2)
+        s3_deliveries = S3Delivery.objects.order_by('bucket__name')
+        self.assertEqual([s3_delivery.bucket.name for s3_delivery in s3_deliveries],
+                         ['mouse', 'mouse2'])
+
+    def test_prevents_creating_same_delivery_twice(self):
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        with self.assertRaises(IntegrityError):
+            S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)

@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import detail_route
-from d4s2_api.models import Delivery, Share
+from d4s2_api.models import DDSDelivery, Share
 from d4s2_api.serializers import DeliverySerializer, ShareSerializer
 from d4s2_api.utils import ShareMessage, DeliveryMessage
 from switchboard.dds_util import DDSUtil
@@ -19,7 +19,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
     API endpoint that allows deliveries to be viewed or edited.
     """
     serializer_class = DeliverySerializer
-    queryset = Delivery.objects.all()
+    queryset = DDSDelivery.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('project_id', 'from_user_id', 'to_user_id')
