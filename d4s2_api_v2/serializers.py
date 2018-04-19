@@ -61,7 +61,7 @@ class S3EndpointSerializer(serializers.ModelSerializer):
     class Meta:
         model = S3Endpoint
         resource_name = 's3endpoints'
-        fields = ('id', 'url',)
+        fields = ('id', 'url', 'name',)
 
 
 class S3UserSerializer(serializers.ModelSerializer):
