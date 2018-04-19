@@ -433,6 +433,12 @@ class S3UserTestCase(TestCase):
         with self.assertRaises(IntegrityError):
             S3User.objects.create(endpoint=endpoint1, s3_id='user1_s3_3id', user=self.user1)
 
+    def test_endpoint_name_must_be_unique(self):
+        # One django user can have multiple S3Users as long as the endpoints are different
+        endpoint1 = S3Endpoint.objects.create(url='https://s3service1.com/', name='primary')
+        with self.assertRaises(IntegrityError):
+            S3Endpoint.objects.create(url='https://s3service2.com/', name='primary')
+
 
 class S3UserCredentialTestCase(TestCase):
     def setUp(self):
