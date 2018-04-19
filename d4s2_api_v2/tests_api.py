@@ -501,16 +501,18 @@ class S3EndpointViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_list_endpoints(self):
-        S3Endpoint.objects.create(url='http://s3.com')
-        S3Endpoint.objects.create(url='http://s3.org')
-        S3Endpoint.objects.create(url='http://s3.net')
+        S3Endpoint.objects.create(url='http://s3.com', name='com')
+        S3Endpoint.objects.create(url='http://s3.org', name='org')
+        S3Endpoint.objects.create(url='http://s3.net', name='net')
 
         url = reverse('v2-s3endpoint-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 3)
-        self.assertEqual(set([endpoint['url'] for endpoint in  response.data]),
+        self.assertEqual(set([endpoint['url'] for endpoint in response.data]),
                          set(['http://s3.com', 'http://s3.org', 'http://s3.net']))
+        self.assertEqual(set([endpoint['name'] for endpoint in response.data]),
+                         set(['com', 'org', 'net']))
 
 
 class S3UserViewSetTestCase(AuthenticatedResourceTestCase):
@@ -701,8 +703,8 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.normal_user3 = user = django_user.objects.create_user(username='user3', password='user3')
 
         # create and endpoint and some S3Users
-        self.endpoint = S3Endpoint.objects.create(url='http://s1.com')
-        self.endpoint2 = S3Endpoint.objects.create(url='http://s2.com')
+        self.endpoint = S3Endpoint.objects.create(url='http://s1.com', name='s1')
+        self.endpoint2 = S3Endpoint.objects.create(url='http://s2.com', name='s2')
         self.s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
         self.s3_user2 = S3User.objects.create(endpoint=self.endpoint, s3_id='def', user=self.normal_user2)
         self.s3_user3 = S3User.objects.create(endpoint=self.endpoint, s3_id='hij', user=self.normal_user3)
