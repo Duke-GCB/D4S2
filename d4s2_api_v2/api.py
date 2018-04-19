@@ -151,18 +151,12 @@ class S3EndpointViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('name', )
 
-    @detail_route(methods=['get'], url_path='current-user')
-    def current_user(self, request, pk=None):
-        endpoint = self.get_object()
-        current_user = self.request.user
-        s3_user = S3User.objects.get(user=current_user, endpoint=endpoint)
-        serializer = S3UserSerializer(s3_user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 class S3UserViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = S3UserSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('endpoint',  'user')
 
     def get_queryset(self):
         """
