@@ -2,8 +2,8 @@ from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, DDSDelivery
 from gcb_web_auth.backends.dukeds import make_auth_config
-from gcb_web_auth.utils import get_dds_token
-from gcb_web_auth.models import DDSEndpoint
+from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
+from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
 
 
 class DDSUtil(object):
@@ -16,8 +16,16 @@ class DDSUtil(object):
     @property
     def remote_store(self):
         if self._remote_store is None:
-            dds_token = get_dds_token(self.user)
-            config = make_auth_config(dds_token.key)
+            # First need to resolve DukeDS Credential.
+            # For simplicity and development ease, we first check if a DDSUserCredential exists for the requesting user
+            try:
+                dds_credential = DDSUserCredential.objects.get(user=self.user)
+                config = get_dds_config_for_credentials(dds_credential)
+            except DDSUserCredential.DoesNotExist:
+                # No DDSUserCredential configured for this user, fall back to OAuth
+                # May raise an OAuthConfigurationException
+                dds_token = get_dds_token(self.user)
+                config = make_auth_config(dds_token.key)
             self._remote_store = RemoteStore(config)
         return self._remote_store
 
