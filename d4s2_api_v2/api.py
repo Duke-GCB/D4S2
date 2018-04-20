@@ -4,6 +4,7 @@ from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
 from django.core.urlresolvers import reverse
+from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
 from switchboard.dds_util import DDSUtil
 from switchboard.s3_util import S3DeliveryUtil
@@ -147,11 +148,15 @@ class S3EndpointViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = S3EndpointSerializer
     queryset = S3Endpoint.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('name', )
 
 
 class S3UserViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = S3UserSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('endpoint',  'user')
 
     def get_queryset(self):
         """
@@ -167,6 +172,8 @@ class S3UserViewSet(viewsets.ReadOnlyModelViewSet):
 class S3BucketViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = S3BucketSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('name', )
 
     def get_queryset(self):
         """

@@ -424,14 +424,20 @@ class S3UserTestCase(TestCase):
 
     def test_duplicating_endoint_and_user(self):
         # One django user can have multiple S3Users as long as the endpoints are different
-        endpoint1 = S3Endpoint.objects.create(url='https://s3service1.com/')
-        endpoint2 = S3Endpoint.objects.create(url='https://s3service2.com/')
+        endpoint1 = S3Endpoint.objects.create(url='https://s3service1.com/', name='primary')
+        endpoint2 = S3Endpoint.objects.create(url='https://s3service2.com/', name='secondary')
 
         S3User.objects.create(endpoint=endpoint1, s3_id='user1_s3_id', user=self.user1)
         S3User.objects.create(endpoint=endpoint2, s3_id='user1_s3_2id', user=self.user1)
 
         with self.assertRaises(IntegrityError):
             S3User.objects.create(endpoint=endpoint1, s3_id='user1_s3_3id', user=self.user1)
+
+    def test_endpoint_name_must_be_unique(self):
+        # One django user can have multiple S3Users as long as the endpoints are different
+        endpoint1 = S3Endpoint.objects.create(url='https://s3service1.com/', name='primary')
+        with self.assertRaises(IntegrityError):
+            S3Endpoint.objects.create(url='https://s3service2.com/', name='primary')
 
 
 class S3UserCredentialTestCase(TestCase):

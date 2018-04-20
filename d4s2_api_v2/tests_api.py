@@ -501,22 +501,36 @@ class S3EndpointViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_list_endpoints(self):
-        S3Endpoint.objects.create(url='http://s3.com')
-        S3Endpoint.objects.create(url='http://s3.org')
-        S3Endpoint.objects.create(url='http://s3.net')
+        S3Endpoint.objects.create(url='http://s3.com', name='com')
+        S3Endpoint.objects.create(url='http://s3.org', name='org')
+        S3Endpoint.objects.create(url='http://s3.net', name='net')
 
         url = reverse('v2-s3endpoint-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 3)
-        self.assertEqual(set([endpoint['url'] for endpoint in  response.data]),
+        self.assertEqual(set([endpoint['url'] for endpoint in response.data]),
                          set(['http://s3.com', 'http://s3.org', 'http://s3.net']))
+        self.assertEqual(set([endpoint['name'] for endpoint in response.data]),
+                         set(['com', 'org', 'net']))
+
+    def test_list_endpoint_filter_by_name(self):
+        S3Endpoint.objects.create(url='http://s3.com', name='com')
+        S3Endpoint.objects.create(url='http://s3.org', name='org')
+        S3Endpoint.objects.create(url='http://s3.net', name='net')
+
+        url = reverse('v2-s3endpoint-list') + "?name=org"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], 'org')
+        self.assertEqual(response.data[0]['url'], 'http://s3.org')
 
 
 class S3UserViewSetTestCase(AuthenticatedResourceTestCase):
     def setUp(self):
         self.user_login = UserLogin(self.client)
-        self.endpoint = S3Endpoint.objects.create(url='http://s3.com')
+        self.endpoint = S3Endpoint.objects.create(url='http://s3.com', name='primary')
         self.normal_user1 = self.user_login.become_normal_user()
         self.normal_user2 = self.user_login.become_other_normal_user()
 
@@ -605,6 +619,30 @@ class S3UserViewSetTestCase(AuthenticatedResourceTestCase):
             self.assertEqual(s3_user_resp['email'], expected_dict['email'])
             self.assertEqual(s3_user_resp['type'], expected_dict['type'])
 
+    def test_list_s3users_endpoint_user_filtering(self):
+        endpoint2 = S3Endpoint.objects.create(url='http://s4.com', name='other')
+        s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
+        s3_user2 = S3User.objects.create(endpoint=self.endpoint, s3_id='def', user=self.normal_user2)
+        s3_user2 = S3User.objects.create(endpoint=endpoint2, s3_id='def', user=self.normal_user2)
+
+        expected_data = {
+            s3_user2.id: {
+                'email': s3_user2.user.email,
+                'type': 'Normal',
+                'endpoint': endpoint2.id,
+            }
+        }
+
+        url = reverse('v2-s3user-list') + '?user={}&endpoint={}'.format(self.normal_user2.id, endpoint2.id)
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        for s3_user_resp in response.data:
+            s3_id = s3_user_resp['id']
+            expected_dict = expected_data[s3_id]
+            self.assertEqual(s3_user_resp['email'], expected_dict['email'])
+            self.assertEqual(s3_user_resp['type'], expected_dict['type'])
+
 
 class S3BucketViewSetTestCase(AuthenticatedResourceTestCase):
     def setUp(self):
@@ -628,6 +666,19 @@ class S3BucketViewSetTestCase(AuthenticatedResourceTestCase):
         bucket_response = response.data[0]
         self.assertEqual(bucket_response['id'], bucket.id)
         self.assertEqual(bucket_response['name'], 'mouse1')
+        self.assertEqual(bucket_response['owner'], self.s3_user1.id)
+        self.assertEqual(bucket_response['endpoint'], self.endpoint.id)
+
+    def test_list_s3buckets_filters_by_name(self):
+        S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
+        bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
+        url = reverse('v2-s3bucket-list') + "?name=mouse2"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        bucket_response = response.data[0]
+        self.assertEqual(bucket_response['id'], bucket2.id)
+        self.assertEqual(bucket_response['name'], 'mouse2')
         self.assertEqual(bucket_response['owner'], self.s3_user1.id)
         self.assertEqual(bucket_response['endpoint'], self.endpoint.id)
 
@@ -701,8 +752,8 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.normal_user3 = user = django_user.objects.create_user(username='user3', password='user3')
 
         # create and endpoint and some S3Users
-        self.endpoint = S3Endpoint.objects.create(url='http://s1.com')
-        self.endpoint2 = S3Endpoint.objects.create(url='http://s2.com')
+        self.endpoint = S3Endpoint.objects.create(url='http://s1.com', name='s1')
+        self.endpoint2 = S3Endpoint.objects.create(url='http://s2.com', name='s2')
         self.s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
         self.s3_user2 = S3User.objects.create(endpoint=self.endpoint, s3_id='def', user=self.normal_user2)
         self.s3_user3 = S3User.objects.create(endpoint=self.endpoint, s3_id='hij', user=self.normal_user3)
