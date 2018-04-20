@@ -1,5 +1,5 @@
 from django.conf.urls import url
-from . import views, views_classes
+from . import views
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 
@@ -14,9 +14,9 @@ def decorate(view):
 
 
 urlpatterns = [
-    url(r'^$', login_required(views_classes.PromptView.as_view()), name='ownership-prompt'),
-    url(r'^process/$', decorate(views_classes.ProcessView.as_view()), name='ownership-process'),
-    url(r'^decline/$', decorate(views_classes.DeclineView.as_view()), name='ownership-decline'),
-    url(r'^accepted/$',decorate(views_classes.AcceptedView.as_view()), name='ownership-accepted'),
-    url(r'^declined/$', decorate(views_classes.DeclinedView.as_view()), name='ownership-declined'),
+    url(r'^$', login_required(views.PromptView.as_view()), name='ownership-prompt'),
+    url(r'^process/$', decorate(views.ProcessView.as_view()), name='ownership-process'),
+    url(r'^decline/$', decorate(views.DeclineView.as_view()), name='ownership-decline'),
+    url(r'^accepted/$',decorate(views.AcceptedView.as_view()), name='ownership-accepted'),
+    url(r'^declined/$', decorate(views.DeclinedView.as_view()), name='ownership-declined'),
 ]
