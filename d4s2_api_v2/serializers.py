@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from switchboard.dds_util import DDSUtil
 from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery
 
