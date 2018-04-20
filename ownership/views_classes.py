@@ -1,13 +1,11 @@
 from django.views.generic import DetailView
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render_to_response
 from d4s2_api.models import DDSDelivery, S3Delivery
 from d4s2_api.models import State, ShareRole
-from d4s2_api.utils import DeliveryDetails
 from django.core.urlresolvers import reverse
 from d4s2_api.utils import DeliveryUtil, decline_delivery, ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
-from django.http import Http404
 
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
@@ -20,39 +18,63 @@ SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 class DeliveryViewBase(DetailView):
 
     def make_delivery_util(self, request):
-        delivery = self.get_object()
-        delivery_util = DeliveryUtil(delivery, request.user,
-                                     share_role=ShareRole.DOWNLOAD,
-                                     share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
-        return delivery_util
+        delivery = self.object
+        if delivery:
+            return DeliveryUtil(delivery, request.user,
+                                share_role=ShareRole.DOWNLOAD,
+                                share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+        else:
+            return None
 
     def get_context_data(self, **kwargs):
         context = super(DeliveryViewBase, self).get_context_data(**kwargs)
         delivery = self.object
-        details = DeliveryDetails(delivery, self.request.user)
-        from_user = details.get_from_user()
-        to_user = details.get_to_user()
-        project = details.get_project()
-        project_url = details.get_project_url()
-        context.update({
-            'transfer_id': str(delivery.transfer_id),
-            'from_name': from_user.full_name,
-            'from_email': from_user.email,
-            'to_name': to_user.full_name,
-            'project_title': project.name,
-            'project_url': project_url
-        })
+        if delivery:
+            details = DeliveryDetails(delivery, self.request.user)
+            from_user = details.get_from_user()
+            to_user = details.get_to_user()
+            project = details.get_project()
+            project_url = details.get_project_url()
+            context.update({
+                'transfer_id': str(delivery.transfer_id),
+                'from_name': from_user.full_name,
+                'from_email': from_user.email,
+                'to_name': to_user.full_name,
+                'project_title': project.name,
+                'project_url': project_url
+            })
         return context
 
+    def set_error_response(self, status, message):
+        self.error_response = {
+            'status': status,
+            'context': {'message': message},
+        }
+
     def get_object(self, queryset=None):
+        self.error_response = None
         transfer_id = self.request.GET.get('transfer_id') or self.request.POST.get('transfer_id')
-        try:
-            return DDSDelivery.objects.get(transfer_id=transfer_id)
-        except DDSDelivery.DoesNotExist as e:
-            raise Http404(e)
+        if transfer_id:
+            try:
+                return DDSDelivery.objects.get(transfer_id=transfer_id)
+            except DDSDelivery.DoesNotExist as e:
+                self.set_error_response(404, TRANSFER_ID_NOT_FOUND)
+        else:
+            self.set_error_response(400, MISSING_TRANSFER_ID_MSG)
+        return None
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.error_response:
+            # We've trapped a local error, render that instead
+            return render_to_response('ownership/error.html',
+                                      status=self.error_response.get('status'),
+                                      context=self.error_response.get('context'))
+        else:
+            return super(DeliveryViewBase, self).render_to_response(context, **response_kwargs)
+
 
     def _get_query_string(self):
-        delivery = self.get_object()
+        delivery = self.object
         return 'transfer_id={}'.format(delivery.transfer_id)
 
     def process_accept(self):
