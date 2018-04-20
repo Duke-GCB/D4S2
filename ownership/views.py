@@ -17,15 +17,7 @@ SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 class DeliveryViewBase(DetailView):
 
-    def make_delivery_util(self, request):
-        delivery = self.object
-        if delivery:
-            return DeliveryUtil(delivery, request.user,
-                                share_role=ShareRole.DOWNLOAD,
-                                share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
-        else:
-            return None
-
+    # Begin DetailView overrides
     def get_context_data(self, **kwargs):
         context = super(DeliveryViewBase, self).get_context_data(**kwargs)
         delivery = self.object
@@ -45,12 +37,6 @@ class DeliveryViewBase(DetailView):
             })
         return context
 
-    def set_error_response(self, status, message):
-        self.error_response = {
-            'status': status,
-            'context': {'message': message},
-        }
-
     def get_object(self, queryset=None):
         self.error_response = None
         transfer_id = self.request.GET.get('transfer_id') or self.request.POST.get('transfer_id')
@@ -58,34 +44,77 @@ class DeliveryViewBase(DetailView):
             try:
                 return DDSDelivery.objects.get(transfer_id=transfer_id)
             except DDSDelivery.DoesNotExist as e:
-                self.set_error_response(404, TRANSFER_ID_NOT_FOUND)
+                self.set_error_details(404, TRANSFER_ID_NOT_FOUND)
         else:
-            self.set_error_response(400, MISSING_TRANSFER_ID_MSG)
+            self.set_error_details(400, MISSING_TRANSFER_ID_MSG)
         return None
 
     def render_to_response(self, context, **response_kwargs):
         if self.error_response:
             # We've trapped a local error, render that instead
-            return render_to_response('ownership/error.html',
-                                      status=self.error_response.get('status'),
-                                      context=self.error_response.get('context'))
+            return self.make_error_response()
         else:
             return super(DeliveryViewBase, self).render_to_response(context, **response_kwargs)
 
+    # End DetailView overrides
+    # Begin helper methods
+    def set_error_details(self, status, message):
+        self.error_response = {
+            'status': status,
+            'context': {'message': message},
+        }
+
+    def make_error_response(self):
+        return render_to_response('ownership/error.html',
+                                  status=self.error_response.get('status'),
+                                  context=self.error_response.get('context'))
 
     def _get_query_string(self):
-        delivery = self.object
+        delivery = self.get_object()
         return 'transfer_id={}'.format(delivery.transfer_id)
-
-    def process_accept(self):
-        print('Process Acceptance of Delivery..')
-
-    def process_decline(self):
-        print('Process Decline of delivery')
 
     def redirect(self, view_name):
         return redirect(reverse(view_name) + '?' + self._get_query_string())
 
+    def make_delivery_util(self):
+        delivery = self.object
+        request = self.request
+        if delivery:
+            return DeliveryUtil(delivery, request.user,
+                                share_role=ShareRole.DOWNLOAD,
+                                share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+        else:
+            return None
+    # End helper methods
+    # Begin Process actions
+
+    def process_accept(self):
+        delivery = self.get_object()
+        request = self.request
+        try:
+            delivery_util = self.make_delivery_util()
+            delivery_util.accept_project_transfer()
+            warning_message = delivery_util.get_warning_message()
+            message = ProcessedMessage(delivery, request.user, 'accepted', warning_message=warning_message)
+            message.send()
+            delivery.mark_accepted(request.user.get_username(), message.email_text)
+        except DataServiceError as e:
+            self.set_error_details(500, 'Unable to transfer ownership: {}'.format(e.message))
+        except Exception as e:
+            self.set_error_details(500, str(e))
+
+    def process_decline(self, reason):
+        delivery = self.get_object()
+        request = self.request
+        try:
+            decline_delivery(delivery, request.user, reason)
+            message = ProcessedMessage(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
+            message.send()
+            delivery.mark_declined(request.user.get_username(), reason, message.email_text)
+        except Exception as e:
+            self.set_error_details(500, str(e))
+
+    # End Process Actions
 
 class PromptView(DeliveryViewBase):
     """
@@ -129,8 +158,14 @@ class DeclineView(DeliveryViewBase):
             return self.redirect('ownership-prompt')
         else:
             # User is declining the delivery
-            self.process_decline()
-            return self.redirect('ownership-declined')
+            reason = request.POST.get('decline_reason')
+            if reason:
+                self.process_decline(reason)
+                return self.redirect('ownership-declined')
+            else:
+                self.set_error_details(400, REASON_REQUIRED_MSG)
+                # This needs to return a response
+                return self.make_error_response()
 
 
 class AcceptedView(DeliveryViewBase):
