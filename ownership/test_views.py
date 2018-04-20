@@ -213,7 +213,7 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = reverse('ownership-decline')
-        response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason':'Wrong person.'})
+        response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason':'Wrong person.'}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('has been declined', str(response.content))
         self.assertTrue(mock_decline_delivery.called)
