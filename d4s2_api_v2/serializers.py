@@ -45,23 +45,17 @@ class DDSProjectTransferSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    duke_ds_user = serializers.SerializerMethodField()
-
     class Meta:
         model = User
         resource_name = 'users'
-        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'duke_ds_user',)
-
-    @staticmethod
-    def get_duke_ds_user(user):
-        return DDSUtil(user).get_current_user().id
+        fields = ('id', 'username', 'first_name', 'last_name', 'email')
 
 
 class S3EndpointSerializer(serializers.ModelSerializer):
     class Meta:
         model = S3Endpoint
         resource_name = 's3endpoints'
-        fields = ('id', 'url',)
+        fields = ('id', 'url', 'name',)
 
 
 class S3UserSerializer(serializers.ModelSerializer):

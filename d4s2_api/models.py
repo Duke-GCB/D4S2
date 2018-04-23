@@ -315,6 +315,7 @@ class S3Endpoint(models.Model):
     """
     objects = S3EndpointManager()
     url = models.CharField(max_length=255, help_text='URL of S3 service', unique=True)
+    name = models.CharField(max_length=255, help_text='Unique name of the s3 service', unique=True)
 
     def __str__(self):
         return 'S3 Endpoint url: {}'.format(self.url)
