@@ -1,12 +1,12 @@
-from django.views.generic import DetailView
-from django.shortcuts import redirect, render_to_response
-from d4s2_api.models import DDSDelivery, S3Delivery
-from d4s2_api.models import State, ShareRole
+from ddsc.core.ddsapi import DataServiceError
 from django.core.urlresolvers import reverse
+from django.shortcuts import redirect, render_to_response
+from django.views.generic import TemplateView
+
+from d4s2_api.models import DDSDelivery
+from d4s2_api.models import ShareRole
 from d4s2_api.utils import DeliveryUtil, decline_delivery, ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
-from ddsc.core.ddsapi import DataServiceError
-
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
 INVALID_TRANSFER_ID = 'Invalid transfer ID.'
@@ -15,12 +15,45 @@ REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
 SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 
-class DeliveryViewBase(DetailView):
+class DeliveryViewBase(TemplateView):
 
-    # Begin DetailView overrides
+    def handle_get(self):
+        return None
+
+    def handle_post(self):
+        return None
+
+    def _prepare(self, request):
+        self.request = request
+        self.error_details = None
+        self.delivery = self.get_delivery()
+        self.context = self.get_context_data()
+
+    def _respond(self, response=None):
+        if response:
+            return response
+        else:
+            return self.render_to_response(self.context)
+
+    def get(self, request):
+        self._prepare(request)
+        if self.error_details:
+            response = self.make_error_response()
+        else:
+            response = self.handle_get()
+        return self._respond(response)
+
+    def post(self, request):
+        self._prepare(request)
+        if self.error_details:
+            response = self.make_error_response()
+        else:
+            response = self.handle_post()
+        return self._respond(response)
+
     def get_context_data(self, **kwargs):
-        context = super(DeliveryViewBase, self).get_context_data(**kwargs)
-        delivery = self.object
+        context = {}
+        delivery = self.delivery
         if delivery:
             details = DeliveryDetails(delivery, self.request.user)
             from_user = details.get_from_user()
@@ -37,8 +70,7 @@ class DeliveryViewBase(DetailView):
             })
         return context
 
-    def get_object(self, queryset=None):
-        self.error_response = None
+    def get_delivery(self):
         transfer_id = self.request.GET.get('transfer_id') or self.request.POST.get('transfer_id')
         if transfer_id:
             try:
@@ -50,7 +82,7 @@ class DeliveryViewBase(DetailView):
         return None
 
     def render_to_response(self, context, **response_kwargs):
-        if self.error_response:
+        if self.error_details:
             # We've trapped a local error, render that instead
             return self.make_error_response()
         else:
@@ -59,22 +91,25 @@ class DeliveryViewBase(DetailView):
     # End DetailView overrides
     # Begin helper methods
     def set_error_details(self, status, message):
-        self.error_response = {
+        self.error_details = {
             'status': status,
             'context': {'message': message},
         }
 
     def make_error_response(self):
         return render_to_response('ownership/error.html',
-                                  status=self.error_response.get('status'),
-                                  context=self.error_response.get('context'))
+                                  status=self.error_details.get('status'),
+                                  context=self.error_details.get('context'))
 
     def _get_query_string(self):
-        delivery = self.get_object()
-        return 'transfer_id={}'.format(delivery.transfer_id)
+        delivery = self.delivery
+        if delivery:
+            return '?transfer_id={}'.format(delivery.transfer_id)
+        else:
+            return ''
 
     def redirect(self, view_name):
-        return redirect(reverse(view_name) + '?' + self._get_query_string())
+        return redirect(reverse(view_name) + self._get_query_string())
 
     def make_delivery_util(self):
         delivery = self.object
@@ -85,11 +120,12 @@ class DeliveryViewBase(DetailView):
                                 share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
         else:
             return None
+
     # End helper methods
     # Begin Process actions
 
     def process_accept(self):
-        delivery = self.get_object()
+        delivery = self.delivery
         request = self.request
         try:
             delivery_util = self.make_delivery_util()
@@ -104,7 +140,7 @@ class DeliveryViewBase(DetailView):
             self.set_error_details(500, str(e))
 
     def process_decline(self, reason):
-        delivery = self.get_object()
+        delivery = self.delivery
         request = self.request
         try:
             decline_delivery(delivery, request.user, reason)
@@ -115,6 +151,7 @@ class DeliveryViewBase(DetailView):
             self.set_error_details(500, str(e))
 
     # End Process Actions
+
 
 class PromptView(DeliveryViewBase):
     """
@@ -131,9 +168,10 @@ class ProcessView(DeliveryViewBase):
     If user clicked decline, redirects to the decline form.
     If clicked accept, process acceptance and redirect to accepted page
     """
-    http_method_names =  ['post']
+    http_method_names = ['post']
 
-    def post(self, request):
+    def handle_post(self):
+        request = self.request
         if 'decline' in request.POST:
             # Redirect to decline page
             return self.redirect('ownership-decline')
@@ -148,11 +186,13 @@ class DeclineView(DeliveryViewBase):
     Handles GET to display form to prompt for reason
     When POSTed, process the decline action
     """
-    http_method_names = ['get','post']
+    http_method_names = ['get', 'post']
     template_name = 'ownership/decline_reason.html'
+
     # get() is not implemented, the base implementation renders the form with object and context
 
-    def post(self, request):
+    def handle_post(self):
+        request = self.request
         if 'cancel' in request.POST:
             # User canceled, redirect to prompt
             return self.redirect('ownership-prompt')
@@ -182,4 +222,3 @@ class DeclinedView(DeliveryViewBase):
     """
     http_method_names = ['get']
     template_name = 'ownership/decline_done.html'
-
