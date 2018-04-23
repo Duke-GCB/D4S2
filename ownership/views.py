@@ -3,9 +3,10 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import redirect, render_to_response
 from django.views.generic import TemplateView
 
-from d4s2_api.models import DDSDelivery
+from d4s2_api.models import DDSDelivery, S3Delivery
 from d4s2_api.models import State, ShareRole
 from d4s2_api.utils import DeliveryUtil, decline_delivery, ProcessedMessage
+from switchboard.s3_util import S3DeliveryDetails, S3DeliveryUtil, S3ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
@@ -16,15 +17,31 @@ SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 
 class ResponseType:
-    ERROR = -1
-    TEMPLATE = 0
-    REDIRECT = 1
+    ERROR = 'error'
+    TEMPLATE = 'template'
+    REDIRECT = 'redirect'
+
+
+class DDSDeliveryType:
+    name = 'dds'
+    delivery_cls = DDSDelivery
+    delivery_util_cls = DeliveryUtil
+    delivery_details_cls = DeliveryDetails
+    processed_message_cls = ProcessedMessage
+
+class S3DeliveryType:
+    name = 's3'
+    delivery_cls = S3Delivery
+    delivery_util_cls = S3DeliveryUtil
+    delivery_details_cls = S3DeliveryDetails
+    processed_message_cls = S3ProcessedMessage
 
 
 class DeliveryViewBase(TemplateView):
 
     def __init__(self, **kwargs):
         self.response_type = ResponseType.TEMPLATE
+        self.delivery_type = None
         self.error_details = None
         self.redirect_target = None
         self.warning_message = None
@@ -38,6 +55,7 @@ class DeliveryViewBase(TemplateView):
 
     def _prepare(self, request):
         self.request = request
+        self.delivery_type = self.get_delivery_type()
         self.delivery = self.get_delivery()
         self.context = self.get_context_data()
 
@@ -53,7 +71,7 @@ class DeliveryViewBase(TemplateView):
         context = {}
         delivery = self.delivery
         if delivery:
-            details = DeliveryDetails(delivery, self.request.user)
+            details = self.delivery_type.delivery_details_cls(delivery, self.request.user)
             from_user = details.get_from_user()
             to_user = details.get_to_user()
             project = details.get_project()
@@ -68,12 +86,30 @@ class DeliveryViewBase(TemplateView):
             })
         return context
 
+    def _get_request_var(self, key):
+        return self.request.GET.get(key) or self.request.POST.get(key)
+
+    def get_delivery_type(self):
+        """
+        Determine which DeliveryType adapter to use, based on 'delivery_type' GET/POST var.
+        If not present, assume 'dds' and return a DDSDeliveryType
+
+        :return:
+        """
+        delivery_type_name = self._get_request_var('delivery_type')
+        if delivery_type_name == S3DeliveryType.name:
+            return S3DeliveryType
+        else:
+            return DDSDeliveryType
+
+
+
     def get_delivery(self):
-        transfer_id = self.request.GET.get('transfer_id') or self.request.POST.get('transfer_id')
+        transfer_id = self._get_request_var('transfer_id')
         if transfer_id:
             try:
-                return DDSDelivery.objects.get(transfer_id=transfer_id)
-            except DDSDelivery.DoesNotExist as e:
+                return self.delivery_type.delivery_cls.objects.get(transfer_id=transfer_id)
+            except self.delivery_type.delivery_cls.DoesNotExist as e:
                 self.set_error_details(404, TRANSFER_ID_NOT_FOUND)
         else:
             self.set_error_details(400, MISSING_TRANSFER_ID_MSG)
@@ -102,6 +138,7 @@ class DeliveryViewBase(TemplateView):
             query_dict['transfer_id'] = self.delivery.transfer_id
         if self.warning_message:
             query_dict['warning_message'] = self.warning_message
+        query_dict['delivery_type'] = self.delivery_type.name
         return '?' + urlencode(query_dict)
 
     def make_redirect_response(self):
@@ -111,9 +148,9 @@ class DeliveryViewBase(TemplateView):
         delivery = self.delivery
         request = self.request
         if delivery:
-            return DeliveryUtil(delivery, request.user,
-                                share_role=ShareRole.DOWNLOAD,
-                                share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+            return self.delivery_type.delivery_util_cls(delivery, request.user,
+                                                        share_role=ShareRole.DOWNLOAD,
+                                                        share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
         else:
             return None
 
@@ -167,7 +204,7 @@ class ProcessView(DeliveryViewBase):
             delivery_util.accept_project_transfer()
             delivery_util.share_with_additional_users()
             warning_message = delivery_util.get_warning_message()
-            message = ProcessedMessage(delivery, request.user, 'accepted', warning_message=warning_message)
+            message = self.delivery_type.processed_message_cls(delivery, request.user, 'accepted', warning_message=warning_message)
             self.warning_message = warning_message
             message.send()
             delivery.mark_accepted(request.user.get_username(), message.email_text)
@@ -203,7 +240,7 @@ class DeclineView(DeliveryViewBase):
             return
         try:
             decline_delivery(delivery, request.user, reason)
-            message = ProcessedMessage(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
+            message = self.delivery_type.processed_message_cls(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
             message.send()
             delivery.mark_declined(request.user.get_username(), reason, message.email_text)
         except Exception as e:
