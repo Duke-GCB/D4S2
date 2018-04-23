@@ -48,6 +48,7 @@ def setup_mock_delivery_details(MockDeliveryDetails):
             'user_message': 'msg',
             'warning_message': '',
         }
+    x.get_context.return_value = {'transfer_id':'abc123'}
     return x
 
 

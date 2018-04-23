@@ -244,3 +244,17 @@ class DeliveryDetails(object):
             'user_message': user_message,
             'warning_message': warning_message,
         }
+
+    def get_context(self):
+        from_user = self.get_from_user()
+        to_user = self.get_to_user()
+        project = self.get_project()
+        project_url = self.get_project_url()
+        return {
+            'transfer_id': str(self.delivery.transfer_id),
+            'from_name': from_user.full_name,
+            'from_email': from_user.email,
+            'to_name': to_user.full_name,
+            'project_title': project.name,
+            'project_url': project_url
+        }

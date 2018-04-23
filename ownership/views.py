@@ -72,18 +72,7 @@ class DeliveryViewBase(TemplateView):
         delivery = self.delivery
         if delivery:
             details = self.delivery_type.delivery_details_cls(delivery, self.request.user)
-            from_user = details.get_from_user()
-            to_user = details.get_to_user()
-            project = details.get_project()
-            project_url = details.get_project_url()
-            context.update({
-                'transfer_id': str(delivery.transfer_id),
-                'from_name': from_user.full_name,
-                'from_email': from_user.email,
-                'to_name': to_user.full_name,
-                'project_title': project.name,
-                'project_url': project_url
-            })
+            context.update(details.get_context())
         return context
 
     def _get_request_var(self, key):
@@ -101,8 +90,6 @@ class DeliveryViewBase(TemplateView):
             return S3DeliveryType
         else:
             return DDSDeliveryType
-
-
 
     def get_delivery(self):
         transfer_id = self._get_request_var('transfer_id')
