@@ -109,7 +109,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
         transfer_id = create_delivery_get_transfer_id()
-        url = url_with_transfer_id('ownership-process', transfer_id)
+        url = url_with_transfer_id('ownership-process')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TRANSFER_ID_MSG, str(response.content))
