@@ -23,6 +23,12 @@ class ResponseType:
 
 class DeliveryViewBase(TemplateView):
 
+    def __init__(self, **kwargs):
+        self.response_type = ResponseType.TEMPLATE
+        self.error_details = None
+        self.redirect_target = None
+        super(DeliveryViewBase, self).__init__(**kwargs)
+
     def handle_get(self):
         return None
 
@@ -30,10 +36,7 @@ class DeliveryViewBase(TemplateView):
         return None
 
     def _prepare(self, request):
-        self.response_type = ResponseType.TEMPLATE
         self.request = request
-        self.error_details = None
-        self.redirect_target = None
         self.delivery = self.get_delivery()
         self.context = self.get_context_data()
 
@@ -41,24 +44,9 @@ class DeliveryViewBase(TemplateView):
         if self.response_type == ResponseType.ERROR:
             return self.make_error_response()
         elif self.response_type == ResponseType.REDIRECT:
-            return self.redirect(self.redirect_target)
+            return self.make_redirect_response()
         else:
             return self.render_to_response(self.context)
-
-
-    def get(self, request):
-        self._prepare(request)
-        # If preparation failed, do not handle the request
-        if not self.error_details:
-            self.handle_get()
-        return self._respond()
-
-    def post(self, request):
-        self._prepare(request)
-        # If preparation failed, do not handle the request
-        if not self.error_details:
-            self.handle_post()
-        return self._respond()
 
     def get_context_data(self, **kwargs):
         context = {}
@@ -116,8 +104,8 @@ class DeliveryViewBase(TemplateView):
         else:
             return ''
 
-    def redirect(self, view_name):
-        return redirect(reverse(view_name) + self._get_query_string())
+    def make_redirect_response(self):
+        return redirect(reverse(self.redirect_target) + self._get_query_string())
 
     def make_delivery_util(self):
         delivery = self.delivery
@@ -129,9 +117,40 @@ class DeliveryViewBase(TemplateView):
         else:
             return None
 
-    # End helper methods
-    # Begin Process actions
+    # View handlers
+    def get(self, request):
+        self._prepare(request)
+        # If preparation failed, do not handle the request
+        if not self.error_details:
+            self.handle_get()
+        return self._respond()
 
+    def post(self, request):
+        self._prepare(request)
+        # If preparation failed, do not handle the request
+        if not self.error_details:
+            self.handle_post()
+        return self._respond()
+
+
+class PromptView(DeliveryViewBase):
+    """
+    Initial landing view, prompting for accept or decline button
+    Posts to ProcessDeliveryView
+    """
+    http_method_names = ['get']
+    template_name = 'ownership/index.html'
+
+
+class ProcessView(DeliveryViewBase):
+    """
+    Handles POST from PromptView.
+    If user clicked decline, redirects to the decline form.
+    If clicked accept, process acceptance and redirect to accepted page
+    """
+    http_method_names = ['post']
+
+    # Begin Process actions
     def _set_already_complete_error(self):
         delivery = self.delivery
         status = State.DELIVERY_CHOICES[delivery.state][1]
@@ -156,6 +175,27 @@ class DeliveryViewBase(TemplateView):
         except Exception as e:
             self.set_error_details(500, str(e))
 
+    # End Process Actions
+
+    def handle_post(self):
+        request = self.request
+        if 'decline' in request.POST:
+            # Redirect to decline page
+            self.set_redirect('ownership-decline')
+        else:
+            # Cannot redirect to a POST, so we must process the acceptance here
+            self.set_redirect('ownership-accepted')
+            self.process_accept()  # May override response type with an error
+
+
+class DeclineView(DeliveryViewBase):
+    """
+    Handles GET to display form to prompt for reason
+    When POSTed, process the decline action
+    """
+    http_method_names = ['get', 'post']
+    template_name = 'ownership/decline_reason.html'
+
     def process_decline(self, reason):
         delivery = self.delivery
         request = self.request
@@ -170,47 +210,6 @@ class DeliveryViewBase(TemplateView):
         except Exception as e:
             self.set_error_details(500, str(e))
 
-    # End Process Actions
-
-
-class PromptView(DeliveryViewBase):
-    """
-    Initial landing view, prompting for accept or decline button
-    Posts to ProcessDeliveryView
-    """
-    http_method_names = ['get']
-    template_name = 'ownership/index.html'
-
-
-class ProcessView(DeliveryViewBase):
-    """
-    Handles POST from PromptView.
-    If user clicked decline, redirects to the decline form.
-    If clicked accept, process acceptance and redirect to accepted page
-    """
-    http_method_names = ['post']
-
-    def handle_post(self):
-        request = self.request
-        if 'decline' in request.POST:
-            # Redirect to decline page
-            self.set_redirect('ownership-decline')
-        else:
-            # Cannot redirect to a POST, so we must process the acceptance here
-            self.set_redirect('ownership-accepted')
-            self.process_accept() # May override response type with an error
-
-
-class DeclineView(DeliveryViewBase):
-    """
-    Handles GET to display form to prompt for reason
-    When POSTed, process the decline action
-    """
-    http_method_names = ['get', 'post']
-    template_name = 'ownership/decline_reason.html'
-
-    # get() is not implemented, the base implementation renders the form with object and context
-
     def handle_post(self):
         request = self.request
         if 'cancel' in request.POST:
@@ -221,7 +220,7 @@ class DeclineView(DeliveryViewBase):
             reason = request.POST.get('decline_reason')
             if reason:
                 self.set_redirect('ownership-declined')
-                self.process_decline(reason) # May override response type with an error
+                self.process_decline(reason)  # May override response type with an error
             else:
                 self.set_error_details(400, REASON_REQUIRED_MSG)
 
