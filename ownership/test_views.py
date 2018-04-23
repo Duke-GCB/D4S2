@@ -6,7 +6,7 @@ from ownership.views import MISSING_TRANSFER_ID_MSG, INVALID_TRANSFER_ID, TRANSF
 from d4s2_api.models import DDSDelivery, State
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
 from django.contrib.auth.models import User as django_user
-from django.utils.encoding import escape_uri_path
+from urllib import urlencode
 from mock import patch, Mock
 
 
@@ -131,9 +131,8 @@ class ProcessTestCase(AuthenticatedTestCase):
         transfer_id = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id})
-        expected_warning_message = escape_uri_path('Failed to share with Joe, Tom')
-        expected_url = reverse('ownership-accepted') + '?transfer_id=' + transfer_id + \
-                       '&warning_message=' + expected_warning_message
+        expected_warning_message = urlencode({'transfer_id': transfer_id, 'warning_message': 'Failed to share with Joe, Tom'})
+        expected_url = reverse('ownership-accepted') + '?' + expected_warning_message
         self.assertRedirects(response, expected_url)
         self.assertNotIn(MISSING_TRANSFER_ID_MSG, str(response.content))
         self.assertTrue(mock_delivery_util.return_value.accept_project_transfer.called)
