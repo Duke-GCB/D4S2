@@ -27,6 +27,7 @@ class DeliveryViewBase(TemplateView):
         self.response_type = ResponseType.TEMPLATE
         self.error_details = None
         self.redirect_target = None
+        self.warning_message = None
         super(DeliveryViewBase, self).__init__(**kwargs)
 
     def handle_get(self):
@@ -78,9 +79,6 @@ class DeliveryViewBase(TemplateView):
             self.set_error_details(400, MISSING_TRANSFER_ID_MSG)
         return None
 
-    # End DetailView overrides
-    # Begin helper methods
-
     def set_redirect(self, target_view_name):
         self.response_type = ResponseType.REDIRECT
         self.redirect_target = target_view_name
@@ -98,11 +96,13 @@ class DeliveryViewBase(TemplateView):
                                   context=self.error_details.get('context'))
 
     def _get_query_string(self):
-        delivery = self.delivery
-        if delivery:
-            return '?transfer_id={}'.format(delivery.transfer_id)
-        else:
-            return ''
+        from urllib import urlencode
+        query_dict = {}
+        if self.delivery:
+            query_dict['transfer_id'] = self.delivery.transfer_id
+        if self.warning_message:
+            query_dict['warning_message'] = self.warning_message
+        return '?' + urlencode(query_dict)
 
     def make_redirect_response(self):
         return redirect(reverse(self.redirect_target) + self._get_query_string())
@@ -150,7 +150,6 @@ class ProcessView(DeliveryViewBase):
     """
     http_method_names = ['post']
 
-    # Begin Process actions
     def _set_already_complete_error(self):
         delivery = self.delivery
         status = State.DELIVERY_CHOICES[delivery.state][1]
@@ -166,16 +165,16 @@ class ProcessView(DeliveryViewBase):
         try:
             delivery_util = self.make_delivery_util()
             delivery_util.accept_project_transfer()
+            delivery_util.share_with_additional_users()
             warning_message = delivery_util.get_warning_message()
             message = ProcessedMessage(delivery, request.user, 'accepted', warning_message=warning_message)
+            self.warning_message = warning_message
             message.send()
             delivery.mark_accepted(request.user.get_username(), message.email_text)
         except DataServiceError as e:
             self.set_error_details(500, 'Unable to transfer ownership: {}'.format(e.message))
         except Exception as e:
             self.set_error_details(500, str(e))
-
-    # End Process Actions
 
     def handle_post(self):
         request = self.request
