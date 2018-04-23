@@ -177,7 +177,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = reverse('ownership-process')
-        response = self.client.post(url, {'transfer_id': transfer_id, 'decline':'decline'})
+        response = self.client.post(url, {'transfer_id': transfer_id, 'decline':'decline'}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('reason for declining project', str(response.content))
 
