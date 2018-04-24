@@ -76,7 +76,7 @@ class S3DeliveryDetails(object):
         to_user = self.get_to_user()
         bucket_name = self.s3_delivery.bucket.name
         return {
-            's3_delivery_id': str(self.s3_delivery.id),
+            'transfer_id': str(self.s3_delivery.transfer_id),
             'from_name': '{} {}'.format(from_user.first_name, from_user.last_name),
             'from_email': from_user.email,
             'to_name': '{} {}'.format(to_user.first_name, to_user.last_name),

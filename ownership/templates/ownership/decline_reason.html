@@ -9,6 +9,7 @@
   <div>
     {% csrf_token %}
     <input type="hidden" name="transfer_id" value="{{ transfer_id }}">
+    <input type="hidden" name="delivery_type" value="{{ delivery_type }}">
 
     <textarea autofocus class="decline_textarea" type="text" rows= "10" name="decline_reason" ></textarea>
 

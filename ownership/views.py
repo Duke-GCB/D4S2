@@ -73,6 +73,7 @@ class DeliveryViewBase(TemplateView):
         if delivery:
             details = self.delivery_type.delivery_details_cls(delivery, self.request.user)
             context.update(details.get_context())
+            context['delivery_type'] = self.delivery_type.name
         return context
 
     def _get_request_var(self, key):
