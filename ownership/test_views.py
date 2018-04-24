@@ -203,10 +203,10 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         self.assertIn(expected_url, response.url)
         self.assertFalse(mock_delivery_util.return_value.accept_project_transfer.called)
 
-    @patch('ownership.views.decline_delivery')
+    @patch('ownership.views.DDSDeliveryType.delivery_util_cls')
     @patch('ownership.views.DDSDeliveryType.delivery_details_cls')
     @patch('ownership.views.DDSDeliveryType.processed_message_cls')
-    def test_confirm_decline(self, mock_processed_message, mock_delivery_details, mock_decline_delivery):
+    def test_confirm_decline(self, mock_processed_message, mock_delivery_details, mock_delivery_util):
         mock_processed_message.return_value.email_text = 'email text'
         setup_mock_delivery_details(mock_delivery_details)
         transfer_id = create_delivery_get_transfer_id()
@@ -216,7 +216,7 @@ class DeclineReasonTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason':'Wrong person.'}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('has been declined', str(response.content))
-        self.assertTrue(mock_decline_delivery.called)
+        self.assertTrue(mock_delivery_util.return_value.decline_delivery.called)
         self.assertTrue(mock_processed_message.called)
         self.assertTrue(mock_processed_message.return_value.send.called)
 

@@ -185,15 +185,13 @@ class DeliveryUtil(object):
         return warning_message
 
 
-def decline_delivery(delivery, user, reason):
-    """
-    Communicates with DukeDS via DDSUtil to add the to_user to a project
-    :param user: The user with a DukeDS authentication credential
-    :param delivery: A Delivery object
-    :return:
-    """
-    try:
-        dds_util = DDSUtil(user)
-        dds_util.decline_project_transfer(delivery.transfer_id, reason)
-    except ValueError as e:
-        raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+    def decline_delivery(self, reason):
+        """
+        Decline the delivery through dds_util, supplying the reason provided
+        :param reason: The reason the user is declining the delivery
+        :return: None
+        """
+        try:
+            self.dds_util.decline_project_transfer(self.delivery.transfer_id, reason)
+        except ValueError as e:
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))

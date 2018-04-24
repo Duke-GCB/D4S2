@@ -5,7 +5,7 @@ from django.views.generic import TemplateView
 
 from d4s2_api.models import DDSDelivery, S3Delivery
 from d4s2_api.models import State, ShareRole
-from d4s2_api.utils import DeliveryUtil, decline_delivery, ProcessedMessage
+from d4s2_api.utils import DeliveryUtil, ProcessedMessage
 from switchboard.s3_util import S3DeliveryDetails, S3DeliveryUtil, S3ProcessedMessage
 from switchboard.dds_util import DeliveryDetails
 
@@ -28,6 +28,7 @@ class DDSDeliveryType:
     delivery_util_cls = DeliveryUtil
     delivery_details_cls = DeliveryDetails
     processed_message_cls = ProcessedMessage
+
 
 class S3DeliveryType:
     name = 's3'
@@ -227,7 +228,8 @@ class DeclineView(DeliveryViewBase):
             self._set_already_complete_error()
             return
         try:
-            decline_delivery(delivery, request.user, reason)
+            delivery_util = self.make_delivery_util()
+            delivery_util.decline_delivery(reason)
             message = self.delivery_type.processed_message_cls(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
             message.send()
             delivery.mark_declined(request.user.get_username(), reason, message.email_text)
