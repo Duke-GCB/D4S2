@@ -115,28 +115,20 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn('login', response['Location'])
 
-    @patch('d4s2_api.utils.DDSUtil')
-    def test_error_when_no_transfer_id(self, MockDDSUtil):
-        mock_ddsutil = MockDDSUtil()
-        mock_ddsutil.add_user = Mock()
-        mock_ddsutil.remove_user = Mock()
+    def test_error_when_no_transfer_id(self):
         transfer_id = create_delivery_get_transfer_id()
         url = url_with_transfer_id('ownership-process')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TRANSFER_ID_MSG, str(response.content))
 
-    @patch('d4s2_api.utils.DDSUtil')
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
-    def test_normal_with_transfer_id_is_redirect(self, mock_get_delivery_type, mock_dds_util):
+    def test_normal_with_transfer_id_is_redirect(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
         mock_delivery_type.mock_delivery_util.get_warning_message.return_value = 'Failed to share with Joe, Tom'
         mock_delivery_type.mock_processed_message.email_text = 'email text'
         delivery = create_delivery()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
-        mock_ddsutil = mock_dds_util()
-        mock_ddsutil.add_user = Mock()
-        mock_ddsutil.remove_user = Mock()
         transfer_id = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id})
