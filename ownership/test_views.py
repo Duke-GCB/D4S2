@@ -52,6 +52,14 @@ def setup_mock_delivery_details(MockDeliveryDetails):
     return x
 
 
+def setup_mock_delivery_type(MockDeliveryType):
+    MockDeliveryType.name = 'mock'
+    MockDeliveryType.delivery_cls = Mock()
+    MockDeliveryType.make_delivery_details.return_value = setup_mock_delivery_details(Mock())
+    MockDeliveryType.make_delivery_util.return_value = Mock()
+    MockDeliveryType.make_processed_message.return_value = Mock()
+
+
 class AuthenticatedTestCase(TestCase):
     def setUp(self):
         username = 'ownership_user'
@@ -75,10 +83,12 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TRANSFER_ID_MSG, str(response.content))
 
-    @patch('ownership.views.DeliveryDetails')
-    def test_normal_with_valid_transfer_id(self, mock_delivery_details):
-        setup_mock_delivery_details(mock_delivery_details)
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_normal_with_valid_transfer_id(self, mock_get_delivery_type):
+        MockDeliveryType = mock_get_delivery_type.return_value
+        setup_mock_delivery_type(MockDeliveryType)
         transfer_id = create_delivery_get_transfer_id()
+        mock_delivery_details = MockDeliveryType.make_delivery_details.return_value
         mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = url_with_transfer_id('ownership-prompt', transfer_id)
