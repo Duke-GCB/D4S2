@@ -135,7 +135,7 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
             'project_url': 's://mouse',
             'from_email': 'from_user@from_user.com',
             'to_name': 'To User',
-            's3_delivery_id': str(self.s3_delivery.id)
+            'transfer_id': str(self.s3_delivery.transfer_id)
         }
         self.assertEqual(context, expected_context)
 
