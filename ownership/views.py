@@ -25,17 +25,37 @@ class ResponseType:
 class DDSDeliveryType:
     name = 'dds'
     delivery_cls = DDSDelivery
-    delivery_util_cls = DeliveryUtil
-    delivery_details_cls = DeliveryDetails
-    processed_message_cls = ProcessedMessage
+
+    @staticmethod
+    def make_delivery_details(*args):
+        return DeliveryDetails(*args)
+
+    @staticmethod
+    def make_delivery_util(*args):
+        return DeliveryUtil(*args,
+                            share_role=ShareRole.DOWNLOAD,
+                            share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+
+    @staticmethod
+    def make_processed_message(*args, **kwargs):
+        return ProcessedMessage(*args, **kwargs)
 
 
 class S3DeliveryType:
     name = 's3'
     delivery_cls = S3Delivery
-    delivery_util_cls = S3DeliveryUtil
-    delivery_details_cls = S3DeliveryDetails
-    processed_message_cls = S3ProcessedMessage
+
+    @staticmethod
+    def make_delivery_details(*args):
+        return S3DeliveryDetails(*args)
+
+    @staticmethod
+    def make_delivery_util(*args):
+        return S3DeliveryUtil(*args)
+
+    @staticmethod
+    def make_processed_message(*args, **kwargs):
+        return S3ProcessedMessage(*args, **kwargs)
 
 
 class DeliveryViewBase(TemplateView):
@@ -72,7 +92,7 @@ class DeliveryViewBase(TemplateView):
         context = {}
         delivery = self.delivery
         if delivery:
-            details = self.delivery_type.delivery_details_cls(delivery, self.request.user)
+            details = self.delivery_type.make_delivery_details(delivery, self.request.user)
             context.update(details.get_context())
             context['delivery_type'] = self.delivery_type.name
         return context
@@ -133,16 +153,6 @@ class DeliveryViewBase(TemplateView):
     def make_redirect_response(self):
         return redirect(reverse(self.redirect_target) + self._get_query_string())
 
-    def make_delivery_util(self):
-        delivery = self.delivery
-        request = self.request
-        if delivery:
-            return self.delivery_type.delivery_util_cls(delivery, request.user,
-                                                        share_role=ShareRole.DOWNLOAD,
-                                                        share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
-        else:
-            return None
-
     # View handlers
     def get(self, request):
         self._prepare(request)
@@ -189,11 +199,11 @@ class ProcessView(DeliveryViewBase):
             self._set_already_complete_error()
             return
         try:
-            delivery_util = self.make_delivery_util()
+            delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
             delivery_util.accept_project_transfer()
             delivery_util.share_with_additional_users()
             warning_message = delivery_util.get_warning_message()
-            message = self.delivery_type.processed_message_cls(delivery, request.user, 'accepted', warning_message=warning_message)
+            message = self.delivery_type.make_processed_message(delivery, request.user, 'accepted', warning_message=warning_message)
             self.warning_message = warning_message
             message.send()
             delivery.mark_accepted(request.user.get_username(), message.email_text)
@@ -228,9 +238,9 @@ class DeclineView(DeliveryViewBase):
             self._set_already_complete_error()
             return
         try:
-            delivery_util = self.make_delivery_util()
+            delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
             delivery_util.decline_delivery(reason)
-            message = self.delivery_type.processed_message_cls(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
+            message = self.delivery_type.make_processed_message(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
             message.send()
             delivery.mark_declined(request.user.get_username(), reason, message.email_text)
         except Exception as e:
