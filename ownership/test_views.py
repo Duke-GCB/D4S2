@@ -52,12 +52,14 @@ def setup_mock_delivery_details(MockDeliveryDetails):
     return x
 
 
-def setup_mock_delivery_type(MockDeliveryType):
-    MockDeliveryType.name = 'mock'
-    MockDeliveryType.delivery_cls = Mock()
-    MockDeliveryType.make_delivery_details.return_value = setup_mock_delivery_details(Mock())
-    MockDeliveryType.make_delivery_util.return_value = Mock()
-    MockDeliveryType.make_processed_message.return_value = Mock()
+def setup_mock_delivery_type(mock_delivery_type):
+    mock_delivery_type.name = 'mock'
+    mock_delivery_type.delivery_cls = DDSDelivery
+    mock_delivery_type.make_delivery_details.return_value = setup_mock_delivery_details(Mock())
+    # Convenience for tests to assign return values without .return_value.return_value
+    mock_delivery_type.mock_delivery_details = mock_delivery_type.make_delivery_details.return_value
+    mock_delivery_type.mock_delivery_util = mock_delivery_type.make_delivery_util.return_value
+    mock_delivery_type.mock_processed_message = mock_delivery_type.make_processed_message.return_value
 
 
 class AuthenticatedTestCase(TestCase):
@@ -85,11 +87,10 @@ class AcceptTestCase(AuthenticatedTestCase):
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_normal_with_valid_transfer_id(self, mock_get_delivery_type):
-        MockDeliveryType = mock_get_delivery_type.return_value
-        setup_mock_delivery_type(MockDeliveryType)
+        mock_delivery_type = mock_get_delivery_type.return_value
+        setup_mock_delivery_type(mock_delivery_type)
         transfer_id = create_delivery_get_transfer_id()
-        mock_delivery_details = MockDeliveryType.make_delivery_details.return_value
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
+        mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = url_with_transfer_id('ownership-prompt', transfer_id)
         response = self.client.get(url)
@@ -125,31 +126,29 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(MISSING_TRANSFER_ID_MSG, str(response.content))
 
-    @patch('ownership.views.DeliveryDetails')
     @patch('d4s2_api.utils.DDSUtil')
-    @patch('ownership.views.DeliveryUtil')
-    @patch('ownership.views.ProcessedMessage')
-    def test_normal_with_transfer_id_is_redirect(self, mock_processed_message, mock_delivery_util, mock_dds_util,
-                                                 mock_delivery_details):
-        mock_delivery_util.return_value.get_warning_message.return_value = 'Failed to share with Joe, Tom'
-        mock_processed_message.return_value.email_text = 'email text'
-        setup_mock_delivery_details(mock_delivery_details)
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_normal_with_transfer_id_is_redirect(self, mock_get_delivery_type, mock_dds_util):
+        mock_delivery_type = mock_get_delivery_type.return_value
+        setup_mock_delivery_type(mock_delivery_type)
+        mock_delivery_type.mock_delivery_util.get_warning_message.return_value = 'Failed to share with Joe, Tom'
+        mock_delivery_type.mock_processed_message.email_text = 'email text'
         delivery = create_delivery()
-        mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
+        mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         mock_ddsutil = mock_dds_util()
         mock_ddsutil.add_user = Mock()
         mock_ddsutil.remove_user = Mock()
         transfer_id = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id})
-        expected_warning_message = urlencode({'transfer_id': transfer_id, 'warning_message': 'Failed to share with Joe, Tom', 'delivery_type': 'dds'})
+        expected_warning_message = urlencode({'transfer_id': transfer_id, 'warning_message': 'Failed to share with Joe, Tom', 'delivery_type': 'mock'})
         expected_url = reverse('ownership-accepted') + '?' + expected_warning_message
         self.assertRedirects(response, expected_url)
         self.assertNotIn(MISSING_TRANSFER_ID_MSG, str(response.content))
-        self.assertTrue(mock_delivery_util.return_value.accept_project_transfer.called)
-        self.assertTrue(mock_delivery_util.return_value.share_with_additional_users.called)
-        self.assertTrue(mock_processed_message.called)
-        self.assertTrue(mock_processed_message.return_value.send.called)
+        self.assertTrue(mock_delivery_type.mock_delivery_util.accept_project_transfer.called)
+        self.assertTrue(mock_delivery_type.mock_delivery_util.share_with_additional_users.called)
+        self.assertTrue(mock_delivery_type.make_processed_message.called)
+        self.assertTrue(mock_delivery_type.mock_processed_message.send.called)
 
     def test_with_bad_transfer_id(self):
         transfer_id = create_delivery_get_transfer_id() + "a"
