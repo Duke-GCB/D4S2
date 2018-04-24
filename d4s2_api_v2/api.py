@@ -12,7 +12,7 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
-from switchboard.s3_util import S3DeliveryMessage
+from switchboard.s3_util import S3DeliveryMessage, S3Exception
 
 
 class DataServiceUnavailable(APIException):
@@ -33,6 +33,15 @@ class BadRequestException(APIException):
     status_code = 400
     def __init__(self, detail):
         self.detail = detail
+
+
+class WrappedS3Exception(APIException):
+    """
+    Converts error returned from DukeDS python code into one appropriate for django.
+    """
+    def __init__(self, s3_exception, status_code=500):
+        self.detail = s3_exception.message
+        self.status_code = status_code
 
 
 class DDSViewSet(viewsets.ReadOnlyModelViewSet):
@@ -227,9 +236,22 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         # accept_path = reverse('s3ownership-prompt') + "?s3_delivery_id=" + str(s3_delivery.id)
         # accept_url = request.build_absolute_uri(accept_path)
         accept_url = 'TODO'
-        s3_delivery_util = S3DeliveryUtil(s3_delivery, request.user)
-        s3_delivery_util.give_agent_permissions()
+        self._give_agent_permission(s3_delivery, request.user)
         message = S3DeliveryMessage(s3_delivery, request.user, accept_url)
         message.send()
         s3_delivery.mark_notified(message.email_text)
         return self.retrieve(request)
+
+    @staticmethod
+    def _give_agent_permission(s3_delivery, user):
+        """
+        Give agent permission to transfer the project to another user.
+        Raises WrappedS3Exception on errors.
+        :param s3_delivery: S3Delivery: details about what we will deliver
+        :param user: django user: user who's credentials to use
+        """
+        try:
+            s3_delivery_util = S3DeliveryUtil(s3_delivery, user)
+            s3_delivery_util.give_agent_permissions()
+        except S3Exception as ex:
+            raise WrappedS3Exception(ex)

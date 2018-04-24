@@ -7,6 +7,7 @@ from mock import patch, Mock
 from d4s2_api.views import *
 from d4s2_api.models import *
 from mock import call
+from switchboard.s3_util import S3Exception
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -904,3 +905,15 @@ class S3DeliveryViewSetTestCase(APITestCase):
         delivery = S3Delivery.objects.get(pk=delivery.id)
         self.assertEqual(delivery.state, State.NOTIFIED)
         self.assertEqual(delivery.delivery_email_text, 'email text')
+
+    @patch('d4s2_api_v2.api.S3DeliveryUtil')
+    @patch('d4s2_api_v2.api.S3DeliveryMessage')
+    def test_send_delivery_s3_exception(self, mock_s3_delivery_message, mock_s3_delivery_util):
+        mock_s3_delivery_util.return_value.give_agent_permissions.side_effect = S3Exception('test')
+        mock_s3_delivery_message.return_value = Mock(email_text='email text')
+        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        self.login_user1()
+        url = reverse('v2-s3delivery-list') + str(delivery.id) + '/send/'
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data, {'detail': 'test'})

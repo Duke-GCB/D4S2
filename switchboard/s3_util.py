@@ -1,6 +1,23 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
 from d4s2_api.utils import ProcessedMessage, DeliveryMessage
+import sys
 import boto3
+from botocore.exceptions import ClientError as BotoClientError
+
+
+def wrap_s3_exceptions(func):
+    """
+    Runs func and traps boto exceptions instead raises them as S3Exception
+    :param func: function to wrap
+    :return: func: wrapped function
+    """
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except BotoClientError:
+            _, e, tb = sys.exc_info()
+            raise S3Exception, e.message, tb
+    return wrapped
 
 
 class S3DeliveryUtil(object):
@@ -13,12 +30,14 @@ class S3DeliveryUtil(object):
         self.current_s3_user = S3User.objects.get(user=self.user, endpoint=self.endpoint)
         self.destination_bucket_name = 'delivery_{}'.format(self.source_bucket_name)
 
+    @wrap_s3_exceptions
     def give_agent_permissions(self):
         s3 = S3Resource(self.current_s3_user)
         s3.grant_bucket_acl(self.source_bucket_name,
                             grant_full_control_user=self.s3_agent)
         print("Gave agent {} Full Control".format(self.s3_agent.s3_id))
 
+    @wrap_s3_exceptions
     def accept_project_transfer(self):
         self._grant_user_read_permissions(self.s3_delivery.to_user)
         self._copy_files_to_new_destination_bucket()
@@ -49,6 +68,7 @@ class S3DeliveryUtil(object):
         s3 = S3Resource(self.s3_agent)
         s3.delete_bucket(self.source_bucket_name)
 
+    @wrap_s3_exceptions
     def decline_delivery(self):
         from_s3_user = self.s3_delivery.from_user
         s3 = S3Resource(self.s3_agent)
@@ -195,8 +215,22 @@ class S3DeliveryMessage(DeliveryMessage):
 
 class S3BucketUtil(object):
     def __init__(self, endpoint, user):
+        """
+        :param endpoint: S3Endpoint: endpoint to connect to
+        :param user: django user: user who we will act as
+        """
         current_s3_user = S3User.objects.get(user=user, endpoint=endpoint)
         self.s3 = S3Resource(current_s3_user)
 
+    @wrap_s3_exceptions
     def user_owns_bucket(self, bucket_name):
+        """
+         Return true if the bucket_name is in the list of buckets for the current user.
+        :param bucket_name: str: name of the bucket to check
+        :return: boolean: true if user owns the bucket
+        """
         return bucket_name in self.s3.get_bucket_name_list()
+
+
+class S3Exception(Exception):
+    pass

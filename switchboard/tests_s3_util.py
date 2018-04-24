@@ -1,7 +1,8 @@
 from django.test import TestCase
 from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint
-from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil
+from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, S3Exception
+import botocore
 
 
 class S3DeliveryTestBase(TestCase):
@@ -311,3 +312,13 @@ class S3BucketUtilTestCase(S3DeliveryTestBase):
         self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), True)
         self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test2'), False)
         self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test3'), True)
+
+    @patch('switchboard.s3_util.S3Resource')
+    def test_user_owns_bucket_wraps_exception(self, mock_s3_resource):
+        mock_s3_resource.return_value.get_bucket_name_list.side_effect = botocore.exceptions.ClientError(
+            error_response={}, operation_name='test'
+        )
+
+        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
+        with self.assertRaises(S3Exception):
+            s3_bucket_util.user_owns_bucket(bucket_name='test1')
