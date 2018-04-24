@@ -2,6 +2,10 @@ from ddsc.core.ddsapi import DataServiceError
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect, render_to_response
 from django.views.generic import TemplateView
+try:
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
 
 from d4s2_api.models import DDSDelivery, S3Delivery
 from d4s2_api.models import State, ShareRole
@@ -140,7 +144,6 @@ class DeliveryViewBase(TemplateView):
                                   context=self.error_details.get('context'))
 
     def _get_query_string(self):
-        from urllib import urlencode
         query_dict = {}
         if self.delivery:
             query_dict['transfer_id'] = self.delivery.transfer_id
