@@ -10,7 +10,6 @@ from switchboard.s3_util import S3DeliveryDetails, S3DeliveryUtil, S3ProcessedMe
 from switchboard.dds_util import DeliveryDetails
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
-INVALID_TRANSFER_ID = 'Invalid transfer ID.'
 TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
 SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'

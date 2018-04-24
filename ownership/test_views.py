@@ -2,9 +2,9 @@ import uuid
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
-from ownership.views import MISSING_TRANSFER_ID_MSG, INVALID_TRANSFER_ID, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG
+from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG
 from d4s2_api.models import DDSDelivery, State
-from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
+from switchboard.mocks_ddsutil import MockDDSUser
 from django.contrib.auth.models import User as django_user
 from urllib import urlencode
 from mock import patch, Mock
