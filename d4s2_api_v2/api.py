@@ -7,7 +7,7 @@ from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
 from switchboard.dds_util import DDSUtil
-from switchboard.s3_util import S3DeliveryUtil
+from switchboard.s3_util import S3DeliveryUtil, S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
@@ -183,6 +183,29 @@ class S3BucketViewSet(viewsets.ModelViewSet):
             Q(owner__user=self.request.user) |
             Q(deliveries__to_user__user=self.request.user)
         )
+
+    def create(self, request, *args, **kwargs):
+        self.verify_user_owns_bucket_in_s3(request)
+        return super(S3BucketViewSet, self).create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self.verify_user_owns_bucket_in_s3(request)
+        return super(S3BucketViewSet, self).update(request, *args, **kwargs)
+
+    @staticmethod
+    def verify_user_owns_bucket_in_s3(request):
+        """
+        Make sure user can list the bucket specified.
+        Raises BadRequestException if bucket is not found
+        :param request: request who's data we will validate
+        """
+        user = request.user
+        endpoint_id = request.data['endpoint']
+        bucket_name = request.data['name']
+        endpoint = S3Endpoint.objects.get(pk=endpoint_id)
+        s3_bucket_util = S3BucketUtil(endpoint, user)
+        if not s3_bucket_util.user_owns_bucket(bucket_name):
+            raise BadRequestException("Unable to find bucket {} for your user.".format(bucket_name))
 
 
 class S3DeliveryViewSet(viewsets.ModelViewSet):

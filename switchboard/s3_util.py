@@ -176,6 +176,12 @@ class S3Resource(object):
             raise ValueError("Programmer should specify grant_full_control_user or grant_read_user")
         return args
 
+    def get_bucket_name_list(self):
+        bucket_names = []
+        for bucket in self.s3.buckets.all():
+            bucket_names.append(bucket.name)
+        return bucket_names
+
 
 class S3ProcessedMessage(ProcessedMessage):
     def make_delivery_details(self, deliverable, user):
@@ -185,3 +191,12 @@ class S3ProcessedMessage(ProcessedMessage):
 class S3DeliveryMessage(DeliveryMessage):
     def make_delivery_details(self, deliverable, user):
         return S3DeliveryDetails(deliverable, user)
+
+
+class S3BucketUtil(object):
+    def __init__(self, endpoint, user):
+        current_s3_user = S3User.objects.get(user=user, endpoint=endpoint)
+        self.s3 = S3Resource(current_s3_user)
+
+    def user_owns_bucket(self, bucket_name):
+        return bucket_name in self.s3.get_bucket_name_list()

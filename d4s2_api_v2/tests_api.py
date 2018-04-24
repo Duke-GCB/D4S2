@@ -707,28 +707,53 @@ class S3BucketViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(bucket_response['owner'], self.s3_user1.id)
         self.assertEqual(bucket_response['endpoint'], self.endpoint.id)
 
-    def test_create_s3_buckets(self):
+    @patch('d4s2_api_v2.api.S3BucketUtil')
+    def test_create_s3_buckets(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.user_owns_bucket.return_value = True
         url = reverse('v2-s3bucket-list')
         data = {'name': 'mouse2', 'owner': self.s3_user1.id, 'endpoint': self.endpoint.id}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         bucket = S3Bucket.objects.get(name='mouse2')
         self.assertEqual(bucket.owner, self.s3_user1)
+        mock_s3_bucket_util.return_value.user_owns_bucket.assert_called_with('mouse2')
 
-    def test_create_s3_buckets_if_not_owner(self):
+    @patch('d4s2_api_v2.api.S3BucketUtil')
+    def test_create_s3_buckets_if_not_owner_in_s3(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.user_owns_bucket.return_value = False
+        url = reverse('v2-s3bucket-list')
+        data = {'name': 'mouse2', 'owner': self.s3_user1.id, 'endpoint': self.endpoint.id}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(S3Bucket.objects.count(), 0)
+
+    @patch('d4s2_api_v2.api.S3BucketUtil')
+    def test_create_s3_buckets_if_not_owner(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.user_owns_bucket.return_value = True
         url = reverse('v2-s3bucket-list')
         data = {'name': 'mouse2', 'owner': self.s3_user1.id, 'endpoint': self.endpoint.id}
         self.user_login.become_other_normal_user()
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_put_s3_bucket(self):
+    @patch('d4s2_api_v2.api.S3BucketUtil')
+    def test_put_s3_bucket(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.user_owns_bucket.return_value = True
         bucket = S3Bucket.objects.create(name='mouseOops', owner=self.s3_user1, endpoint=self.endpoint)
         url = reverse('v2-s3bucket-list') + str(bucket.id) + '/'
         data = {'name': 'mouseFixed', 'owner': bucket.owner.id, 'endpoint': bucket.endpoint.id}
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(S3Bucket.objects.get(pk=bucket.id).name, 'mouseFixed')
+
+    @patch('d4s2_api_v2.api.S3BucketUtil')
+    def test_put_s3_bucket_if_not_owner_in_s3(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.user_owns_bucket.return_value = False
+        bucket = S3Bucket.objects.create(name='mouseOops', owner=self.s3_user1, endpoint=self.endpoint)
+        url = reverse('v2-s3bucket-list') + str(bucket.id) + '/'
+        data = {'name': 'mouseFixed', 'owner': bucket.owner.id, 'endpoint': bucket.endpoint.id}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_delete_own_s3_buckets(self):
         bucket = S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
