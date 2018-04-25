@@ -184,7 +184,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline':'decline'}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('reason for declining project', str(response.content))
+        self.assertIn('reason for declining delivery', str(response.content))
 
 
 class DeclineReasonTestCase(AuthenticatedTestCase):
@@ -245,7 +245,7 @@ class AcceptedPageTestCase(AuthenticatedTestCase):
         url = reverse('ownership-accepted')
         response = self.client.get(url, {'transfer_id': transfer_id})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('View this project', str(response.content))
+        self.assertIn('View this data', str(response.content))
 
     def test_renders_error_with_bad_transfer_id(self):
         url = reverse('ownership-accepted')

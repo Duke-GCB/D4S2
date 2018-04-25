@@ -77,13 +77,14 @@ class S3DeliveryDetails(object):
         to_user = self.get_to_user()
         bucket_name = self.s3_delivery.bucket.name
         return {
+            'service': 'S3',
             'transfer_id': str(self.s3_delivery.transfer_id),
             'from_name': '{} {}'.format(from_user.first_name, from_user.last_name),
             'from_email': from_user.email,
             'to_name': '{} {}'.format(to_user.first_name, to_user.last_name),
             'to_email': to_user.email,
             'project_title': bucket_name,
-            'project_url': 's://{}'.format(bucket_name)
+            'project_url': 's3://{}'.format(bucket_name)
         }
 
     def get_email_context(self, accept_url, process_type, reason, warning_message=''):
@@ -100,6 +101,7 @@ class S3DeliveryDetails(object):
             'message': reason,  # decline reason
             'user_message': self.s3_delivery.user_message,
             'warning_message': warning_message,
+            'service': base_context['service'],
         }
 
     @staticmethod
