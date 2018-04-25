@@ -24,6 +24,12 @@ class S3DeliveryUtil(object):
         self._copy_files_to_new_destination_bucket()
         self._cleanup_source_bucket()
 
+    def share_with_additional_users(self):
+        pass
+
+    def get_warning_message(self):
+        return None
+
     def _grant_user_read_permissions(self, s3_user):
         """
         Grants s3_user read bucket/object permissions while retaining full control for agent
