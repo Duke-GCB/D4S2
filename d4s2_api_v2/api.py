@@ -40,7 +40,7 @@ class WrappedS3Exception(APIException):
     Converts error returned from DukeDS python code into one appropriate for django.
     """
     def __init__(self, s3_exception, status_code=500):
-        self.detail = s3_exception.message
+        self.detail = str(s3_exception)
         self.status_code = status_code
 
 
