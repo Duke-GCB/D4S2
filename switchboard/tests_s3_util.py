@@ -112,7 +112,7 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3Resource')
     def test_decline_delivery(self, mock_s3_resource):
         s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.to_user)
-        s3_delivery_util.decline_delivery()
+        s3_delivery_util.decline_delivery('test reason')
         mock_s3_resource.return_value.grant_bucket_acl.assert_called_with(
             'mouse', grant_full_control_user=self.s3_from_user
         )

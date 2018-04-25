@@ -184,7 +184,6 @@ class DeliveryUtil(object):
             warning_message = "Failed to share with the following user(s): " + failed_share_users_str
         return warning_message
 
-
     def decline_delivery(self, reason):
         """
         Decline the delivery through dds_util, supplying the reason provided

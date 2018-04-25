@@ -49,7 +49,8 @@ class S3DeliveryUtil(object):
         s3 = S3Resource(self.s3_agent)
         s3.delete_bucket(self.source_bucket_name)
 
-    def decline_delivery(self):
+    def decline_delivery(self, reason):
+        print("Declining delivery for reason: {}".format(reason))
         from_s3_user = self.s3_delivery.from_user
         s3 = S3Resource(self.s3_agent)
         s3.grant_bucket_acl(self.source_bucket_name,
