@@ -104,16 +104,6 @@ class S3DeliveryDetails(object):
             'service': base_context['service'],
         }
 
-    @staticmethod
-    def from_s3_delivery_id(s3_delivery_id, user):
-        """
-        :param s3_delivery_id: int: S3Delivery id
-        :param user: django user
-        :return: S3DeliveryDetails
-        """
-        delivery = S3Delivery.objects.get(pk=s3_delivery_id)
-        return S3DeliveryDetails(delivery, user)
-
     def get_action_template_text(self, action_name):
         email_template = EmailTemplate.for_user(self.user, action_name)
         if email_template:

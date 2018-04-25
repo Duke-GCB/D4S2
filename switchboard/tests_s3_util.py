@@ -164,12 +164,6 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
         }
         self.assertEqual(context, expected_context)
 
-    def test_from_s3_delivery_id(self):
-        s3_delivery_details = S3DeliveryDetails.from_s3_delivery_id(self.s3_delivery.id, self.to_user)
-        self.assertEqual(s3_delivery_details.get_delivery(), self.s3_delivery)
-        self.assertEqual(s3_delivery_details.get_from_user(), self.from_user)
-        self.assertEqual(s3_delivery_details.get_to_user(), self.to_user)
-
     @patch('switchboard.s3_util.EmailTemplate')
     def test_get_action_template_text(self, mock_email_template):
         mock_email_template.for_user.return_value = Mock(subject='email subject', body='email body')
