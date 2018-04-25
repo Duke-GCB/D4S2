@@ -194,11 +194,9 @@ class S3Resource(object):
             raise ValueError("Programmer should specify grant_full_control_user or grant_read_user")
         return args
 
-    def get_bucket_name_list(self):
-        bucket_names = []
-        for bucket in self.s3.buckets.all():
-            bucket_names.append(bucket.name)
-        return bucket_names
+    def get_bucket_owner(self, bucket_name):
+        bucket_acl = self.s3.BucketAcl(bucket_name)
+        return bucket_acl.owner['ID']
 
 
 class S3ProcessedMessage(ProcessedMessage):
@@ -217,8 +215,8 @@ class S3BucketUtil(object):
         :param endpoint: S3Endpoint: endpoint to connect to
         :param user: django user: user who we will act as
         """
-        current_s3_user = S3User.objects.get(user=user, endpoint=endpoint)
-        self.s3 = S3Resource(current_s3_user)
+        self.current_s3_user = S3User.objects.get(user=user, endpoint=endpoint)
+        self.s3 = S3Resource(self.current_s3_user)
 
     @wrap_s3_exceptions
     def user_owns_bucket(self, bucket_name):
@@ -227,7 +225,7 @@ class S3BucketUtil(object):
         :param bucket_name: str: name of the bucket to check
         :return: boolean: true if user owns the bucket
         """
-        return bucket_name in self.s3.get_bucket_name_list()
+        return self.s3.get_bucket_owner(bucket_name) == self.current_s3_user.s3_id
 
 
 class S3Exception(Exception):

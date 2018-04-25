@@ -285,37 +285,37 @@ class S3ResourceTestCase(TestCase):
             GrantRead='id=user4')
 
     @patch('switchboard.s3_util.boto3')
-    def test_get_bucket_name_list(self, mock_boto3):
+    def test_get_bucket_owner(self, mock_boto3):
         bucket1 = Mock()
         bucket1.name = 'bucket1'
         bucket2 = Mock()
         bucket2.name = 'bucket2'
         bucket3 = Mock()
         bucket3.name = 'bucket3'
-        mock_boto3.session.Session.return_value.resource.return_value.buckets.all.return_value = [
-            bucket1, bucket2, bucket3
-        ]
+        mock_s3 = mock_boto3.session.Session.return_value.resource.return_value
+        mock_s3.BucketAcl.return_value.owner = {'ID': self.s3_user.s3_id}
         s3_resource = S3Resource(self.s3_user)
-        self.assertEqual(s3_resource.get_bucket_name_list(), [
-            'bucket1', 'bucket2', 'bucket3'
-        ])
+        self.assertEqual(s3_resource.get_bucket_owner('somebucket'), self.s3_user.s3_id)
+        mock_s3.BucketAcl.assert_called_with('somebucket')
 
 
 class S3BucketUtilTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3Resource')
     def test_user_owns_bucket(self, mock_s3_resource):
-        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
-        mock_s3_resource.return_value.get_bucket_name_list.return_value = [
-            'test1',
-            'test3'
+        mock_s3_resource.return_value.get_bucket_owner.side_effect = [
+            self.s3_to_user.s3_id,
+            self.s3_from_user.s3_id,
+            self.s3_to_user.s3_id,
         ]
+
+        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
         self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), True)
-        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test2'), False)
-        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test3'), True)
+        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), False)
+        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), True)
 
     @patch('switchboard.s3_util.S3Resource')
     def test_user_owns_bucket_wraps_exception(self, mock_s3_resource):
-        mock_s3_resource.return_value.get_bucket_name_list.side_effect = botocore.exceptions.ClientError(
+        mock_s3_resource.return_value.get_bucket_owner.side_effect = botocore.exceptions.ClientError(
             error_response={}, operation_name='test'
         )
 
