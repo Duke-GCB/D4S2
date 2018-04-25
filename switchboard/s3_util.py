@@ -1,6 +1,7 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
 from d4s2_api.utils import ProcessedMessage, DeliveryMessage
 import sys
+import six
 import boto3
 from botocore.exceptions import ClientError as BotoClientError
 
@@ -14,9 +15,9 @@ def wrap_s3_exceptions(func):
     def wrapped(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except BotoClientError:
-            _, e, tb = sys.exc_info()
-            raise S3Exception, e.message, tb
+        except BotoClientError as e:
+            tb = sys.exc_info()[2]
+            six.reraise(S3Exception, e.message, tb)
     return wrapped
 
 
