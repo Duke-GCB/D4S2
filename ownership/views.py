@@ -138,6 +138,12 @@ class DeliveryViewBase(TemplateView):
             'context': {'message': message},
         }
 
+    def set_already_complete_error(self):
+        delivery = self.delivery
+        status = State.DELIVERY_CHOICES[delivery.state][1]
+        message = "This delivery has already been processed: {}.".format(status)
+        self.set_error_details(400, message)
+
     def make_error_response(self):
         return render_to_response('ownership/error.html',
                                   status=self.error_details.get('status'),
@@ -188,17 +194,11 @@ class ProcessView(DeliveryViewBase):
     """
     http_method_names = ['post']
 
-    def _set_already_complete_error(self):
-        delivery = self.delivery
-        status = State.DELIVERY_CHOICES[delivery.state][1]
-        message = "This project has already been processed: {}.".format(status)
-        self.set_error_details(400, message)
-
     def process_accept(self):
         delivery = self.delivery
         request = self.request
         if delivery.is_complete():
-            self._set_already_complete_error()
+            self.set_already_complete_error()
             return
         try:
             delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
@@ -237,7 +237,7 @@ class DeclineView(DeliveryViewBase):
         delivery = self.delivery
         request = self.request
         if delivery.is_complete():
-            self._set_already_complete_error()
+            self.set_already_complete_error()
             return
         try:
             delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
