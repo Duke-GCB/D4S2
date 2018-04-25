@@ -10,7 +10,7 @@ from switchboard.dds_util import DDSUtil
 from switchboard.s3_util import S3DeliveryUtil, S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
-from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
+from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateException
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
 from switchboard.s3_util import S3DeliveryMessage, S3Exception
 
@@ -42,6 +42,15 @@ class WrappedS3Exception(APIException):
     def __init__(self, s3_exception, status_code=500):
         self.detail = str(s3_exception)
         self.status_code = status_code
+
+
+class InvalidSettingsException(APIException):
+    """
+    Raised when the database settings tables are not setup correctly.
+    """
+    status_code = 500
+    def __init__(self, detail):
+        self.detail = detail
 
 
 class DDSViewSet(viewsets.ReadOnlyModelViewSet):
@@ -237,9 +246,7 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         # accept_url = request.build_absolute_uri(accept_path)
         accept_url = 'TODO'
         self._give_agent_permission(s3_delivery, request.user)
-        message = S3DeliveryMessage(s3_delivery, request.user, accept_url)
-        message.send()
-        s3_delivery.mark_notified(message.email_text)
+        self._send_delivery_message(s3_delivery, request.user, accept_url)
         return self.retrieve(request)
 
     @staticmethod
@@ -255,3 +262,18 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
             s3_delivery_util.give_agent_permissions()
         except S3Exception as ex:
             raise WrappedS3Exception(ex)
+
+    @staticmethod
+    def _send_delivery_message(s3_delivery, user, accept_url):
+        """
+        Send email to delivery recipient and update delivery status.
+        :param s3_delivery: S3Delivery: details about what we will deliver
+        :param user: django user: user who is sending the delivery
+        :param accept_url: str: url recipient uses to accept or reject delivery
+        """
+        try:
+            message = S3DeliveryMessage(s3_delivery, user, accept_url)
+            message.send()
+            s3_delivery.mark_notified(message.email_text)
+        except EmailTemplateException as e:
+            raise InvalidSettingsException(str(e))

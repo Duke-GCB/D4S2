@@ -917,3 +917,14 @@ class S3DeliveryViewSetTestCase(APITestCase):
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data, {'detail': 'test'})
+
+    @patch('d4s2_api_v2.api.S3DeliveryUtil')
+    @patch('d4s2_api_v2.api.S3DeliveryMessage')
+    def test_send_delivery_s3_exception(self, mock_s3_delivery_message, mock_s3_delivery_util):
+        mock_s3_delivery_message.side_effect = EmailTemplateException('not found')
+        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        self.login_user1()
+        url = reverse('v2-s3delivery-list') + str(delivery.id) + '/send/'
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data, {'detail': 'not found'})
