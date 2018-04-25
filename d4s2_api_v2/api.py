@@ -7,12 +7,12 @@ from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
 from switchboard.dds_util import DDSUtil
-from switchboard.s3_util import S3DeliveryUtil
+from switchboard.s3_util import S3DeliveryUtil, S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
-from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
+from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateException
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
-from switchboard.s3_util import S3DeliveryMessage
+from switchboard.s3_util import S3DeliveryMessage, S3Exception, S3NoSuchBucket
 
 
 class DataServiceUnavailable(APIException):
@@ -31,6 +31,24 @@ class WrappedDataServiceException(APIException):
 
 class BadRequestException(APIException):
     status_code = 400
+    def __init__(self, detail):
+        self.detail = detail
+
+
+class WrappedS3Exception(APIException):
+    """
+    Converts error returned from DukeDS python code into one appropriate for django.
+    """
+    def __init__(self, s3_exception, status_code=500):
+        self.detail = str(s3_exception)
+        self.status_code = status_code
+
+
+class InvalidSettingsException(APIException):
+    """
+    Raised when the database settings tables are not setup correctly.
+    """
+    status_code = 500
     def __init__(self, detail):
         self.detail = detail
 
@@ -184,6 +202,34 @@ class S3BucketViewSet(viewsets.ModelViewSet):
             Q(deliveries__to_user__user=self.request.user)
         )
 
+    def create(self, request, *args, **kwargs):
+        self.verify_user_owns_bucket_in_s3(request)
+        return super(S3BucketViewSet, self).create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self.verify_user_owns_bucket_in_s3(request)
+        return super(S3BucketViewSet, self).update(request, *args, **kwargs)
+
+    @staticmethod
+    def verify_user_owns_bucket_in_s3(request):
+        """
+        Make sure user can list the bucket specified.
+        Raises BadRequestException if bucket is not found
+        :param request: request who's data we will validate
+        """
+        user = request.user
+        endpoint_id = request.data['endpoint']
+        bucket_name = request.data['name']
+        endpoint = S3Endpoint.objects.get(pk=endpoint_id)
+        s3_bucket_util = S3BucketUtil(endpoint, user)
+        try:
+            if not s3_bucket_util.user_owns_bucket(bucket_name):
+                raise BadRequestException("Your user do not own bucket {}.".format(bucket_name))
+        except S3NoSuchBucket as e:
+            raise BadRequestException(str(e))
+        except S3Exception as e:
+            raise WrappedS3Exception(e)
+
 
 class S3DeliveryViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
@@ -204,9 +250,35 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         # accept_path = reverse('s3ownership-prompt') + "?s3_delivery_id=" + str(s3_delivery.id)
         # accept_url = request.build_absolute_uri(accept_path)
         accept_url = 'TODO'
-        s3_delivery_util = S3DeliveryUtil(s3_delivery, request.user)
-        s3_delivery_util.give_agent_permissions()
-        message = S3DeliveryMessage(s3_delivery, request.user, accept_url)
-        message.send()
-        s3_delivery.mark_notified(message.email_text)
+        self._give_agent_permission(s3_delivery, request.user)
+        self._send_delivery_message(s3_delivery, request.user, accept_url)
         return self.retrieve(request)
+
+    @staticmethod
+    def _give_agent_permission(s3_delivery, user):
+        """
+        Give agent permission to transfer the project to another user.
+        Raises WrappedS3Exception on errors.
+        :param s3_delivery: S3Delivery: details about what we will deliver
+        :param user: django user: user who's credentials to use
+        """
+        try:
+            s3_delivery_util = S3DeliveryUtil(s3_delivery, user)
+            s3_delivery_util.give_agent_permissions()
+        except S3Exception as ex:
+            raise WrappedS3Exception(ex)
+
+    @staticmethod
+    def _send_delivery_message(s3_delivery, user, accept_url):
+        """
+        Send email to delivery recipient and update delivery status.
+        :param s3_delivery: S3Delivery: details about what we will deliver
+        :param user: django user: user who is sending the delivery
+        :param accept_url: str: url recipient uses to accept or reject delivery
+        """
+        try:
+            message = S3DeliveryMessage(s3_delivery, user, accept_url)
+            message.send()
+            s3_delivery.mark_notified(message.email_text)
+        except EmailTemplateException as e:
+            raise InvalidSettingsException(str(e))
