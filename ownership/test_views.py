@@ -2,15 +2,16 @@ import uuid
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
-from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG
-from d4s2_api.models import DDSDelivery, State
+from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, SHARE_IN_RESPONSE_TO_DELIVERY_MSG
+from ownership.views import DDSDeliveryType, S3DeliveryType
+from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole
 from switchboard.mocks_ddsutil import MockDDSUser
 from django.contrib.auth.models import User as django_user
 try:
     from urllib.parse import urlencode
 except ImportError:
     from urllib import urlencode
-from mock import patch, Mock
+from mock import patch, Mock, call
 
 
 def url_with_transfer_id(name, transfer_id=None):
@@ -250,3 +251,59 @@ class AcceptedPageTestCase(AuthenticatedTestCase):
         url = reverse('ownership-accepted')
         response = self.client.get(url, {'transfer_id': 'garbage'})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class DDSDeliveryTypeTestCase(TestCase):
+
+    def setUp(self):
+        self.delivery_type = DDSDeliveryType()
+
+    def test_name_and_delivery_cls(self):
+        self.assertEqual(self.delivery_type.name, 'dds')
+        self.assertEqual(self.delivery_type.delivery_cls, DDSDelivery)
+
+    @patch('ownership.views.DeliveryDetails')
+    def test_makes_dds_delivery_details(self, mock_delivery_details):
+        details = self.delivery_type.make_delivery_details('arg1','arg2')
+        mock_delivery_details.assert_called_once_with('arg1', 'arg2')
+        self.assertEqual(details, mock_delivery_details.return_value)
+
+    @patch('ownership.views.DeliveryUtil')
+    def test_makes_dds_delivery_util(self, mock_delivery_util):
+        util = self.delivery_type.make_delivery_util('arg1','arg2')
+        mock_delivery_util.assert_called_once_with('arg1', 'arg2', share_role=ShareRole.DOWNLOAD, share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+        self.assertEqual(util, mock_delivery_util.return_value)
+
+    @patch('ownership.views.ProcessedMessage')
+    def test_makes_dds_processed_message(self, mock_processed_message):
+        message = self.delivery_type.make_processed_message('arg1', arg2='arg2')
+        mock_processed_message.assert_called_once_with('arg1', arg2='arg2')
+        self.assertEqual(message, mock_processed_message.return_value)
+
+
+class S3DeliveryTypeTestCase(TestCase):
+
+    def setUp(self):
+        self.delivery_type = S3DeliveryType()
+
+    def test_name_and_delivery_cls(self):
+        self.assertEqual(self.delivery_type.name, 's3')
+        self.assertEqual(self.delivery_type.delivery_cls, S3Delivery)
+
+    @patch('ownership.views.S3DeliveryDetails')
+    def test_makes_dds_delivery_details(self, mock_delivery_details):
+        details = self.delivery_type.make_delivery_details('arg1','arg2')
+        mock_delivery_details.assert_called_once_with('arg1', 'arg2')
+        self.assertEqual(details, mock_delivery_details.return_value)
+
+    @patch('ownership.views.S3DeliveryUtil')
+    def test_makes_dds_delivery_util(self, mock_delivery_util):
+        util = self.delivery_type.make_delivery_util('arg1','arg2')
+        mock_delivery_util.assert_called_once_with('arg1', 'arg2')
+        self.assertEqual(util, mock_delivery_util.return_value)
+
+    @patch('ownership.views.S3ProcessedMessage')
+    def test_makes_dds_processed_message(self, mock_processed_message):
+        message = self.delivery_type.make_processed_message('arg1', arg2='arg2')
+        mock_processed_message.assert_called_once_with('arg1', arg2='arg2')
+        self.assertEqual(message, mock_processed_message.return_value)
