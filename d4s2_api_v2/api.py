@@ -12,7 +12,7 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateException
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
-from switchboard.s3_util import S3DeliveryMessage, S3Exception
+from switchboard.s3_util import S3DeliveryMessage, S3Exception, S3NoSuchBucket
 
 
 class DataServiceUnavailable(APIException):
@@ -222,8 +222,13 @@ class S3BucketViewSet(viewsets.ModelViewSet):
         bucket_name = request.data['name']
         endpoint = S3Endpoint.objects.get(pk=endpoint_id)
         s3_bucket_util = S3BucketUtil(endpoint, user)
-        if not s3_bucket_util.user_owns_bucket(bucket_name):
-            raise BadRequestException("Unable to find bucket {} for your user.".format(bucket_name))
+        try:
+            if not s3_bucket_util.user_owns_bucket(bucket_name):
+                raise BadRequestException("Your user do not own bucket {}.".format(bucket_name))
+        except S3NoSuchBucket as e:
+            raise BadRequestException(str(e))
+        except S3Exception as e:
+            raise WrappedS3Exception(e)
 
 
 class S3DeliveryViewSet(viewsets.ModelViewSet):

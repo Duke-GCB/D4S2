@@ -7,7 +7,7 @@ from mock import patch, Mock
 from d4s2_api.views import *
 from d4s2_api.models import *
 from mock import call
-from switchboard.s3_util import S3Exception
+from switchboard.s3_util import S3Exception, S3NoSuchBucket
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -726,6 +726,17 @@ class S3BucketViewSetTestCase(AuthenticatedResourceTestCase):
         data = {'name': 'mouse2', 'owner': self.s3_user1.id, 'endpoint': self.endpoint.id}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['detail'], 'Your user do not own bucket mouse2.')
+        self.assertEqual(S3Bucket.objects.count(), 0)
+
+    @patch('d4s2_api_v2.api.S3BucketUtil')
+    def test_create_s3_buckets_if_not_found_in_s3(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.user_owns_bucket.side_effect = S3NoSuchBucket('No such bucket')
+        url = reverse('v2-s3bucket-list')
+        data = {'name': 'mouse2', 'owner': self.s3_user1.id, 'endpoint': self.endpoint.id}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['detail'], 'No such bucket')
         self.assertEqual(S3Bucket.objects.count(), 0)
 
     @patch('d4s2_api_v2.api.S3BucketUtil')

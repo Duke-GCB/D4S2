@@ -142,6 +142,7 @@ class S3Resource(object):
         session = boto3.session.Session(aws_access_key_id=s3_user.s3_id,
                                         aws_secret_access_key=s3_user.credential.aws_secret_access_key)
         self.s3 = session.resource('s3', endpoint_url=s3_user.endpoint.url)
+        self.exceptions = self.s3.meta.client.exceptions
 
     def create_bucket(self, bucket_name):
         bucket = self.s3.Bucket(bucket_name)
@@ -225,8 +226,20 @@ class S3BucketUtil(object):
         :param bucket_name: str: name of the bucket to check
         :return: boolean: true if user owns the bucket
         """
-        return self.s3.get_bucket_owner(bucket_name) == self.current_s3_user.s3_id
+        try:
+            return self.s3.get_bucket_owner(bucket_name) == self.current_s3_user.s3_id
+        except self.s3.exceptions.NoSuchBucket:
+            raise S3NoSuchBucket("No such bucket found {}".format(bucket_name))
+        except self.s3.exceptions.ClientError as e:
+            if e.response.get('Error', {}).get('Code') == 'AccessDenied':
+                return False
+            else:
+                raise S3Exception(e)
 
 
 class S3Exception(Exception):
+    pass
+
+
+class S3NoSuchBucket(S3Exception):
     pass
