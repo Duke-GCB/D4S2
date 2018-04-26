@@ -1,0 +1,83 @@
+stages:
+- build
+- test
+- release
+- deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_REGISTRY: gitlab.dhe.duke.edu:4567
+  CONTAINER_IMAGE: gitlab.dhe.duke.edu:4567/dcl9/d4s2:${CI_BUILD_REF}
+  CONTAINER_IMAGE_LATEST: gitlab.dhe.duke.edu:4567/dcl9/d4s2:latest
+  CONTAINER_IMAGE_APACHE: gitlab.dhe.duke.edu:4567/dcl9/d4s2:${CI_BUILD_REF}-apache
+  CONTAINER_IMAGE_APACHE_LATEST: gitlab.dhe.duke.edu:4567/dcl9/d4s2:latest-apache
+  PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/dcl9/gcb-ansible-deploy.git
+  PLAYBOOK_DIR: gcb-ansible-deploy
+  DEPLOY_PLAYBOOK: d4s2-webapp.yml
+  DEPLOY_HOST: bespin-float-70.genome.duke.edu
+  DEPLOY_USER: ubuntu
+  DEPLOY_KEY: /home/gitlab-runner/.ssh/bespin-gitlab-runner-deploy-id_rsa
+  COMPOSE_FILE: docker-compose.test.yml
+
+# The gitlab runner environment will have CI_JOB_TOKEN set, which can be used as the
+# docker password for the GitLab container registry
+before_script:
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $DOCKER_REGISTRY
+
+# Build docker images. Always build the base image before the apache image
+# Pushes back to the repo in case subsequent step runs on different host
+build:
+  stage: build
+  tags:
+  - docker-build
+  script:
+  - docker build -t $CONTAINER_IMAGE .
+  - docker build --build-arg BASE_IMAGE=${CONTAINER_IMAGE} -t $CONTAINER_IMAGE_APACHE production
+  - docker push $CONTAINER_IMAGE
+  - docker push $CONTAINER_IMAGE_APACHE
+
+# Test the code inside the built docker image using docker-compose
+test:
+  stage: test
+  tags:
+  - docker-build
+  script:
+  - docker-compose up -d
+  - docker-compose run web python manage.py test
+  - docker-compose down
+
+# Tag built docker images. Pulls from repo and pushes back in case running on a different host than build
+# Only release from master
+release-image:
+  stage: release
+  tags:
+  - docker-build
+  script:
+  - docker pull $CONTAINER_IMAGE
+  - docker pull $CONTAINER_IMAGE_APACHE
+  - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE_LATEST
+  - docker tag $CONTAINER_IMAGE_APACHE $CONTAINER_IMAGE_APACHE_LATEST
+  - docker push $CONTAINER_IMAGE_LATEST
+  - docker push $CONTAINER_IMAGE_APACHE_LATEST
+  only:
+  - master
+
+# Deploy images using ansible-playbook
+# Clones the internal (light) playbook dir that uses public roles submodule
+# Passes in docker registry credentials as ansible extra variables
+# Requires that ansible has already been installed on the gitlab runner host, and that the
+# SSH private key (DEPLOY_KEY) can login and sudo all
+deploy:
+  stage: deploy
+  tags:
+  - docker-build
+  script:
+  - git clone --recursive $PLAYBOOK_REPO_URL $PLAYBOOK_DIR
+  - cd $PLAYBOOK_DIR
+  - ansible-galaxy install -r install_roles.yml
+  - ansible-playbook -e d4s2_docker_image=$CONTAINER_IMAGE_APACHE -e ansible_python_interpreter=/usr/bin/python3 -e docker_registry=$DOCKER_REGISTRY -e docker_username=gitlab-ci-token -e docker_password=$CI_JOB_TOKEN -u $DEPLOY_USER --private-key=$DEPLOY_KEY -i inventory -l $DEPLOY_HOST $DEPLOY_PLAYBOOK
+  environment:
+    name: development
+    url: https://bespin-float-70.genome.duke.edu
+  only:
+  - master
