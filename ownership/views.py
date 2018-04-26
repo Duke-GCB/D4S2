@@ -200,9 +200,6 @@ class ProcessView(DeliveryViewBase):
     def process_accept(self):
         delivery = self.delivery
         request = self.request
-        if delivery.is_complete():
-            self.set_already_complete_error()
-            return
         try:
             delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
             delivery_util.accept_project_transfer()
@@ -218,8 +215,10 @@ class ProcessView(DeliveryViewBase):
             self.set_error_details(500, str(e))
 
     def handle_post(self):
-        request = self.request
-        if 'decline' in request.POST:
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
+            return
+        if 'decline' in self.request.POST:
             # Redirect to decline page
             self.set_redirect('ownership-decline')
         else:
@@ -239,9 +238,6 @@ class DeclineView(DeliveryViewBase):
     def process_decline(self, reason):
         delivery = self.delivery
         request = self.request
-        if delivery.is_complete():
-            self.set_already_complete_error()
-            return
         try:
             delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
             delivery_util.decline_delivery(reason)
@@ -251,7 +247,14 @@ class DeclineView(DeliveryViewBase):
         except Exception as e:
             self.set_error_details(500, str(e))
 
+    def handle_get(self):
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
+
     def handle_post(self):
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
+            return
         request = self.request
         if 'cancel' in request.POST:
             # User canceled, redirect to prompt

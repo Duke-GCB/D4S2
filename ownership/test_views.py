@@ -197,7 +197,39 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class DeclineReasonTestCase(AuthenticatedTestCase):
+class DeclineGetTestCase(AuthenticatedTestCase):
+
+    def test_redirects_for_login(self):
+        self.client.logout()
+        url = reverse('ownership-decline')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('login', response['Location'])
+
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_get_with_already_accepted(self,mock_get_delivery_type):
+        mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
+        delivery = create_delivery()
+        delivery.mark_accepted('user', 'email text')
+        mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
+        url = reverse('ownership-decline')
+        response = self.client.get(url, {'transfer_id': delivery.transfer_id})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(State.DELIVERY_CHOICES[State.ACCEPTED][1], str(response.content))
+
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_get_with_already_declined(self,mock_get_delivery_type):
+        mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
+        delivery = create_delivery()
+        delivery.mark_declined('user', 'Done', 'email text')
+        mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
+        url = reverse('ownership-decline')
+        response = self.client.get(url, {'transfer_id': delivery.transfer_id})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(State.DELIVERY_CHOICES[State.DECLINED][1], str(response.content))
+
+
+class DeclinePostTestCase(AuthenticatedTestCase):
 
     def test_redirects_for_login(self):
         self.client.logout()
