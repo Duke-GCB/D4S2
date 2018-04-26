@@ -1,7 +1,9 @@
 from django.test import TestCase
 from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint
-from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails
+from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
+    S3Exception, S3NoSuchBucket
+import botocore
 
 
 class S3DeliveryTestBase(TestCase):
@@ -278,3 +280,57 @@ class S3ResourceTestCase(TestCase):
         mock_object_acl_constructor.return_value.put.assert_called_with(
             GrantFullControl='id=user3',
             GrantRead='id=user4')
+
+    @patch('switchboard.s3_util.boto3')
+    def test_get_bucket_owner(self, mock_boto3):
+        bucket1 = Mock()
+        bucket1.name = 'bucket1'
+        bucket2 = Mock()
+        bucket2.name = 'bucket2'
+        bucket3 = Mock()
+        bucket3.name = 'bucket3'
+        mock_s3 = mock_boto3.session.Session.return_value.resource.return_value
+        mock_s3.BucketAcl.return_value.owner = {'ID': self.s3_user.s3_id}
+        s3_resource = S3Resource(self.s3_user)
+        self.assertEqual(s3_resource.get_bucket_owner('somebucket'), self.s3_user.s3_id)
+        mock_s3.BucketAcl.assert_called_with('somebucket')
+
+
+class S3BucketUtilTestCase(S3DeliveryTestBase):
+    @patch('switchboard.s3_util.S3Resource')
+    def test_user_owns_bucket(self, mock_s3_resource):
+        mock_s3_resource.return_value.get_bucket_owner.side_effect = [
+            self.s3_to_user.s3_id,
+            self.s3_from_user.s3_id,
+            self.s3_to_user.s3_id,
+        ]
+
+        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
+        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), True)
+        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), False)
+        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), True)
+
+    @patch('switchboard.s3_util.S3Resource')
+    def test_user_owns_bucket_handles_boto3_bucket_not_found(self, mock_s3_resource):
+        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
+        s3_bucket_util.s3.exceptions.NoSuchBucket = ValueError
+
+        mock_s3_resource.return_value.get_bucket_owner.side_effect = ValueError
+
+        with self.assertRaises(S3NoSuchBucket):
+            s3_bucket_util.user_owns_bucket(bucket_name='test1')
+
+    @patch('switchboard.s3_util.S3Resource')
+    def test_user_owns_bucket_handles_boto3_access_denied(self, mock_s3_resource):
+        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
+        s3_bucket_util.s3.exceptions.ClientError = AccessDeniedClientError
+        s3_bucket_util.s3.exceptions.NoSuchBucket = ValueError
+
+        mock_s3_resource.return_value.get_bucket_owner.side_effect = AccessDeniedClientError
+
+        self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), False)
+
+
+class AccessDeniedClientError(Exception):
+    def __init__(self):
+        self.response = {'Error': {'Code': 'AccessDenied'}}
