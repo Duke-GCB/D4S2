@@ -41,6 +41,12 @@ class S3DeliveryUtil(object):
         self._copy_files_to_new_destination_bucket()
         self._cleanup_source_bucket()
 
+    def share_with_additional_users(self):
+        pass
+
+    def get_warning_message(self):
+        return None
+
     def _grant_user_read_permissions(self, s3_user):
         """
         Grants s3_user read bucket/object permissions while retaining full control for agent
@@ -67,7 +73,8 @@ class S3DeliveryUtil(object):
         s3.delete_bucket(self.source_bucket_name)
 
     @wrap_s3_exceptions
-    def decline_delivery(self):
+    def decline_delivery(self, reason):
+        print("Declining delivery for reason: {}".format(reason))
         from_s3_user = self.s3_delivery.from_user
         s3 = S3Resource(self.s3_agent)
         s3.grant_bucket_acl(self.source_bucket_name,
@@ -94,13 +101,14 @@ class S3DeliveryDetails(object):
         to_user = self.get_to_user()
         bucket_name = self.s3_delivery.bucket.name
         return {
-            's3_delivery_id': str(self.s3_delivery.id),
+            'service': 'S3',
+            'transfer_id': str(self.s3_delivery.transfer_id),
             'from_name': '{} {}'.format(from_user.first_name, from_user.last_name),
             'from_email': from_user.email,
             'to_name': '{} {}'.format(to_user.first_name, to_user.last_name),
             'to_email': to_user.email,
             'project_title': bucket_name,
-            'project_url': 's://{}'.format(bucket_name)
+            'project_url': 's3://{}'.format(bucket_name)
         }
 
     def get_email_context(self, accept_url, process_type, reason, warning_message=''):
@@ -117,17 +125,8 @@ class S3DeliveryDetails(object):
             'message': reason,  # decline reason
             'user_message': self.s3_delivery.user_message,
             'warning_message': warning_message,
+            'service': base_context['service'],
         }
-
-    @staticmethod
-    def from_s3_delivery_id(s3_delivery_id, user):
-        """
-        :param s3_delivery_id: int: S3Delivery id
-        :param user: django user
-        :return: S3DeliveryDetails
-        """
-        delivery = S3Delivery.objects.get(pk=s3_delivery_id)
-        return S3DeliveryDetails(delivery, user)
 
     def get_action_template_text(self, action_name):
         email_template = EmailTemplate.for_user(self.user, action_name)

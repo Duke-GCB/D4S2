@@ -1,14 +1,15 @@
 {%  extends "base.html" %}
-{% block title %}Decline Project{% endblock %}
+{% block title %}Decline Delivery{% endblock %}
 {% block content %}
 <h4>Delivery Service</h4>
 <p>
-    Enter reason for declining project {{ project_title }}.
+    Enter reason for declining delivery of {{ project_title }}.
 </p>
 <form action="{% url 'ownership-decline' %}" method="post">
   <div>
     {% csrf_token %}
     <input type="hidden" name="transfer_id" value="{{ transfer_id }}">
+    <input type="hidden" name="delivery_type" value="{{ delivery_type }}">
 
     <textarea autofocus class="decline_textarea" type="text" rows= "10" name="decline_reason" ></textarea>
 

@@ -1,194 +1,285 @@
-from django.shortcuts import render, redirect
-from django.core.urlresolvers import reverse
-from django.core.exceptions import ObjectDoesNotExist
-from d4s2_api.models import State, ShareRole
-from d4s2_api.utils import DeliveryUtil, decline_delivery, ProcessedMessage
-from switchboard.dds_util import DeliveryDetails
 from ddsc.core.ddsapi import DataServiceError
-from django.views.decorators.cache import never_cache
-from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
+from django.shortcuts import redirect, render_to_response
+from django.views.generic import TemplateView
+try:
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
+
+from d4s2_api.models import DDSDelivery, S3Delivery
+from d4s2_api.models import State, ShareRole
+from d4s2_api.utils import DeliveryUtil, ProcessedMessage
+from switchboard.s3_util import S3DeliveryDetails, S3DeliveryUtil, S3ProcessedMessage
+from switchboard.dds_util import DeliveryDetails
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
-INVALID_TRANSFER_ID = 'Invalid transfer ID.'
 TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
 SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 
-@login_required
-@never_cache
-def ownership_prompt(request):
-    """
-    Main accept screen where user accepts or declines a project.
-    """
-    return response_with_delivery(request, request.GET, render_accept_delivery_page)
+class ResponseType:
+    ERROR = 'error'
+    TEMPLATE = 'template'
+    REDIRECT = 'redirect'
 
 
-def build_delivery_context(delivery, user):
-    """
-    Return dictionary of commonly needed delivery data for use with templates.
-    """
-    delivery_details = DeliveryDetails(delivery, user=user)
-    from_user = delivery_details.get_from_user()
-    to_user = delivery_details.get_to_user()
-    project = delivery_details.get_project()
-    project_url = delivery_details.get_project_url()
-    return {
-        'transfer_id': str(delivery.transfer_id),
-        'from_name': from_user.full_name,
-        'from_email': from_user.email,
-        'to_name': to_user.full_name,
-        'project_title': project.name,
-        'project_url': project_url
-    }
+class DDSDeliveryType:
+    name = 'dds'
+    delivery_cls = DDSDelivery
+
+    @staticmethod
+    def make_delivery_details(*args):
+        return DeliveryDetails(*args)
+
+    @staticmethod
+    def make_delivery_util(*args):
+        return DeliveryUtil(*args,
+                            share_role=ShareRole.DOWNLOAD,
+                            share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+
+    @staticmethod
+    def make_processed_message(*args, **kwargs):
+        return ProcessedMessage(*args, **kwargs)
 
 
-def render_accept_delivery_page(request, delivery):
-    """
-    Renders page with delivery details and ACCEPT/DECLINE buttons.
-    """
-    return render(request, 'ownership/index.html', build_delivery_context(delivery, request.user))
+class S3DeliveryType:
+    name = 's3'
+    delivery_cls = S3Delivery
+
+    @staticmethod
+    def make_delivery_details(*args):
+        return S3DeliveryDetails(*args)
+
+    @staticmethod
+    def make_delivery_util(*args):
+        return S3DeliveryUtil(*args)
+
+    @staticmethod
+    def make_processed_message(*args, **kwargs):
+        return S3ProcessedMessage(*args, **kwargs)
 
 
-@login_required
-@never_cache
-def ownership_process(request):
-    """
-    Handles response to either accept or decline a project..
-    """
-    func = accept_project_redirect
-    if request.POST.get('decline', None):
-        func = render_decline_reason_prompt
-    return response_with_delivery(request, request.POST, func)
+class DeliveryViewBase(TemplateView):
+
+    def __init__(self, **kwargs):
+        self.response_type = ResponseType.TEMPLATE
+        self.delivery_type = None
+        self.error_details = None
+        self.redirect_target = None
+        self.warning_message = None
+        super(DeliveryViewBase, self).__init__(**kwargs)
+
+    def handle_get(self):
+        return
+
+    def handle_post(self):
+        return
+
+    def _prepare(self, request):
+        self.request = request
+        self.delivery_type = self.get_delivery_type()
+        self.delivery = self.get_delivery()
+        self.context = self.get_context_data()
+
+    def _respond(self):
+        if self.response_type == ResponseType.ERROR:
+            return self.make_error_response()
+        elif self.response_type == ResponseType.REDIRECT:
+            return self.make_redirect_response()
+        else:
+            return self.render_to_response(self.context)
+
+    def get_context_data(self, **kwargs):
+        context = {}
+        delivery = self.delivery
+        if delivery:
+            details = self.delivery_type.make_delivery_details(delivery, self.request.user)
+            context.update(details.get_context())
+            context['delivery_type'] = self.delivery_type.name
+        return context
+
+    def _get_request_var(self, key):
+        return self.request.GET.get(key) or self.request.POST.get(key)
+
+    def get_delivery_type(self):
+        """
+        Determine which DeliveryType adapter to use, based on 'delivery_type' GET/POST var.
+        If not present, assume 'dds' and return a DDSDeliveryType
+
+        :return:
+        """
+        delivery_type_name = self._get_request_var('delivery_type')
+        if delivery_type_name == S3DeliveryType.name:
+            return S3DeliveryType
+        else:
+            return DDSDeliveryType
+
+    def get_delivery(self):
+        transfer_id = self._get_request_var('transfer_id')
+        if transfer_id:
+            try:
+                return self.delivery_type.delivery_cls.objects.get(transfer_id=transfer_id)
+            except self.delivery_type.delivery_cls.DoesNotExist as e:
+                self.set_error_details(404, TRANSFER_ID_NOT_FOUND)
+        else:
+            self.set_error_details(400, MISSING_TRANSFER_ID_MSG)
+        return None
+
+    def set_redirect(self, target_view_name):
+        self.response_type = ResponseType.REDIRECT
+        self.redirect_target = target_view_name
+
+    def set_error_details(self, status, message):
+        self.response_type = ResponseType.ERROR
+        self.error_details = {
+            'status': status,
+            'context': {'message': message},
+        }
+
+    def set_already_complete_error(self):
+        delivery = self.delivery
+        status = State.DELIVERY_CHOICES[delivery.state][1]
+        message = "This delivery has already been processed: {}.".format(status)
+        self.set_error_details(400, message)
+
+    def make_error_response(self):
+        return render_to_response('ownership/error.html',
+                                  status=self.error_details.get('status'),
+                                  context=self.error_details.get('context'))
+
+    def _get_query_string(self):
+        query_dict = {}
+        if self.delivery:
+            query_dict['transfer_id'] = self.delivery.transfer_id
+        if self.warning_message:
+            query_dict['warning_message'] = self.warning_message
+        query_dict['delivery_type'] = self.delivery_type.name
+        return '?' + urlencode(query_dict)
+
+    def make_redirect_response(self):
+        return redirect(reverse(self.redirect_target) + self._get_query_string())
+
+    def _action(self, request, handle_method):
+        self._prepare(request)
+        # If preparation failed, do not handle the request
+        if not self.error_details:
+            handle_method()
+        return self._respond()
+
+    # View handlers
+    def get(self, request):
+        return self._action(request, self.handle_get)
+
+    def post(self, request):
+        return self._action(request, self.handle_post)
 
 
-def accept_project_redirect(request, delivery):
+class PromptView(DeliveryViewBase):
     """
-    Accept delivery and redirect user to look at the project.
+    Initial landing view, prompting for accept or decline button
+    Posts to ProcessDeliveryView
     """
-    try:
-        delivery_util = DeliveryUtil(delivery, request.user,
-                                     share_role=ShareRole.DOWNLOAD,
-                                     share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
-        delivery_util.accept_project_transfer()
-        delivery_util.share_with_additional_users()
-        warning_message = delivery_util.get_warning_message()
-        message = ProcessedMessage(delivery, request.user, "accepted", warning_message=warning_message)
-        message.send()
-        delivery.mark_accepted(request.user.get_username(), message.email_text)
-    except DataServiceError as e:
-        raise RuntimeError('Unable to transfer ownership: {}'.format(e.message))
-    except Exception as e:
-        return general_error(request, msg=str(e), status=500)
-    return redirect(reverse('ownership-accepted') + '?transfer_id=' + delivery.transfer_id +
-                    '&warning_message=' + warning_message)
+    http_method_names = ['get']
+    template_name = 'ownership/index.html'
+
+    def handle_get(self):
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
 
 
-def render_decline_reason_prompt(request, delivery):
+class ProcessView(DeliveryViewBase):
     """
-    Prompts for a reason for declineing the project.
+    Handles POST from PromptView.
+    If user clicked decline, redirects to the decline form.
+    If clicked accept, process acceptance and redirect to accepted page
     """
-    return render(request, 'ownership/decline_reason.html', build_delivery_context(delivery, request.user))
+    http_method_names = ['post']
 
-
-def decline_project(request, delivery):
-    """
-    Marks delivery declined.
-    """
-    reason = request.POST.get('decline_reason')
-    if not reason:
-        context = build_delivery_context(delivery, request.user)
-        context['error_message'] = REASON_REQUIRED_MSG
-        return render(request, 'ownership/decline_reason.html', context, status=400)
-
-    try:
-        decline_delivery(delivery, request.user, reason)
-        message = ProcessedMessage(delivery, request.user, "declined", "Reason: {}".format(reason))
-        message.send()
-        delivery.mark_declined(request.user.get_username(), reason, message.email_text)
-        return render(request, 'ownership/decline_done.html', build_delivery_context(delivery, request.user))
-    except Exception as e:
-        return general_error(request, msg=str(e), status=500)
-
-
-@login_required
-@never_cache
-def ownership_decline(request):
-    """
-    Handle response from decline reason prompt.
-    """
-    if request.POST.get('cancel', None):
-        url = url_with_transfer_id('ownership-prompt', request.POST.get('transfer_id'))
-        return redirect(url)
-    params = request.GET
-    func = render_decline_reason_prompt
-    if request.method == 'POST':
-        params = request.POST
-        func = decline_project
-    return response_with_delivery(request, params, func)
-
-
-def url_with_transfer_id(name, transfer_id=None):
-    """
-    Lookup url for name and append transfer_id to url.
-    """
-    url = reverse(name)
-    if transfer_id:
-        url = "{}?transfer_id={}".format(url, transfer_id)
-    return url
-
-
-def response_with_delivery(request, param_dict, func):
-    """
-    Pull out transfer_id from request params and return func(delivery).
-    If delivery already complete render already complete message.
-    Renders missing authorization transfer_id message otherwise.
-    """
-    transfer_id = param_dict.get('transfer_id', None)
-    if transfer_id:
+    def process_accept(self):
+        delivery = self.delivery
+        request = self.request
         try:
-            details = DeliveryDetails.from_transfer_id(transfer_id, request.user)
-            delivery = details.get_delivery()
-            # update the status
-            if delivery.is_complete():
-                return render_already_complete(request, delivery)
-            return func(request, delivery)
-        except ObjectDoesNotExist:
-            return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)
-        except DataServiceError as err:
-            return general_error(request, msg=(err), status=500)
-    else:
-        return general_error(request, msg=MISSING_TRANSFER_ID_MSG, status=400)
+            delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
+            delivery_util.accept_project_transfer()
+            delivery_util.share_with_additional_users()
+            warning_message = delivery_util.get_warning_message()
+            message = self.delivery_type.make_processed_message(delivery, request.user, 'accepted', warning_message=warning_message)
+            self.warning_message = warning_message
+            message.send()
+            delivery.mark_accepted(request.user.get_username(), message.email_text)
+        except DataServiceError as e:
+            self.set_error_details(500, 'Unable to transfer ownership: {}'.format(e.message))
+        except Exception as e:
+            self.set_error_details(500, str(e))
+
+    def handle_post(self):
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
+            return
+        if 'decline' in self.request.POST:
+            # Redirect to decline page
+            self.set_redirect('ownership-decline')
+        else:
+            # Cannot redirect to a POST, so we must process the acceptance here
+            self.set_redirect('ownership-accepted')
+            self.process_accept()  # May override response type with an error
 
 
-def render_already_complete(request, delivery):
+class DeclineView(DeliveryViewBase):
     """
-    User is trying to access a delivery that has already been declined or accepted.
+    Handles GET to display form to prompt for reason
+    When POSTed, process the decline action
     """
-    status = State.DELIVERY_CHOICES[delivery.state][1]
-    message = "This project has already been processed: {}.".format(status)
-    return general_error(request, msg=message, status=400)
+    http_method_names = ['get', 'post']
+    template_name = 'ownership/decline_reason.html'
+
+    def process_decline(self, reason):
+        delivery = self.delivery
+        request = self.request
+        try:
+            delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
+            delivery_util.decline_delivery(reason)
+            message = self.delivery_type.make_processed_message(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
+            message.send()
+            delivery.mark_declined(request.user.get_username(), reason, message.email_text)
+        except Exception as e:
+            self.set_error_details(500, str(e))
+
+    def handle_get(self):
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
+
+    def handle_post(self):
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
+            return
+        request = self.request
+        if 'cancel' in request.POST:
+            # User canceled, redirect to prompt
+            self.set_redirect('ownership-prompt')
+        else:
+            # User is declining the delivery
+            reason = request.POST.get('decline_reason')
+            if reason:
+                self.set_redirect('ownership-declined')
+                self.process_decline(reason)  # May override response type with an error
+            else:
+                self.set_error_details(400, REASON_REQUIRED_MSG)
 
 
-def general_error(request, msg, status):
+class AcceptedView(DeliveryViewBase):
     """
-    Return the error template with the specified message and the status.
+    Handles GET to show a message that the delivery was accepted
     """
-    message = msg
-    context = {'message': message}
-    return render(request, 'ownership/error.html', context, status=status)
+    http_method_names = ['get']
+    template_name = 'ownership/accepted.html'
 
 
-def ownership_accepted(request):
+class DeclinedView(DeliveryViewBase):
     """
-    Shows an acceptance page, with link to the Data Service Project
+    Handles GET to show a message that the delivery was declined
     """
-    try:
-        transfer_id = request.GET.get('transfer_id', None)
-        warning_message = request.GET.get('warning_message', None)
-        delivery = DeliveryDetails.from_transfer_id(transfer_id, request.user).get_delivery()
-        context = build_delivery_context(delivery, request.user)
-        context['warning_message'] = warning_message
-        return render(request, 'ownership/accepted.html', context)
-    except ObjectDoesNotExist:
-        return general_error(request, msg=TRANSFER_ID_NOT_FOUND, status=404)
+    http_method_names = ['get']
+    template_name = 'ownership/decline_done.html'

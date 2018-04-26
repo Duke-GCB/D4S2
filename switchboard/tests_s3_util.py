@@ -114,7 +114,7 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3Resource')
     def test_decline_delivery(self, mock_s3_resource):
         s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.to_user)
-        s3_delivery_util.decline_delivery()
+        s3_delivery_util.decline_delivery('test reason')
         mock_s3_resource.return_value.grant_bucket_acl.assert_called_with(
             'mouse', grant_full_control_user=self.s3_from_user
         )
@@ -134,10 +134,11 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
             'to_email': 'to_user@to_user.com',
             'from_name': 'From User',
             'project_title': 'mouse',
-            'project_url': 's://mouse',
+            'project_url': 's3://mouse',
+            'service': 'S3',
             'from_email': 'from_user@from_user.com',
             'to_name': 'To User',
-            's3_delivery_id': str(self.s3_delivery.id)
+            'transfer_id': str(self.s3_delivery.transfer_id)
         }
         self.assertEqual(context, expected_context)
 
@@ -153,7 +154,8 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
             'accept_url': 'accepturl',
             'message': 'somereason',
             'project_name': 'mouse',
-            'project_url': 's://mouse',
+            'project_url': 's3://mouse',
+            'service': 'S3',
             'recipient_email': 'to_user@to_user.com',
             'recipient_name': 'To User',
             'sender_email': 'from_user@from_user.com',
@@ -163,12 +165,6 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
             'warning_message': 'oops'
         }
         self.assertEqual(context, expected_context)
-
-    def test_from_s3_delivery_id(self):
-        s3_delivery_details = S3DeliveryDetails.from_s3_delivery_id(self.s3_delivery.id, self.to_user)
-        self.assertEqual(s3_delivery_details.get_delivery(), self.s3_delivery)
-        self.assertEqual(s3_delivery_details.get_from_user(), self.from_user)
-        self.assertEqual(s3_delivery_details.get_to_user(), self.to_user)
 
     @patch('switchboard.s3_util.EmailTemplate')
     def test_get_action_template_text(self, mock_email_template):

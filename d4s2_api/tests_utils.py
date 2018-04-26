@@ -1,6 +1,6 @@
 from mock import patch, Mock, call
 from django.test import TestCase
-from d4s2_api.utils import decline_delivery, ShareMessage, DeliveryMessage, ProcessedMessage, \
+from d4s2_api.utils import  ShareMessage, DeliveryMessage, ProcessedMessage, \
     MessageDirection, DeliveryUtil, Message
 from d4s2_api.models import DDSDelivery, Share, State, DDSDeliveryShareUser
 from ownership.test_views import setup_mock_delivery_details
@@ -18,15 +18,6 @@ class UtilsTestCase(TestCase):
         DDSDeliveryShareUser.objects.create(delivery=self.delivery, dds_id='jkl888')
         DDSDeliveryShareUser.objects.create(delivery=self.delivery, dds_id='mno999')
         self.share = Share.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
-
-    @patch('d4s2_api.utils.DDSUtil')
-    def test_decline_delivery(self, MockDDSUtil):
-        mock_ddsutil = MockDDSUtil()
-        mock_ddsutil.decline_project_transfer = Mock()
-        delivery = self.delivery
-        decline_delivery(delivery, self.user, 'reason')
-        MockDDSUtil.assert_any_call(self.user)
-        mock_ddsutil.decline_project_transfer.assert_called_with(delivery.transfer_id, 'reason')
 
     @patch('d4s2_api.utils.DeliveryDetails')
     def test_delivery_message(self, MockDeliveryDetails):
@@ -125,6 +116,16 @@ class DeliveryUtilTestCase(TestCase):
         delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
         delivery_util.accept_project_transfer()
         mock_ddsutil.return_value.accept_project_transfer.assert_called_with(self.delivery.transfer_id)
+
+    @patch('d4s2_api.utils.DDSUtil')
+    @patch('d4s2_api.utils.DeliveryDetails')
+    def test_decline_delivery(self, mock_delivery_details, MockDDSUtil):
+        mock_ddsutil = MockDDSUtil()
+        mock_ddsutil.decline_project_transfer = Mock()
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        delivery_util.decline_delivery('reason')
+        MockDDSUtil.assert_any_call(self.user)
+        mock_ddsutil.decline_project_transfer.assert_called_with(self.delivery.transfer_id, 'reason')
 
     @patch('d4s2_api.utils.DDSUtil')
     @patch('d4s2_api.utils.DeliveryDetails')

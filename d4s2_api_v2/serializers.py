@@ -93,8 +93,8 @@ class S3DeliverySerializer(serializers.ModelSerializer):
         model = S3Delivery
         resource_name = 's3delivery'
         fields = ('id', 'bucket', 'from_user', 'to_user', 'state', 'user_message',
-                  'decline_reason', 'performed_by', 'delivery_email_text')
-        read_only_fields = ('state', 'decline_reason', 'performed_by', 'delivery_email_text',)
+                  'decline_reason', 'performed_by', 'delivery_email_text', 'transfer_id',)
+        read_only_fields = ('state', 'decline_reason', 'performed_by', 'delivery_email_text', 'transfer_id',)
 
     def validate_from_user(self, from_user):
         if from_user.user != self.context['request'].user:

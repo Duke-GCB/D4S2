@@ -2,8 +2,8 @@ from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, DDSDelivery
 from gcb_web_auth.backends.dukeds import make_auth_config
-from gcb_web_auth.utils import get_dds_token
-from gcb_web_auth.models import DDSEndpoint
+from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
+from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
 
 
 class DDSUtil(object):
@@ -16,8 +16,16 @@ class DDSUtil(object):
     @property
     def remote_store(self):
         if self._remote_store is None:
-            dds_token = get_dds_token(self.user)
-            config = make_auth_config(dds_token.key)
+            # First need to resolve DukeDS Credential.
+            # For simplicity and development ease, we first check if a DDSUserCredential exists for the requesting user
+            try:
+                dds_credential = DDSUserCredential.objects.get(user=self.user)
+                config = get_dds_config_for_credentials(dds_credential)
+            except DDSUserCredential.DoesNotExist:
+                # No DDSUserCredential configured for this user, fall back to OAuth
+                # May raise an OAuthConfigurationException
+                dds_token = get_dds_token(self.user)
+                config = make_auth_config(dds_token.key)
             self._remote_store = RemoteStore(config)
         return self._remote_store
 
@@ -235,4 +243,19 @@ class DeliveryDetails(object):
             'message': reason,  # decline reason
             'user_message': user_message,
             'warning_message': warning_message,
+        }
+
+    def get_context(self):
+        from_user = self.get_from_user()
+        to_user = self.get_to_user()
+        project = self.get_project()
+        project_url = self.get_project_url()
+        return {
+            'service': 'Duke Data Service',
+            'transfer_id': str(self.delivery.transfer_id),
+            'from_name': from_user.full_name,
+            'from_email': from_user.email,
+            'to_name': to_user.full_name,
+            'project_title': project.name,
+            'project_url': project_url
         }

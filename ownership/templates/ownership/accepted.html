@@ -1,9 +1,9 @@
 {%  extends "base.html" %}
-{% block title %}Project Accepted{% endblock %}
+{% block title %}Delivery Accepted{% endblock %}
 {% block content %}
 <h4>Delivery Service</h4>
 <p>
-    Project {{ project_title }} has been accepted.
+    Delivery of {{ project_title }} has been accepted.
 </p>
 {% if failed_share_users %}
     <p>
@@ -11,6 +11,6 @@
     </p>
 {%  endif %}
 <p>
-    View this project in Duke Data Service at <a href="{{ project_url }}">{{ project_url }}.</a>
+    View this data in {{ service }} at <a href="{{ project_url }}">{{ project_url }}.</a>
 </p>
 {% endblock %}
