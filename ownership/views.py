@@ -161,11 +161,11 @@ class DeliveryViewBase(TemplateView):
     def make_redirect_response(self):
         return redirect(reverse(self.redirect_target) + self._get_query_string())
 
-    def _action(self, request, func):
+    def _action(self, request, handle_method):
         self._prepare(request)
         # If preparation failed, do not handle the request
         if not self.error_details:
-            func()
+            handle_method()
         return self._respond()
 
     # View handlers
