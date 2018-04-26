@@ -109,6 +109,11 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn(TRANSFER_ID_NOT_FOUND, str(response.content))
 
+    def test_post_not_allowed(self):
+        url = url_with_transfer_id('ownership-prompt')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
 
 class ProcessTestCase(AuthenticatedTestCase):
 
@@ -185,6 +190,11 @@ class ProcessTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline':'decline'}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('reason for declining delivery', str(response.content))
+
+    def test_get_not_allowed(self):
+        url = url_with_transfer_id('ownership-process')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class DeclineReasonTestCase(AuthenticatedTestCase):
