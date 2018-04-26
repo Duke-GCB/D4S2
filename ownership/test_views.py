@@ -168,6 +168,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(State.DELIVERY_CHOICES[State.DECLINED][1], str(response.content))
+        self.assertFalse(mock_delivery_type.mock_delivery_util.accept_project_transfer.called)
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_accept_with_already_accepted(self, mock_get_delivery_type):
@@ -179,6 +180,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': delivery.transfer_id})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(State.DELIVERY_CHOICES[State.ACCEPTED][1], str(response.content))
+        self.assertFalse(mock_delivery_type.mock_delivery_util.accept_project_transfer.called)
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_normal_with_decline(self, mock_get_delivery_type):
@@ -190,6 +192,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline':'decline'}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('reason for declining delivery', str(response.content))
+        self.assertFalse(mock_delivery_type.mock_delivery_util.accept_project_transfer.called)
 
     def test_get_not_allowed(self):
         url = url_with_transfer_id('ownership-process')
@@ -274,6 +277,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason': ''})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(REASON_REQUIRED_MSG, str(response.content))
+        self.assertFalse(mock_delivery_type.mock_delivery_util.decline_delivery.called)
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_decline_with_already_declined(self, mock_get_delivery_type):
@@ -286,6 +290,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason': 'Wrong person.'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(State.DELIVERY_CHOICES[State.DECLINED][1], str(response.content))
+        self.assertFalse(mock_delivery_type.mock_delivery_util.decline_delivery.called)
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_decline_with_already_accepted(self, mock_get_delivery_type):
@@ -298,6 +303,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason': 'Wrong person.'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(State.DELIVERY_CHOICES[State.ACCEPTED][1], str(response.content))
+        self.assertFalse(mock_delivery_type.mock_delivery_util.decline_delivery.called)
 
 
 class AcceptedPageTestCase(AuthenticatedTestCase):
