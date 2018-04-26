@@ -6,7 +6,7 @@ from django.views.decorators.cache import never_cache
 
 def decorate(view):
     """
-    Decorate our views as requied and never_cache
+    Decorate our views as login_required and never_cache
     :param view: The view to decorate
     :return: The view, decorated with login_required and never_cache
     """
@@ -14,7 +14,7 @@ def decorate(view):
 
 
 urlpatterns = [
-    url(r'^$', login_required(views.PromptView.as_view()), name='ownership-prompt'),
+    url(r'^$', decorate(views.PromptView.as_view()), name='ownership-prompt'),
     url(r'^process/$', decorate(views.ProcessView.as_view()), name='ownership-process'),
     url(r'^decline/$', decorate(views.DeclineView.as_view()), name='ownership-decline'),
     url(r'^accepted/$',decorate(views.AcceptedView.as_view()), name='ownership-accepted'),
