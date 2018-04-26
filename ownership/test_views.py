@@ -286,6 +286,35 @@ class AcceptedPageTestCase(AuthenticatedTestCase):
         response = self.client.get(url, {'transfer_id': 'garbage'})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_post_not_allowed(self):
+        url = url_with_transfer_id('ownership-accepted')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class DeclinedPageTestCase(AuthenticatedTestCase):
+
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_renders_declined_page_with_project_url(self, mock_get_delivery_type):
+        mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
+        transfer_id = create_delivery_get_transfer_id()
+        mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
+            transfer_id=transfer_id)
+        url = reverse('ownership-declined')
+        response = self.client.get(url, {'transfer_id': transfer_id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('has been declined', str(response.content))
+
+    def test_renders_error_with_bad_transfer_id(self):
+        url = reverse('ownership-declined')
+        response = self.client.get(url, {'transfer_id': 'garbage'})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_post_not_allowed(self):
+        url = url_with_transfer_id('ownership-declined')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
 
 class DDSDeliveryTypeTestCase(TestCase):
 
