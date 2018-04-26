@@ -1,4 +1,6 @@
+from __future__ import print_function
 from ddsc.core.ddsapi import DataServiceError
+from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect, render_to_response
 from django.views.generic import TemplateView
@@ -6,6 +8,7 @@ try:
     from urllib.parse import urlencode
 except ImportError:
     from urllib import urlencode
+from background_task import background
 
 from d4s2_api.models import DDSDelivery, S3Delivery
 from d4s2_api.models import State, ShareRole
@@ -28,6 +31,7 @@ class ResponseType:
 class DDSDeliveryType:
     name = 'dds'
     delivery_cls = DDSDelivery
+    transfer_in_background = False
 
     @staticmethod
     def make_delivery_details(*args):
@@ -47,6 +51,7 @@ class DDSDeliveryType:
 class S3DeliveryType:
     name = 's3'
     delivery_cls = S3Delivery
+    transfer_in_background = True
 
     @staticmethod
     def make_delivery_details(*args):
@@ -59,6 +64,50 @@ class S3DeliveryType:
     @staticmethod
     def make_processed_message(*args, **kwargs):
         return S3ProcessedMessage(*args, **kwargs)
+
+
+class TransferOperation(object):
+    def __init__(self, delivery_type):
+        self.delivery_type = delivery_type
+        self.warning_message = None
+
+    def run(self, delivery, user):
+        if self.delivery_type.transfer_in_background:
+            transfer_in_background(self.delivery_type.name, delivery.id, user.id)
+        else:
+            self.warning_message = TransferOperation.transfer_delivery(self.delivery_type, delivery, user)
+
+    @staticmethod
+    def transfer_delivery(delivery_type, delivery, user):
+        delivery_util = delivery_type.make_delivery_util(delivery, user)
+        delivery_util.accept_project_transfer()
+        delivery_util.share_with_additional_users()
+        warning_message = delivery_util.get_warning_message()
+        message = delivery_type.make_processed_message(delivery, user, 'accepted',
+                                                       warning_message=warning_message)
+        message.send()
+        delivery.mark_accepted(user.get_username(), message.email_text)
+        return warning_message
+
+    @staticmethod
+    def delivery_type_from_name(delivery_type_name):
+        if delivery_type_name == DDSDeliveryType.name:
+            return DDSDeliveryType
+        elif delivery_type_name == S3DeliveryType.name:
+            return S3DeliveryType
+        else:
+            raise ValueError("Invalid delivery type name {}".format(delivery_type_name))
+
+
+@background
+def transfer_in_background(delivery_type_name, delivery_id, user_id):
+    delivery_type = TransferOperation.delivery_type_from_name(delivery_type_name)
+    delivery = delivery_type.delivery_cls.objects.get(pk=delivery_id)
+    user = User.objects.get(pk=user_id)
+    try:
+        TransferOperation.transfer_delivery(delivery_type, delivery, user)
+    except Exception as e:
+        print('Error transferring delivery: {}'.format(e.message))
 
 
 class DeliveryViewBase(TemplateView):
@@ -201,14 +250,9 @@ class ProcessView(DeliveryViewBase):
         delivery = self.delivery
         request = self.request
         try:
-            delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
-            delivery_util.accept_project_transfer()
-            delivery_util.share_with_additional_users()
-            warning_message = delivery_util.get_warning_message()
-            message = self.delivery_type.make_processed_message(delivery, request.user, 'accepted', warning_message=warning_message)
-            self.warning_message = warning_message
-            message.send()
-            delivery.mark_accepted(request.user.get_username(), message.email_text)
+            transfer_operation = TransferOperation(self.delivery_type)
+            transfer_operation.run(delivery, request.user)
+            self.warning_message = transfer_operation.warning_message
         except DataServiceError as e:
             self.set_error_details(500, 'Unable to transfer ownership: {}'.format(e.message))
         except Exception as e:
