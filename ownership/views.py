@@ -72,10 +72,10 @@ class DeliveryViewBase(TemplateView):
         super(DeliveryViewBase, self).__init__(**kwargs)
 
     def handle_get(self):
-        return None
+        return
 
     def handle_post(self):
-        return None
+        return
 
     def _prepare(self, request):
         self.request = request
@@ -184,6 +184,10 @@ class PromptView(DeliveryViewBase):
     """
     http_method_names = ['get']
     template_name = 'ownership/index.html'
+
+    def handle_get(self):
+        if self.delivery.is_complete():
+            self.set_already_complete_error()
 
 
 class ProcessView(DeliveryViewBase):
