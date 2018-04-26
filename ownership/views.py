@@ -161,20 +161,19 @@ class DeliveryViewBase(TemplateView):
     def make_redirect_response(self):
         return redirect(reverse(self.redirect_target) + self._get_query_string())
 
-    # View handlers
-    def get(self, request):
+    def _action(self, request, func):
         self._prepare(request)
         # If preparation failed, do not handle the request
         if not self.error_details:
-            self.handle_get()
+            func()
         return self._respond()
 
+    # View handlers
+    def get(self, request):
+        return self._action(request, self.handle_get)
+
     def post(self, request):
-        self._prepare(request)
-        # If preparation failed, do not handle the request
-        if not self.error_details:
-            self.handle_post()
-        return self._respond()
+        return self._action(request, self.handle_post)
 
 
 class PromptView(DeliveryViewBase):
