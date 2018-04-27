@@ -3,7 +3,10 @@ from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, DDSDelivery
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
-from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
+from gcb_web_auth.models import DDSEndpoint, DDSUserCredential, ShareRole
+from d4s2_api.utils import ProcessedMessage
+
+SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 
 class DDSUtil(object):
@@ -259,3 +262,35 @@ class DeliveryDetails(object):
             'project_title': project.name,
             'project_url': project_url
         }
+
+
+class DDSDeliveryType:
+    name = 'dds'
+    delivery_cls = DDSDelivery
+    transfer_in_background = False
+
+    @staticmethod
+    def make_delivery_details(*args):
+        return DeliveryDetails(*args)
+
+    @staticmethod
+    def make_delivery_util(*args):
+        return DeliveryUtil(*args,
+                            share_role=ShareRole.DOWNLOAD,
+                            share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+
+    @staticmethod
+    def make_processed_message(*args, **kwargs):
+        return ProcessedMessage(*args, **kwargs)
+
+    @staticmethod
+    def transfer_delivery(delivery, user):
+        delivery_util = DDSDeliveryType.make_delivery_util(delivery, user)
+        delivery_util.accept_project_transfer()
+        delivery_util.share_with_additional_users()
+        warning_message = delivery_util.get_warning_message()
+        message = DDSDeliveryType.make_processed_message(delivery, user, 'accepted',
+                                                         warning_message=warning_message)
+        message.send()
+        delivery.mark_accepted(message.email_text)
+        return warning_message

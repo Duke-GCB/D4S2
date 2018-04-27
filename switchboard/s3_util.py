@@ -2,6 +2,7 @@ from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
 from d4s2_api.utils import ProcessedMessage, DeliveryMessage
 import boto3
 import botocore
+from background_task import background
 
 
 def wrap_s3_exceptions(func):
@@ -242,3 +243,74 @@ class S3Exception(Exception):
 
 class S3NoSuchBucket(S3Exception):
     pass
+
+
+class S3DeliveryType:
+    name = 's3'
+    delivery_cls = S3Delivery
+    transfer_in_background = True
+
+    @staticmethod
+    def make_delivery_details(*args):
+        return S3DeliveryDetails(*args)
+
+    @staticmethod
+    def make_delivery_util(*args):
+        return S3DeliveryUtil(*args)
+
+    @staticmethod
+    def make_processed_message(*args, **kwargs):
+        return S3ProcessedMessage(*args, **kwargs)
+
+    @staticmethod
+    def transfer_delivery(delivery, _):
+        transfer_delivery(delivery.id)
+
+
+class S3TransferOperation(object):
+    def __init__(self, delivery_id):
+        self.delivery = S3Delivery.objects.get(pk=delivery_id)
+        self.to_user = self.delivery.to_user.user
+        self.from_user = self.delivery.from_user.user
+        self.delivery_type = S3DeliveryType
+
+    def make_delivery_util(self):
+        return self.delivery_type.make_delivery_util(self.delivery, self.from_user)
+
+    def make_processed_message(self, warning_message):
+        return self.delivery_type.make_processed_message(self.delivery, self.from_user,
+                                                         'accepted', warning_message=warning_message)
+
+    def mark_accepted(self, accepted_email_text):
+        self.delivery.mark_accepted(accepted_email_text)
+
+
+@background
+def transfer_delivery(delivery_id):
+    transfer_operation = S3TransferOperation(delivery_id)
+    delivery_util = transfer_operation.make_delivery_util()
+    delivery_util.accept_project_transfer()
+    delivery_util.share_with_additional_users()
+    notify_sender_delivery_accepted(delivery_id, delivery_util.get_warning_message())
+
+
+@background
+def notify_sender_delivery_accepted(delivery_id, warning_message):
+    transfer_operation = S3TransferOperation(delivery_id)
+    message = transfer_operation.make_processed_message(warning_message)
+    message.send()
+    notify_receiver_transfer_complete(delivery_id, warning_message, message.email_text)
+
+
+@background
+def notify_receiver_transfer_complete(delivery_id, warning_message, accepted_email_text):
+    transfer_operation = S3TransferOperation(delivery_id)
+    # TODO notify receiver transfer is complete
+    transfer_complete_email_text = ''
+    mark_delivery_complete(delivery_id, warning_message, accepted_email_text, transfer_complete_email_text)
+
+
+@background
+def mark_delivery_complete(delivery_id, warning_message, accepted_email_text, transfer_complete_email_text):
+    transfer_operation = S3TransferOperation(delivery_id)
+    transfer_operation.mark_accepted(accepted_email_text)
