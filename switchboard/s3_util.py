@@ -1,5 +1,5 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
-from d4s2_api.utils import ProcessedMessage, DeliveryMessage
+from d4s2_api.utils import BaseProcessedMessage, BaseDeliveryMessage
 import boto3
 import botocore
 from background_task import background
@@ -200,16 +200,6 @@ class S3Resource(object):
         return bucket_acl.owner['ID']
 
 
-class S3ProcessedMessage(ProcessedMessage):
-    def make_delivery_details(self, deliverable, user):
-        return S3DeliveryDetails(deliverable, user)
-
-
-class S3DeliveryMessage(DeliveryMessage):
-    def make_delivery_details(self, deliverable, user):
-        return S3DeliveryDetails(deliverable, user)
-
-
 class S3BucketUtil(object):
     def __init__(self, endpoint, user):
         """
@@ -282,11 +272,12 @@ class S3TransferOperation(object):
                                                          'accepted', warning_message=warning_message)
 
     def mark_accepted(self, accepted_email_text):
-        self.delivery.mark_accepted(accepted_email_text)
+        self.delivery.mark_accepted(self.to_user.get_username(), accepted_email_text)
 
 
 @background
 def transfer_delivery(delivery_id):
+    print("transfer_delivery delivery_id: {}".format(delivery_id))
     transfer_operation = S3TransferOperation(delivery_id)
     delivery_util = transfer_operation.make_delivery_util()
     delivery_util.accept_project_transfer()
@@ -296,6 +287,7 @@ def transfer_delivery(delivery_id):
 
 @background
 def notify_sender_delivery_accepted(delivery_id, warning_message):
+    print("notify_sender_delivery_accepted delivery_id: {}".format(delivery_id))
     transfer_operation = S3TransferOperation(delivery_id)
     message = transfer_operation.make_processed_message(warning_message)
     message.send()
@@ -304,6 +296,7 @@ def notify_sender_delivery_accepted(delivery_id, warning_message):
 
 @background
 def notify_receiver_transfer_complete(delivery_id, warning_message, accepted_email_text):
+    print("notify_receiver_transfer_complete delivery_id: {}".format(delivery_id))
     transfer_operation = S3TransferOperation(delivery_id)
     # TODO notify receiver transfer is complete
     transfer_complete_email_text = ''
@@ -312,5 +305,19 @@ def notify_receiver_transfer_complete(delivery_id, warning_message, accepted_ema
 
 @background
 def mark_delivery_complete(delivery_id, warning_message, accepted_email_text, transfer_complete_email_text):
+    print("mark_delivery_complete delivery_id: {}".format(delivery_id))
     transfer_operation = S3TransferOperation(delivery_id)
     transfer_operation.mark_accepted(accepted_email_text)
+
+
+class S3Message(object):
+    def make_delivery_details(self, deliverable, user):
+        return S3DeliveryDetails(deliverable, user)
+
+
+class S3ProcessedMessage(S3Message, BaseProcessedMessage):
+    pass
+
+
+class S3DeliveryMessage(S3Message, BaseDeliveryMessage):
+    pass

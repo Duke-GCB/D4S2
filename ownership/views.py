@@ -1,6 +1,5 @@
 from __future__ import print_function
 from ddsc.core.ddsapi import DataServiceError
-from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect, render_to_response
 from django.views.generic import TemplateView

@@ -1,7 +1,4 @@
 from switchboard.mailer import generate_message
-from switchboard.dds_util import DeliveryDetails, DDSUtil
-from d4s2_api.models import ShareRole, Share
-from ddsc.core.ddsapi import DataServiceError
 
 
 class MessageDirection(object):
@@ -16,7 +13,7 @@ class MessageDirection(object):
             return receiver.email, sender.email
 
 
-class Message(object):
+class BaseMessage(object):
     def __init__(self, deliverable, user, accept_url=None, reason=None, process_type=None,
                  direction=MessageDirection.ToRecipient, warning_message=''):
         """
@@ -39,7 +36,7 @@ class Message(object):
         self._message = generate_message(from_email, to_email, template_subject, template_body, context)
 
     def make_delivery_details(self, deliverable, user):
-        return DeliveryDetails(deliverable, user)
+        raise NotImplementedError("Subclasses of Message should implement make_delivery_details.")
 
     def get_templates(self, delivery_details):
         return (None, None)
@@ -75,7 +72,7 @@ class Message(object):
         self._message.send()
 
 
-class ShareMessage(Message):
+class BaseShareMessage(BaseMessage):
 
     def get_templates(self, delivery_details):
         return delivery_details.get_share_template_text()
@@ -85,10 +82,10 @@ class ShareMessage(Message):
         Generates a Message to the recipient informing they have access to a project
         :param share:
         """
-        super(ShareMessage, self).__init__(share, user)
+        super(BaseShareMessage, self).__init__(share, user)
 
 
-class DeliveryMessage(Message):
+class BaseDeliveryMessage(BaseMessage):
 
     def get_templates(self, delivery_details):
         return delivery_details.get_action_template_text('delivery')
@@ -97,10 +94,10 @@ class DeliveryMessage(Message):
         """
         Generates a Message to the recipient prompting to accept the delivery
         """
-        super(DeliveryMessage, self).__init__(delivery, user, accept_url=accept_url)
+        super(BaseDeliveryMessage, self).__init__(delivery, user, accept_url=accept_url)
 
 
-class ProcessedMessage(Message):
+class BaseProcessedMessage(BaseMessage):
 
     def get_templates(self, delivery_details):
         return delivery_details.get_action_template_text(self.process_type)
@@ -110,87 +107,6 @@ class ProcessedMessage(Message):
         Generates a Message to the sender reporting whether or not the recipient accepted the delivery
         """
         self.process_type = process_type
-        super(ProcessedMessage, self).__init__(delivery, user, process_type=process_type, reason=reason,
-                                               direction=MessageDirection.ToSender,
-                                               warning_message=warning_message)
-
-
-class DeliveryUtil(object):
-    """
-    Communicates with DukeDS via DDSUtil to accept the project transfer.
-    Also gives download permission to the users in the delivery's share_to_users list.
-    """
-    def __init__(self, delivery, user, share_role, share_user_message):
-        """
-        :param delivery: A Delivery object
-        :param user: The user with a DukeDS authentication credential
-        :param share_role: str: share role to use for additional users
-        :param share_user_message: str: reason for sharing to this user
-        """
-        self.delivery = delivery
-        self.user = user
-        self.dds_util = DDSUtil(user)
-        self.share_role = share_role
-        self.share_user_message = share_user_message
-        self.failed_share_users = []
-
-    def accept_project_transfer(self):
-        """
-        Communicate with DukeDS via to accept the project transfer.
-        """
-        self.dds_util.accept_project_transfer(self.delivery.transfer_id)
-
-    def share_with_additional_users(self):
-        """
-        Share project with additional users based on delivery share_to_users.
-        Adds user names to failed_share_users for failed share commands.
-        """
-        for share_to_user in self.delivery.share_users.all():
-            self._share_with_additional_user(share_to_user)
-
-    def _share_with_additional_user(self, share_to_user):
-        try:
-            project_id = self.delivery.project_id
-            self.dds_util.share_project_with_user(project_id, share_to_user.dds_id, self.share_role)
-            self._create_and_send_share_message(share_to_user, project_id)
-        except DataServiceError:
-            self.failed_share_users.append(self._try_lookup_user_name(share_to_user.dds_id))
-
-    def _try_lookup_user_name(self, user_id):
-        try:
-            remote_user = self.dds_util.get_remote_user(user_id)
-            return remote_user.full_name
-        except DataServiceError:
-            return user_id
-
-    def _create_and_send_share_message(self, share_to_user, project_id):
-        share = Share.objects.create(project_id=project_id,
-                                     from_user_id=self.delivery.to_user_id,
-                                     to_user_id=share_to_user.dds_id,
-                                     role=self.share_role,
-                                     user_message=self.share_user_message)
-        message = ShareMessage(share, self.user)
-        message.send()
-        share.mark_notified(message.email_text)
-
-    def get_warning_message(self):
-        """
-        Create message about any issues that occurred during share_with_additional_users.
-        :return: str: end user warning message
-        """
-        failed_share_users_str = ', '.join(self.failed_share_users)
-        warning_message = ''
-        if failed_share_users_str:
-            warning_message = "Failed to share with the following user(s): " + failed_share_users_str
-        return warning_message
-
-    def decline_delivery(self, reason):
-        """
-        Decline the delivery through dds_util, supplying the reason provided
-        :param reason: The reason the user is declining the delivery
-        :return: None
-        """
-        try:
-            self.dds_util.decline_project_transfer(self.delivery.transfer_id, reason)
-        except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+        super(BaseProcessedMessage, self).__init__(delivery, user, process_type=process_type, reason=reason,
+                                                   direction=MessageDirection.ToSender,
+                                                   warning_message=warning_message)
