@@ -14,7 +14,8 @@ class TransferBaseTestCase(TestCase):
 
 class DeliveryTestCase(TransferBaseTestCase):
     DELIVERY_EMAIL_TEXT = 'delivery email message'
-    ACCEPT_EMAIL_TEXT = 'delivery accepted'
+    SENDER_COMPLETE_EMAIL_TEXT = 'sender delivery accepted'
+    RECIPIENT_COMPLETE_EMAIL_TEXT = 'recipient delivery accepted'
     DECLINE_EMAIL_TEXT = 'delivery declined'
 
     def setUp(self):
@@ -84,10 +85,23 @@ class DeliveryTestCase(TransferBaseTestCase):
         performed_by = 'performer'
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
-        delivery.mark_accepted(performed_by, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
+        delivery.mark_accepted(performed_by, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.ACCEPTED)
         self.assertEqual(delivery.performed_by, performed_by)
-        self.assertEqual(delivery.completion_email_text, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
+        self.assertEqual(delivery.sender_completion_email_text, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
+        self.assertEqual(delivery.recipient_completion_email_text, '')
+
+    def test_mark_accepted_with_recipient_email(self):
+        performed_by = 'performer'
+        delivery = DDSDelivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_accepted(performed_by,
+                               DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT,
+                               DeliveryTestCase.RECIPIENT_COMPLETE_EMAIL_TEXT)
+        self.assertEqual(delivery.state, State.ACCEPTED)
+        self.assertEqual(delivery.performed_by, performed_by)
+        self.assertEqual(delivery.sender_completion_email_text, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
+        self.assertEqual(delivery.recipient_completion_email_text, DeliveryTestCase.RECIPIENT_COMPLETE_EMAIL_TEXT)
 
     def test_mark_declined(self):
         performed_by = 'performer'
@@ -97,14 +111,14 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.state, State.DECLINED)
         self.assertEqual(delivery.decline_reason, 'Wrong person.')
         self.assertEqual(delivery.performed_by, performed_by)
-        self.assertEqual(delivery.completion_email_text, DeliveryTestCase.DECLINE_EMAIL_TEXT)
+        self.assertEqual(delivery.sender_completion_email_text, DeliveryTestCase.DECLINE_EMAIL_TEXT)
 
     def test_is_complete(self):
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.is_complete(), False)
         delivery.mark_notified('')
         self.assertEqual(delivery.is_complete(), False)
-        delivery.mark_accepted('','')
+        delivery.mark_accepted('', '', '')
         self.assertEqual(delivery.is_complete(), True)
         delivery.mark_declined('','','')
         self.assertEqual(delivery.is_complete(), True)

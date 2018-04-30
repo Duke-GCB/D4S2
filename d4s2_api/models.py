@@ -39,11 +39,13 @@ class State(object):
     ACCEPTED = 2
     DECLINED = 3
     FAILED = 4
+    TRANSFERRING = 5
     STATES = (
         (NEW, 'New'),
         (NOTIFIED, 'Notified'),
         (ACCEPTED, 'Accepted'),
         (DECLINED, 'Declined'),
+        (TRANSFERRING, 'Transferring'),
     )
     DELIVERY_CHOICES = STATES
     SHARE_CHOICES = (
@@ -85,7 +87,8 @@ class DeliveryBase(models.Model):
     decline_reason = models.TextField(null=False, blank=True)
     performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or declined the delivery
     delivery_email_text = models.TextField(null=False, blank=True)
-    completion_email_text = models.TextField(null=False, blank=True)
+    sender_completion_email_text = models.TextField(null=False, blank=True)
+    recipient_completion_email_text = models.TextField(blank=True)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
 
@@ -100,17 +103,27 @@ class DeliveryBase(models.Model):
         self.delivery_email_text = email_text
         if save: self.save()
 
-    def mark_accepted(self, performed_by, accept_email_text, save=True):
+    def mark_accepted(self, performed_by, sender_completion_email_text,
+                      recipient_completion_email_text='', save=True):
         self.state = State.ACCEPTED
         self.performed_by = performed_by
-        self.completion_email_text = accept_email_text
+        self.sender_completion_email_text = sender_completion_email_text
+        self.recipient_completion_email_text = recipient_completion_email_text
         if save: self.save()
 
-    def mark_declined(self, performed_by, reason, decline_email_text, save=True):
+    def mark_declined(self, performed_by, reason, sender_decline_email_text, save=True):
         self.state = State.DECLINED
         self.performed_by = performed_by
         self.decline_reason = reason
-        self.completion_email_text = decline_email_text
+        self.sender_completion_email_text = sender_decline_email_text
+        if save: self.save()
+
+    def mark_transferring(self, save=True):
+        self.state = State.TRANSFERRING
+        if save: self.save()
+
+    def mark_failed(self, save=True):
+        self.state = State.FAILED
         if save: self.save()
 
     class Meta:
@@ -156,6 +169,11 @@ class DDSDelivery(DeliveryBase):
 
     class Meta:
         unique_together = ('project_id', 'from_user_id', 'to_user_id')
+
+
+class DDSDeliveryError(models.Model):
+    message = models.TextField(max_length=255)
+    delivery = models.ForeignKey(DDSDelivery, on_delete=models.CASCADE, related_name='errors')
 
 
 class DDSDeliveryShareUser(models.Model):
@@ -395,3 +413,8 @@ class S3Delivery(DeliveryBase):
 
     class Meta:
         unique_together = ('bucket', 'from_user', 'to_user')
+
+
+class S3DeliveryError(models.Model):
+    message = models.TextField(max_length=255)
+    delivery = models.ForeignKey(S3Delivery, on_delete=models.CASCADE, related_name='errors')
