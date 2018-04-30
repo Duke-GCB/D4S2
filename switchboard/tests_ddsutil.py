@@ -1,7 +1,8 @@
 from django.test import TestCase
-from mock import patch, Mock, MagicMock
-from switchboard.dds_util import DDSUtil, DeliveryDetails
-from d4s2_api.models import User
+from mock import patch, Mock, MagicMock, call
+from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
+    SHARE_IN_RESPONSE_TO_DELIVERY_MSG
+from d4s2_api.models import User, State, DDSDelivery, DDSDeliveryShareUser, ShareRole, Share
 from gcb_web_auth.models import DDSEndpoint
 
 
@@ -135,3 +136,82 @@ class TestDeliveryDetails(TestCase):
         self.assertEqual(context['message'], 'test')
         self.assertEqual(context['user_message'], 'user message text')
         self.assertEqual(context['warning_message'], 'warning!!')
+
+
+class DeliveryUtilTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(username='test_user')
+        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        DDSDeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
+        DDSDeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
+
+    @patch('switchboard.dds_util.DDSUtil')
+    def test_accept_project_transfer(self, mock_ddsutil):
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        delivery_util.accept_project_transfer()
+        mock_ddsutil.return_value.accept_project_transfer.assert_called_with(self.delivery.transfer_id)
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DeliveryDetails')
+    def test_decline_delivery(self, mock_delivery_details, MockDDSUtil):
+        mock_ddsutil = MockDDSUtil()
+        mock_ddsutil.decline_project_transfer = Mock()
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        delivery_util.decline_delivery('reason')
+        MockDDSUtil.assert_any_call(self.user)
+        mock_ddsutil.decline_project_transfer.assert_called_with(self.delivery.transfer_id, 'reason')
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DeliveryDetails')
+    def test_share_with_additional_users(self, mock_delivery_details, mock_ddsutil):
+        mock_delivery_details.return_value.get_share_template_text.return_value = 'subject', 'template body'
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        delivery_util.share_with_additional_users()
+
+        # each additional user should have permissions given
+        mock_ddsutil.return_value.share_project_with_user.assert_has_calls([
+            call('ghi789', 'jkl888', 'file_downloader'),
+            call('ghi789', 'mno999', 'file_downloader'),
+        ])
+
+        # each additional user should have an email sent (share record)
+        share1 = Share.objects.get(to_user_id='jkl888')
+        self.assertEqual('ghi789', share1.project_id)
+        self.assertEqual(self.delivery.to_user_id, share1.from_user_id)
+        self.assertEqual(State.NOTIFIED, share1.state)
+        share2 = Share.objects.get(to_user_id='mno999')
+        self.assertEqual('ghi789', share2.project_id)
+        self.assertEqual(self.delivery.to_user_id, share2.from_user_id)
+        self.assertEqual(State.NOTIFIED, share2.state)
+
+    def test_get_warning_message(self):
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        self.assertEqual(delivery_util.get_warning_message(), '')
+
+        delivery_util.failed_share_users.append('joe')
+        delivery_util.failed_share_users.append('bob')
+        self.assertEqual(delivery_util.get_warning_message(), 'Failed to share with the following user(s): joe, bob')
+
+
+class DDSDeliveryTypeTestCase(TestCase):
+
+    def setUp(self):
+        self.delivery_type = DDSDeliveryType()
+
+    def test_name_and_delivery_cls(self):
+        self.assertEqual(self.delivery_type.name, 'dds')
+        self.assertEqual(self.delivery_type.delivery_cls, DDSDelivery)
+
+    @patch('switchboard.dds_util.DeliveryDetails')
+    def test_makes_dds_delivery_details(self, mock_delivery_details):
+        details = self.delivery_type.make_delivery_details('arg1','arg2')
+        mock_delivery_details.assert_called_once_with('arg1', 'arg2')
+        self.assertEqual(details, mock_delivery_details.return_value)
+
+    @patch('switchboard.dds_util.DeliveryUtil')
+    def test_makes_dds_delivery_util(self, mock_delivery_util):
+        util = self.delivery_type.make_delivery_util('arg1','arg2')
+        mock_delivery_util.assert_called_once_with('arg1', 'arg2',
+                                                   share_role=ShareRole.DOWNLOAD,
+                                                   share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+        self.assertEqual(util, mock_delivery_util.return_value)

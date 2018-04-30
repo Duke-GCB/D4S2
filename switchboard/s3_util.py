@@ -1,5 +1,5 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
-from d4s2_api.utils import BaseProcessedMessage, BaseDeliveryMessage
+from d4s2_api.utils import MessageFactory
 import boto3
 import botocore
 from background_task import background
@@ -250,7 +250,7 @@ class S3DeliveryType:
 
     @staticmethod
     def make_processed_message(*args, **kwargs):
-        return S3ProcessedMessage(*args, **kwargs)
+        raise NotImplementedError()
 
     @staticmethod
     def transfer_delivery(delivery, _):
@@ -310,14 +310,8 @@ def mark_delivery_complete(delivery_id, warning_message, accepted_email_text, tr
     transfer_operation.mark_accepted(accepted_email_text)
 
 
-class S3Message(object):
-    def make_delivery_details(self, deliverable, user):
-        return S3DeliveryDetails(deliverable, user)
-
-
-class S3ProcessedMessage(S3Message, BaseProcessedMessage):
-    pass
-
-
-class S3DeliveryMessage(S3Message, BaseDeliveryMessage):
-    pass
+class S3MessageFactory(MessageFactory):
+    def __init__(self, s3_delivery, user):
+        super(S3MessageFactory, self).__init__(
+            S3DeliveryDetails(s3_delivery, user)
+        )

@@ -2,7 +2,8 @@ import uuid
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
-from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, SHARE_IN_RESPONSE_TO_DELIVERY_MSG
+from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG
+from switchboard.dds_util import SHARE_IN_RESPONSE_TO_DELIVERY_MSG
 from ownership.views import DDSDeliveryType, S3DeliveryType
 from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole
 from switchboard.mocks_ddsutil import MockDDSUser
@@ -134,7 +135,7 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_normal_with_transfer_id_is_redirect(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        mock_delivery_type.mock_delivery_util.get_warning_message.return_value = 'Failed to share with Joe, Tom'
+        mock_delivery_type.transfer_delivery.return_value = 'Failed to share with Joe, Tom'
         mock_delivery_type.mock_processed_message.email_text = 'email text'
         delivery = create_delivery()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
@@ -145,10 +146,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         expected_url = reverse('ownership-accepted') + '?' + expected_warning_message
         self.assertRedirects(response, expected_url)
         self.assertNotIn(MISSING_TRANSFER_ID_MSG, str(response.content))
-        self.assertTrue(mock_delivery_type.mock_delivery_util.accept_project_transfer.called)
-        self.assertTrue(mock_delivery_type.mock_delivery_util.share_with_additional_users.called)
-        self.assertTrue(mock_delivery_type.make_processed_message.called)
-        self.assertTrue(mock_delivery_type.mock_processed_message.send.called)
+        self.assertTrue(mock_delivery_type.transfer_delivery.called)
 
     def test_with_bad_transfer_id(self):
         transfer_id = create_delivery_get_transfer_id() + "a"
@@ -352,59 +350,3 @@ class DeclinedPageTestCase(AuthenticatedTestCase):
         url = url_with_transfer_id('ownership-declined')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-
-
-class DDSDeliveryTypeTestCase(TestCase):
-
-    def setUp(self):
-        self.delivery_type = DDSDeliveryType()
-
-    def test_name_and_delivery_cls(self):
-        self.assertEqual(self.delivery_type.name, 'dds')
-        self.assertEqual(self.delivery_type.delivery_cls, DDSDelivery)
-
-    @patch('ownership.views.DeliveryDetails')
-    def test_makes_dds_delivery_details(self, mock_delivery_details):
-        details = self.delivery_type.make_delivery_details('arg1','arg2')
-        mock_delivery_details.assert_called_once_with('arg1', 'arg2')
-        self.assertEqual(details, mock_delivery_details.return_value)
-
-    @patch('ownership.views.DeliveryUtil')
-    def test_makes_dds_delivery_util(self, mock_delivery_util):
-        util = self.delivery_type.make_delivery_util('arg1','arg2')
-        mock_delivery_util.assert_called_once_with('arg1', 'arg2', share_role=ShareRole.DOWNLOAD, share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
-        self.assertEqual(util, mock_delivery_util.return_value)
-
-    @patch('ownership.views.ProcessedMessage')
-    def test_makes_dds_processed_message(self, mock_processed_message):
-        message = self.delivery_type.make_processed_message('arg1', arg2='arg2')
-        mock_processed_message.assert_called_once_with('arg1', arg2='arg2')
-        self.assertEqual(message, mock_processed_message.return_value)
-
-
-class S3DeliveryTypeTestCase(TestCase):
-
-    def setUp(self):
-        self.delivery_type = S3DeliveryType()
-
-    def test_name_and_delivery_cls(self):
-        self.assertEqual(self.delivery_type.name, 's3')
-        self.assertEqual(self.delivery_type.delivery_cls, S3Delivery)
-
-    @patch('ownership.views.S3DeliveryDetails')
-    def test_makes_dds_delivery_details(self, mock_delivery_details):
-        details = self.delivery_type.make_delivery_details('arg1','arg2')
-        mock_delivery_details.assert_called_once_with('arg1', 'arg2')
-        self.assertEqual(details, mock_delivery_details.return_value)
-
-    @patch('ownership.views.S3DeliveryUtil')
-    def test_makes_dds_delivery_util(self, mock_delivery_util):
-        util = self.delivery_type.make_delivery_util('arg1','arg2')
-        mock_delivery_util.assert_called_once_with('arg1', 'arg2')
-        self.assertEqual(util, mock_delivery_util.return_value)
-
-    @patch('ownership.views.S3ProcessedMessage')
-    def test_makes_dds_processed_message(self, mock_processed_message):
-        message = self.delivery_type.make_processed_message('arg1', arg2='arg2')
-        mock_processed_message.assert_called_once_with('arg1', arg2='arg2')
-        self.assertEqual(message, mock_processed_message.return_value)
