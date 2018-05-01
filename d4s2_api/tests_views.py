@@ -134,7 +134,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(mock_delivery_message.called)
         # Make sure transfer_id is in the email message
         ownership_url = reverse('ownership-prompt')
-        expected_absolute_url = APIRequestFactory().request().build_absolute_uri(ownership_url) + '?transfer_id=abcd'
+        expected_absolute_url = APIRequestFactory().request().build_absolute_uri(ownership_url) + '?transfer_id=abcd&delivery_type=dds'
         mock_delivery_message.assert_called_with(h, self.user, expected_absolute_url)
         self.assertTrue(instance.send.called)
 
