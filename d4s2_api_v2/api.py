@@ -11,7 +11,7 @@ from switchboard.s3_util import S3DeliveryUtil, S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateException
-from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
+from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
 from switchboard.s3_util import S3DeliveryMessage, S3Exception, S3NoSuchBucket
 
 
@@ -246,10 +246,7 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         s3_delivery = self.get_object()
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
-        # TODO create app to handle s3ownership UI
-        # accept_path = reverse('s3ownership-prompt') + "?s3_delivery_id=" + str(s3_delivery.id)
-        # accept_url = request.build_absolute_uri(accept_path)
-        accept_url = 'TODO'
+        accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')
         self._give_agent_permission(s3_delivery, request.user)
         self._send_delivery_message(s3_delivery, request.user, accept_url)
         return self.retrieve(request)
