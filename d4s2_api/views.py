@@ -7,10 +7,6 @@ from d4s2_api.utils import ShareMessage, DeliveryMessage
 from switchboard.dds_util import DDSUtil
 from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
 
 
 def build_accept_url(request, transfer_id, delivery_type):
@@ -18,7 +14,7 @@ def build_accept_url(request, transfer_id, delivery_type):
         'transfer_id': transfer_id,
         'delivery_type': delivery_type
     }
-    accept_path = reverse('ownership-prompt') + '?' + urlencode(query_dict)
+    accept_path = reverse('ownership-prompt') + '?transfer_id={}&delivery_type={}'.format(transfer_id, delivery_type)
     accept_url = request.build_absolute_uri(accept_path)
     return accept_url
 
