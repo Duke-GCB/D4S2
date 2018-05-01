@@ -232,6 +232,7 @@ class DeliveryDetails(object):
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
 
         return {
+            'service_name': 'Duke Data Service',
             'project_name': project.name,
             'recipient_name': receiver.full_name,
             'recipient_email': receiver.email,
@@ -251,7 +252,7 @@ class DeliveryDetails(object):
         project = self.get_project()
         project_url = self.get_project_url()
         return {
-            'service': 'Duke Data Service',
+            'service_name': 'Duke Data Service',
             'transfer_id': str(self.delivery.transfer_id),
             'from_name': from_user.full_name,
             'from_email': from_user.email,

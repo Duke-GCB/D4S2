@@ -101,7 +101,7 @@ class S3DeliveryDetails(object):
         to_user = self.get_to_user()
         bucket_name = self.s3_delivery.bucket.name
         return {
-            'service': 'S3',
+            'service_name': 'S3',
             'transfer_id': str(self.s3_delivery.transfer_id),
             'from_name': '{} {}'.format(from_user.first_name, from_user.last_name),
             'from_email': from_user.email,
@@ -125,7 +125,7 @@ class S3DeliveryDetails(object):
             'message': reason,  # decline reason
             'user_message': self.s3_delivery.user_message,
             'warning_message': warning_message,
-            'service': base_context['service'],
+            'service_name': base_context['service_name'],
         }
 
     def get_action_template_text(self, action_name):
