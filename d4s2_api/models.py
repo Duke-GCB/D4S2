@@ -172,8 +172,9 @@ class DDSDelivery(DeliveryBase):
 
 
 class DDSDeliveryError(models.Model):
-    message = models.TextField(max_length=255)
+    message = models.TextField()
     delivery = models.ForeignKey(DDSDelivery, on_delete=models.CASCADE, related_name='errors')
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class DDSDeliveryShareUser(models.Model):
@@ -416,5 +417,6 @@ class S3Delivery(DeliveryBase):
 
 
 class S3DeliveryError(models.Model):
-    message = models.TextField(max_length=255)
+    message = models.TextField()
     delivery = models.ForeignKey(S3Delivery, on_delete=models.CASCADE, related_name='errors')
+    created = models.DateTimeField(auto_now_add=True)
