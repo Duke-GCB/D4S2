@@ -3,6 +3,7 @@ from django.core import serializers
 from django.test import TestCase
 from d4s2_api.models import *
 from django.contrib.auth.models import User
+import datetime
 import json
 
 
@@ -14,7 +15,8 @@ class TransferBaseTestCase(TestCase):
 
 class DeliveryTestCase(TransferBaseTestCase):
     DELIVERY_EMAIL_TEXT = 'delivery email message'
-    ACCEPT_EMAIL_TEXT = 'delivery accepted'
+    SENDER_COMPLETE_EMAIL_TEXT = 'sender delivery accepted'
+    RECIPIENT_COMPLETE_EMAIL_TEXT = 'recipient delivery accepted'
     DECLINE_EMAIL_TEXT = 'delivery declined'
 
     def setUp(self):
@@ -84,10 +86,23 @@ class DeliveryTestCase(TransferBaseTestCase):
         performed_by = 'performer'
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
-        delivery.mark_accepted(performed_by, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
+        delivery.mark_accepted(performed_by, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.ACCEPTED)
         self.assertEqual(delivery.performed_by, performed_by)
-        self.assertEqual(delivery.completion_email_text, DeliveryTestCase.ACCEPT_EMAIL_TEXT)
+        self.assertEqual(delivery.sender_completion_email_text, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
+        self.assertEqual(delivery.recipient_completion_email_text, '')
+
+    def test_mark_accepted_with_recipient_email(self):
+        performed_by = 'performer'
+        delivery = DDSDelivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_accepted(performed_by,
+                               DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT,
+                               DeliveryTestCase.RECIPIENT_COMPLETE_EMAIL_TEXT)
+        self.assertEqual(delivery.state, State.ACCEPTED)
+        self.assertEqual(delivery.performed_by, performed_by)
+        self.assertEqual(delivery.sender_completion_email_text, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
+        self.assertEqual(delivery.recipient_completion_email_text, DeliveryTestCase.RECIPIENT_COMPLETE_EMAIL_TEXT)
 
     def test_mark_declined(self):
         performed_by = 'performer'
@@ -97,20 +112,37 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertEqual(delivery.state, State.DECLINED)
         self.assertEqual(delivery.decline_reason, 'Wrong person.')
         self.assertEqual(delivery.performed_by, performed_by)
-        self.assertEqual(delivery.completion_email_text, DeliveryTestCase.DECLINE_EMAIL_TEXT)
+        self.assertEqual(delivery.sender_completion_email_text, DeliveryTestCase.DECLINE_EMAIL_TEXT)
 
     def test_is_complete(self):
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.is_complete(), False)
         delivery.mark_notified('')
         self.assertEqual(delivery.is_complete(), False)
-        delivery.mark_accepted('','')
+        delivery.mark_accepted('', '', '')
         self.assertEqual(delivery.is_complete(), True)
         delivery.mark_declined('','','')
         self.assertEqual(delivery.is_complete(), True)
         delivery.state = State.FAILED
         delivery.save()
         self.assertEqual(delivery.is_complete(), True)
+
+    def test_mark_transferring(self):
+        delivery = DDSDelivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_transferring()
+        self.assertEqual(delivery.state, State.TRANSFERRING)
+        delivery.mark_failed()
+        self.assertEqual(delivery.state, State.FAILED)
+        delivery.mark_transferring()
+        self.assertEqual(delivery.state, State.TRANSFERRING)
+        delivery.mark_accepted('', '', '')
+
+    def test_mark_failed(self):
+        delivery = DDSDelivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_failed()
+        self.assertEqual(delivery.state, State.FAILED)
 
     def setup_incomplete_delivery(self):
         delivery = DDSDelivery.objects.first()
@@ -509,3 +541,80 @@ class S3DeliveryCredentialTestCase(TestCase):
         S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
         with self.assertRaises(IntegrityError):
             S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+
+
+class DDSDeliveryErrorTestCase(TestCase):
+    def setUp(self):
+        self.delivery1 = DDSDelivery.objects.create(
+            project_id='project1',
+            from_user_id='user1',
+            to_user_id='user2',
+            transfer_id='transfer1')
+        self.delivery2 = DDSDelivery.objects.create(
+            project_id='project2',
+            from_user_id='user2',
+            to_user_id='user3',
+            transfer_id='transfer2')
+
+    def test_create_errors(self):
+        DDSDeliveryError.objects.create(message='Something failed', delivery=self.delivery1)
+        DDSDeliveryError.objects.create(message='Other failed', delivery=self.delivery1)
+        deliveries = DDSDeliveryError.objects.order_by('message')
+        self.assertEqual(len(deliveries), 2)
+        self.assertEqual(deliveries[0].message, 'Other failed')
+        self.assertIsNotNone(deliveries[0].created)
+        self.assertEqual(type(deliveries[0].created), datetime.datetime)
+        self.assertEqual(deliveries[1].message, 'Something failed')
+        self.assertIsNotNone(deliveries[1].created)
+        self.assertEqual(type(deliveries[1].created), datetime.datetime)
+
+    def test_read_via_delivery_errors(self):
+        DDSDeliveryError.objects.create(message='Error1', delivery=self.delivery1)
+        DDSDeliveryError.objects.create(message='Error2', delivery=self.delivery1)
+        DDSDeliveryError.objects.create(message='Error3OtherDelivery', delivery=self.delivery2)
+
+        deliveries = self.delivery1.errors.order_by('message')
+        self.assertEqual(len(deliveries), 2)
+        self.assertEqual(deliveries[0].message, 'Error1')
+        self.assertEqual(deliveries[1].message, 'Error2')
+
+
+class S3DeliveryErrorTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(username='user1')
+        self.user2 = User.objects.create(username='user2')
+        self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
+        self.s3_user1 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user1_s3_id',
+                                              user=self.user1)
+        self.s3_user2 = S3User.objects.create(endpoint=self.endpoint,
+                                              s3_id='user2_s3_id',
+                                              user=self.user2)
+        self.s3_bucket = S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
+        self.s3_bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
+        self.delivery1 = S3Delivery.objects.create(bucket=self.s3_bucket,
+                                                   from_user=self.s3_user1, to_user=self.s3_user2)
+        self.delivery2 = S3Delivery.objects.create(bucket=self.s3_bucket2,
+                                                   from_user=self.s3_user1, to_user=self.s3_user2)
+
+    def test_create_errors(self):
+        S3DeliveryError.objects.create(message='Something failed', delivery=self.delivery1)
+        S3DeliveryError.objects.create(message='Other failed', delivery=self.delivery1)
+        deliveries = S3DeliveryError.objects.order_by('message')
+        self.assertEqual(len(deliveries), 2)
+        self.assertEqual(deliveries[0].message, 'Other failed')
+        self.assertIsNotNone(deliveries[0].created)
+        self.assertEqual(type(deliveries[0].created), datetime.datetime)
+        self.assertEqual(deliveries[1].message, 'Something failed')
+        self.assertIsNotNone(deliveries[1].created)
+        self.assertEqual(type(deliveries[1].created), datetime.datetime)
+
+    def test_read_via_delivery_errors(self):
+        S3DeliveryError.objects.create(message='Error1', delivery=self.delivery1)
+        S3DeliveryError.objects.create(message='Error2', delivery=self.delivery1)
+        S3DeliveryError.objects.create(message='Error3OtherDelivery', delivery=self.delivery2)
+
+        deliveries = self.delivery1.errors.order_by('message')
+        self.assertEqual(len(deliveries), 2)
+        self.assertEqual(deliveries[0].message, 'Error1')
+        self.assertEqual(deliveries[1].message, 'Error2')
