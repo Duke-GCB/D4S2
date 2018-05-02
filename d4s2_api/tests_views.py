@@ -289,5 +289,3 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Share.objects.count(), 1)
         self.assertEqual(Share.objects.get().user_message, user_message)
-
-
