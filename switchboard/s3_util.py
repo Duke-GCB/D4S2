@@ -1,7 +1,8 @@
-from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
+from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes, S3DeliveryError, State
 from d4s2_api.utils import MessageFactory
 import boto3
 import botocore
+from background_task import background
 
 
 def wrap_s3_exceptions(func):
@@ -45,7 +46,7 @@ class S3DeliveryUtil(object):
         pass
 
     def get_warning_message(self):
-        return ''
+        return None
 
     def _grant_user_read_permissions(self, s3_user):
         """
@@ -248,16 +249,98 @@ class S3DeliveryType:
         return S3DeliveryUtil(*args)
 
     @staticmethod
-    def transfer_delivery(delivery, user):
-        delivery_util = S3DeliveryType.make_delivery_util(delivery, user)
-        delivery_util.accept_project_transfer()
-        delivery_util.share_with_additional_users()
-        warning_message = delivery_util.get_warning_message()
-        message_factory = S3MessageFactory(delivery, user)
-        message = message_factory.make_processed_message('accepted', warning_message=warning_message)
-        message.send()
-        delivery.mark_accepted(user.get_username(), message.email_text)
-        return warning_message
+    def transfer_delivery(delivery, _):
+        delivery.mark_transferring()
+        transfer_delivery(delivery.id)
+
+
+class S3TransferOperation(object):
+    def __init__(self, delivery_id):
+        self.delivery = S3Delivery.objects.get(pk=delivery_id)
+        self.to_user = self.delivery.to_user.user
+        self.from_user = self.delivery.from_user.user
+        self.delivery_type = S3DeliveryType
+
+    def make_delivery_util(self):
+        return self.delivery_type.make_delivery_util(self.delivery, self.from_user)
+
+    def make_accepted_message(self, warning_message, user):
+        message_factory = S3MessageFactory(self.delivery, user)
+        return message_factory.make_processed_message('accepted', warning_message=warning_message)
+
+    def mark_accepted(self, sender_accepted_email_text, recipient_accepted_email_text):
+        self.delivery.mark_accepted(self.to_user.get_username(),
+                                    sender_accepted_email_text,
+                                    recipient_accepted_email_text)
+
+    def assure_transferring(self):
+        """
+        Make sure the delivery is in transferring state since the background decorator retries after exceptions.
+        """
+        if self.delivery.state != State.TRANSFERRING:
+            self.delivery.mark_transferring()
+
+
+def record_delivery_exceptions(func):
+    """
+    Runs func(delivery_id, ...) if the function raises an exception updates delivery state and records the error.
+    :param func: function to wrap
+    :return: func: wrapped function
+    """
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            delivery_id = args[0]
+            delivery = S3Delivery.objects.get(pk=delivery_id)
+            error_message = str(e)
+            S3DeliveryError.objects.create(delivery=delivery, message=error_message)
+            delivery.set_failed()
+            raise
+    return wrapped
+
+
+@background
+@record_delivery_exceptions
+def transfer_delivery(delivery_id):
+    print("transfer_delivery delivery_id: {}".format(delivery_id))
+    transfer_operation = S3TransferOperation(delivery_id)
+    transfer_operation.assure_transferring()
+    delivery_util = transfer_operation.make_delivery_util()
+    delivery_util.accept_project_transfer()
+    delivery_util.share_with_additional_users()
+    notify_sender_delivery_accepted(delivery_id, delivery_util.get_warning_message())
+
+
+@background
+@record_delivery_exceptions
+def notify_sender_delivery_accepted(delivery_id, warning_message):
+    print("notify_sender_delivery_accepted delivery_id: {}".format(delivery_id))
+    transfer_operation = S3TransferOperation(delivery_id)
+    transfer_operation.assure_transferring()
+    message = transfer_operation.make_accepted_message(warning_message, transfer_operation.from_user)
+    message.send()
+    notify_receiver_transfer_complete(delivery_id, warning_message, message.email_text)
+
+
+@background
+@record_delivery_exceptions
+def notify_receiver_transfer_complete(delivery_id, warning_message, sender_accepted_email_text):
+    print("notify_receiver_transfer_complete delivery_id: {}".format(delivery_id))
+    transfer_operation = S3TransferOperation(delivery_id)
+    transfer_operation.assure_transferring()
+    message = transfer_operation.make_accepted_message(warning_message, transfer_operation.to_user)
+    message.send()
+    recipient_accepted_email_text = message.email_text
+    mark_delivery_complete(delivery_id, sender_accepted_email_text, recipient_accepted_email_text)
+
+
+@background
+@record_delivery_exceptions
+def mark_delivery_complete(delivery_id, sender_accepted_email_text, recipient_accepted_email_text):
+    print("mark_delivery_complete delivery_id: {}".format(delivery_id))
+    transfer_operation = S3TransferOperation(delivery_id)
+    transfer_operation.mark_accepted(sender_accepted_email_text, recipient_accepted_email_text)
 
 
 class S3MessageFactory(MessageFactory):

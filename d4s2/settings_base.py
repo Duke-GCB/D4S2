@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'ownership',
     'simple_history',
     'corsheaders',
+    'background_task',
 ]
 
 MIDDLEWARE_CLASSES = [
