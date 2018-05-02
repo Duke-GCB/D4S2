@@ -12,7 +12,7 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateException
 from d4s2_api.views import AlreadyNotifiedException, get_force_param, DeliveryViewSet
-from switchboard.s3_util import S3DeliveryMessage, S3Exception, S3NoSuchBucket
+from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket
 
 
 class DataServiceUnavailable(APIException):
@@ -277,7 +277,8 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         :param accept_url: str: url recipient uses to accept or reject delivery
         """
         try:
-            message = S3DeliveryMessage(s3_delivery, user, accept_url)
+            message_factory = S3MessageFactory(s3_delivery, user)
+            message = message_factory.make_delivery_message(accept_url)
             message.send()
             s3_delivery.mark_notified(message.email_text)
         except EmailTemplateException as e:
