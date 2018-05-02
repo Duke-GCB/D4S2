@@ -568,7 +568,7 @@ class DDSDeliveryErrorTestCase(TestCase):
         self.assertIsNotNone(deliveries[1].created)
         self.assertEqual(type(deliveries[1].created), datetime.datetime)
 
-    def test_ead_via_delivery_errors(self):
+    def test_read_via_delivery_errors(self):
         DDSDeliveryError.objects.create(message='Error1', delivery=self.delivery1)
         DDSDeliveryError.objects.create(message='Error2', delivery=self.delivery1)
         DDSDeliveryError.objects.create(message='Error3OtherDelivery', delivery=self.delivery2)
