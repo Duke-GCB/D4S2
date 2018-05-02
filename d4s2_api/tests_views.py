@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from mock import patch, Mock
+from mock import patch, Mock, call
 from d4s2_api.views import *
 from d4s2_api.models import *
 from django.contrib.auth.models import User as django_user
@@ -290,3 +290,12 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Share.objects.get().user_message, user_message)
 
 
+class BuildAcceptUrlTestCase(APITestCase):
+
+    def test_build_accept_url(self):
+        request = Mock()
+        transfer_id = '123'
+        delivery_type = 'test'
+        accept_url = build_accept_url(request, transfer_id, delivery_type)
+        request.build_absolute_uri.assert_has_calls([call('/ownership/?transfer_id=123&delivery_type=test')])
+        self.assertEqual(accept_url, request.build_absolute_uri.return_value)

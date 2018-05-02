@@ -23,8 +23,6 @@ def replace_service_name_var_with_dds_text(apps, schema_editor):
     replace_text_in_template(apps, schema_editor, find_text='{{ service_name }}', replace_text='Duke Data Service')
 
 
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
