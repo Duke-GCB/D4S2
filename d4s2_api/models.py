@@ -87,7 +87,7 @@ class DeliveryBase(models.Model):
     decline_reason = models.TextField(null=False, blank=True)
     performed_by = models.TextField(null=False, blank=True) # logged-in user that accepted or declined the delivery
     delivery_email_text = models.TextField(null=False, blank=True)
-    sender_completion_email_text = models.TextField(null=False, blank=True)
+    sender_completion_email_text = models.TextField(blank=True)
     recipient_completion_email_text = models.TextField(blank=True)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
