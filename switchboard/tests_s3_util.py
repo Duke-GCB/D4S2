@@ -2,7 +2,7 @@ from django.test import TestCase
 from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
-    S3Exception, S3NoSuchBucket
+    S3Exception, S3NoSuchBucket, S3DeliveryType
 import botocore
 
 
@@ -334,3 +334,25 @@ class S3BucketUtilTestCase(S3DeliveryTestBase):
 class AccessDeniedClientError(Exception):
     def __init__(self):
         self.response = {'Error': {'Code': 'AccessDenied'}}
+
+
+class S3DeliveryTypeTestCase(TestCase):
+
+    def setUp(self):
+        self.delivery_type = S3DeliveryType()
+
+    def test_name_and_delivery_cls(self):
+        self.assertEqual(self.delivery_type.name, 's3')
+        self.assertEqual(self.delivery_type.delivery_cls, S3Delivery)
+
+    @patch('switchboard.s3_util.S3DeliveryDetails')
+    def test_makes_dds_delivery_details(self, mock_delivery_details):
+        details = self.delivery_type.make_delivery_details('arg1','arg2')
+        mock_delivery_details.assert_called_once_with('arg1', 'arg2')
+        self.assertEqual(details, mock_delivery_details.return_value)
+
+    @patch('switchboard.s3_util.S3DeliveryUtil')
+    def test_makes_dds_delivery_util(self, mock_delivery_util):
+        util = self.delivery_type.make_delivery_util('arg1','arg2')
+        mock_delivery_util.assert_called_once_with('arg1', 'arg2')
+        self.assertEqual(util, mock_delivery_util.return_value)
