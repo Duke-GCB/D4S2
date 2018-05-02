@@ -3,8 +3,7 @@ from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import detail_route
 from d4s2_api.models import DDSDelivery, Share
 from d4s2_api.serializers import DeliverySerializer, ShareSerializer
-from d4s2_api.utils import ShareMessage, DeliveryMessage
-from switchboard.dds_util import DDSUtil
+from switchboard.dds_util import DDSUtil, DDSMessageFactory
 from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -31,7 +30,8 @@ class DeliveryViewSet(viewsets.ModelViewSet):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_path = reverse('ownership-prompt') + "?transfer_id=" + str(delivery.transfer_id)
         accept_url = request.build_absolute_uri(accept_path)
-        message = DeliveryMessage(delivery, request.user, accept_url)
+        message_factory = DDSMessageFactory(delivery, request.user)
+        message = message_factory.make_delivery_message(accept_url)
         message.send()
         delivery.mark_notified(message.email_text)
         return self.retrieve(request)
@@ -63,7 +63,8 @@ class ShareViewSet(viewsets.ModelViewSet):
         share = self.get_object()
         if share.is_notified() and not get_force_param(request):
             raise AlreadyNotifiedException()
-        message = ShareMessage(share, request.user)
+        message_factory = DDSMessageFactory(share, request.user)
+        message = message_factory.make_share_message()
         message.send()
         share.mark_notified(message.email_text)
         return self.retrieve(request)
