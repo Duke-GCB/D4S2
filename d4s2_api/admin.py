@@ -18,6 +18,7 @@ class DDSDeliveryAdmin(SimpleHistoryAdmin):
 
 
 admin.site.register(DDSDelivery, DDSDeliveryAdmin)
+admin.site.register(DDSDeliveryError)
 admin.site.register(DDSDeliveryShareUser)
 admin.site.register(DDSEndpoint)
 admin.site.register(DDSUserCredential)
@@ -34,3 +35,4 @@ class S3DeliveryAdmin(SimpleHistoryAdmin):
 
 
 admin.site.register(S3Delivery, S3DeliveryAdmin)
+admin.site.register(S3DeliveryError)
