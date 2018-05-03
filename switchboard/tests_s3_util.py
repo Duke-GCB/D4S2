@@ -1,9 +1,8 @@
 from django.test import TestCase
 from mock import patch, Mock, call
-from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint
+from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
-    S3Exception, S3NoSuchBucket, S3DeliveryType
-import botocore
+    S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError, record_delivery_exceptions
 
 
 class S3DeliveryTestBase(TestCase):
@@ -347,12 +346,121 @@ class S3DeliveryTypeTestCase(TestCase):
 
     @patch('switchboard.s3_util.S3DeliveryDetails')
     def test_makes_dds_delivery_details(self, mock_delivery_details):
-        details = self.delivery_type.make_delivery_details('arg1','arg2')
+        details = self.delivery_type.make_delivery_details('arg1', 'arg2')
         mock_delivery_details.assert_called_once_with('arg1', 'arg2')
         self.assertEqual(details, mock_delivery_details.return_value)
 
     @patch('switchboard.s3_util.S3DeliveryUtil')
     def test_makes_dds_delivery_util(self, mock_delivery_util):
-        util = self.delivery_type.make_delivery_util('arg1','arg2')
+        util = self.delivery_type.make_delivery_util('arg1', 'arg2')
         mock_delivery_util.assert_called_once_with('arg1', 'arg2')
         self.assertEqual(util, mock_delivery_util.return_value)
+
+    def test_transfer_delivery(self):
+        mock_delivery = Mock()
+        S3DeliveryType.transfer_delivery_func = Mock()
+        S3DeliveryType.transfer_delivery(mock_delivery, '')
+        self.assertTrue(mock_delivery.mark_transferring.called)
+        S3DeliveryType.transfer_delivery_func.assert_called_with(mock_delivery.id)
+
+
+class S3TransferOperationTestCase(S3DeliveryTestBase):
+
+    @patch('switchboard.s3_util.S3DeliveryUtil')
+    def test_transfer_delivery_step(self, mock_s3_delivery_util):
+        mock_s3_delivery_util.return_value.get_warning_message.return_value = 'warning'
+        S3TransferOperation.notify_sender_delivery_accepted_func = Mock()
+
+        operation = S3TransferOperation(self.s3_delivery.id)
+        operation.transfer_delivery_step()
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.state, State.TRANSFERRING)
+        S3TransferOperation.notify_sender_delivery_accepted_func.assert_called_with(self.s3_delivery.id, 'warning')
+        self.assertTrue(mock_s3_delivery_util.return_value.accept_project_transfer.called)
+        self.assertTrue(mock_s3_delivery_util.return_value.share_with_additional_users.called)
+
+    @patch('switchboard.s3_util.S3MessageFactory')
+    def test_notify_sender_delivery_accepted_step(self, mock_s3_message_factory):
+        mock_message = mock_s3_message_factory.return_value.make_processed_message.return_value
+        mock_message.email_text = 'sender email'
+
+        S3TransferOperation.notify_receiver_transfer_complete_func = Mock()
+
+        operation = S3TransferOperation(self.s3_delivery.id)
+        operation.notify_sender_delivery_accepted_step(warning_message='oops')
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.state, State.TRANSFERRING)
+        mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
+            'accepted', warning_message='oops')
+        self.assertTrue(mock_message.send.called)
+        S3TransferOperation.notify_receiver_transfer_complete_func.assert_called_with(
+            self.s3_delivery.id, 'oops', 'sender email')
+
+    @patch('switchboard.s3_util.S3MessageFactory')
+    def test_notify_receiver_transfer_complete_step(self, mock_s3_message_factory):
+        mock_message = mock_s3_message_factory.return_value.make_processed_message.return_value
+        mock_message.email_text = 'receiver email'
+
+        S3TransferOperation.mark_delivery_complete_func = Mock()
+
+        operation = S3TransferOperation(self.s3_delivery.id)
+        operation.notify_receiver_transfer_complete_step(warning_message='oops',
+                                                         sender_accepted_email_text='sender email')
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.state, State.TRANSFERRING)
+        mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
+            'accepted', warning_message='oops')
+        self.assertTrue(mock_message.send.called)
+        S3TransferOperation.mark_delivery_complete_func.assert_called_with(
+            self.s3_delivery.id, 'oops', 'sender email', 'receiver email')
+
+    def test_mark_delivery_complete_step(self):
+        operation = S3TransferOperation(self.s3_delivery.id)
+        operation.mark_delivery_complete_step(
+            sender_accepted_email_text='sender email',
+            recipient_accepted_email_text='recipient email'
+        )
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.state, State.ACCEPTED)
+
+    @patch('switchboard.s3_util.S3Delivery')
+    @patch('switchboard.s3_util.S3DeliveryType')
+    @patch('switchboard.s3_util.S3MessageFactory')
+    def test_make_accepted_message(self, mock_s3_message_factory, mock_s3_delivery_type, mock_s3_delivery):
+        operation = S3TransferOperation(delivery_id='delivery1')
+        message = operation.make_accepted_message(warning_message='warning msg', user=operation.to_user)
+        self.assertEqual(message, mock_s3_message_factory.return_value.make_processed_message.return_value)
+        mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
+            'accepted', warning_message='warning msg'
+        )
+
+    @patch('switchboard.s3_util.S3Delivery')
+    @patch('switchboard.s3_util.S3DeliveryType')
+    def test_assure_transferring(self, mock_s3_delivery_type, mock_s3_delivery):
+        operation = S3TransferOperation(delivery_id='delivery1')
+        operation.delivery.state = State.NEW
+        operation.assure_transferring()
+        self.assertEqual(True, operation.delivery.mark_transferring.called)
+
+        operation.delivery.mark_transferring.reset_mock()
+        operation.delivery.state = State.TRANSFERRING
+        operation.assure_transferring()
+        self.assertEqual(False, operation.delivery.mark_transferring.called)
+
+
+class FunctionsTestCase(S3DeliveryTestBase):
+    def test_record_delivery_exceptions(self):
+        def raise_exception(delivery_id):
+            raise ValueError("Oops")
+
+        decorated_func = record_delivery_exceptions(raise_exception)
+
+        with self.assertRaises(ValueError):
+            decorated_func(self.s3_delivery.id)
+
+        errors = S3DeliveryError.objects.filter(delivery=self.s3_delivery)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].message, 'Oops')
