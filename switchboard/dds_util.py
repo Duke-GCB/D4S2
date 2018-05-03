@@ -189,8 +189,12 @@ class DeliveryDetails(object):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
     def get_project(self):
-        transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
-        return DDSProject(transfer.project_dict)
+        try:
+            transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
+            return DDSProject(transfer.project_dict)
+        except AttributeError:
+            # Shares do not have a transfer id so fall back to reading based on project id
+            return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
 
     def get_project_url(self):
         return self.ddsutil.get_project_url(self.delivery.project_id)

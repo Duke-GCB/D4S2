@@ -137,6 +137,38 @@ class TestDeliveryDetails(TestCase):
         self.assertEqual(context['user_message'], 'user message text')
         self.assertEqual(context['warning_message'], 'warning!!')
 
+    @patch('switchboard.dds_util.DDSProjectTransfer')
+    @patch('switchboard.dds_util.DDSProject')
+    def test_get_project_from_share(self, mock_dds_project, mock_dds_project_transfer):
+        share = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+        user = Mock()
+        mock_project = Mock()
+        mock_dds_project.fetch_one.return_value = mock_project
+
+        details = DeliveryDetails(share, user)
+        project = details.get_project()
+        self.assertEqual(project, mock_project)
+        mock_dds_project_transfer.fetch_one.assert_not_called()
+        mock_dds_project.fetch_one.assert_called_with(details.ddsutil, 'project1')
+
+    @patch('switchboard.dds_util.DDSProjectTransfer')
+    @patch('switchboard.dds_util.DDSProject')
+    def test_get_project_from_delivery(self, mock_dds_project, mock_dds_project_transfer):
+        delivery = DDSDelivery.objects.create(project_id='project1',
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id='transfer1')
+        user = Mock()
+        mock_transfer = Mock()
+        mock_dds_project_transfer.fetch_one.return_value = mock_transfer
+
+        details = DeliveryDetails(delivery, user)
+        project = details.get_project()
+        self.assertEqual(project, mock_dds_project.return_value)
+        mock_dds_project_transfer.fetch_one.assert_called_with(details.ddsutil, 'transfer1')
+        mock_dds_project.assert_called_with(mock_transfer.project_dict)
+        mock_dds_project.fetch_one.assert_not_called()
+
 
 class DeliveryUtilTestCase(TestCase):
     def setUp(self):
