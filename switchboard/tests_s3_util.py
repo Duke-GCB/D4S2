@@ -135,7 +135,7 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
             'from_name': 'From User',
             'project_title': 'mouse',
             'project_url': 's3://mouse',
-            'service': 'S3',
+            'service_name': 'S3',
             'from_email': 'from_user@from_user.com',
             'to_name': 'To User',
             'transfer_id': str(self.s3_delivery.transfer_id)
@@ -155,7 +155,7 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
             'message': 'somereason',
             'project_name': 'mouse',
             'project_url': 's3://mouse',
-            'service': 'S3',
+            'service_name': 'S3',
             'recipient_email': 'to_user@to_user.com',
             'recipient_name': 'To User',
             'sender_email': 'from_user@from_user.com',

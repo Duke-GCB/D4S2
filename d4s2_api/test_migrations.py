@@ -111,7 +111,7 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         self.assertEqual(share.to_user_id, 'qr-789')
 
 
-class EmailTemplateGropuMigrationTestCase(TestMigrations):
+class EmailTemplateGroupMigrationTestCase(TestMigrations):
     """
     Runs migrations to the point where EmailTemplate has both group and template_set fields.
     Sets up some sample EmailTemplates that have group filled in.
@@ -184,3 +184,35 @@ class EmailTemplateGropuMigrationTestCase(TestMigrations):
         ]
         self.assertEqual(set(user_email_template_sets_info),
                          {('user1', u'group1'), ('user2', u'group2')})
+
+
+class EmailTemplateServiceNameTest(TestMigrations):
+    """
+    Tests that the string 'Duke Data Service' in email templates is updated to {{ service_name }}
+    """
+
+    migrate_from = '0024_auto_20180423_2026'
+    migrate_to = '0025_auto_20180430_1549'
+
+    def setUpBeforeMigration(self, apps):
+        EmailTemplate = apps.get_model('d4s2_api', 'EmailTemplate')
+        EmailTemplateType = apps.get_model('d4s2_api', 'EmailTemplateType')
+        EmailTemplateSet = apps.get_model('d4s2_api', 'EmailTemplateSet')
+
+        user1 = User.objects.create_user('user1')
+        type1 = EmailTemplateType.objects.create(name='template_type1')
+        set1 = EmailTemplateSet.objects.create(name='template_set1')
+
+        EmailTemplate.objects.create(
+            template_set=set1,
+            owner_id=user1.id,
+            template_type=type1,
+            body='Your data in Duke Data Service is ready at {{ accept_url }}.\\r\\nPlease visit Duke Data Service.',
+            subject='Data from Duke Data Service sent by {{ sender_name }}',
+        )
+
+    def test_name_replaced(self):
+        EmailTemplate = apps.get_model('d4s2_api', 'EmailTemplate')
+        template = EmailTemplate.objects.first()
+        self.assertEqual(template.body, 'Your data in {{ service_name }} is ready at {{ accept_url }}.\\r\\nPlease visit {{ service_name }}.')
+        self.assertEqual(template.subject, 'Data from {{ service_name }} sent by {{ sender_name }}')
