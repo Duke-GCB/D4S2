@@ -9,6 +9,16 @@ from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 
 
+def build_accept_url(request, transfer_id, delivery_type):
+    query_dict = {
+        'transfer_id': transfer_id,
+        'delivery_type': delivery_type
+    }
+    accept_path = reverse('ownership-prompt') + '?transfer_id={}&delivery_type={}'.format(transfer_id, delivery_type)
+    accept_url = request.build_absolute_uri(accept_path)
+    return accept_url
+
+
 class AlreadyNotifiedException(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'Already notified'
@@ -29,8 +39,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
         delivery = self.get_object()
         if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
-        accept_path = reverse('ownership-prompt') + "?transfer_id=" + str(delivery.transfer_id)
-        accept_url = request.build_absolute_uri(accept_path)
+        accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
         message = DeliveryMessage(delivery, request.user, accept_url)
         message.send()
         delivery.mark_notified(message.email_text)

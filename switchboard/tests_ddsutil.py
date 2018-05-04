@@ -117,13 +117,14 @@ class TestDeliveryDetails(TestCase):
         }
         mock_dds_user.fetch_one.side_effect = [
             Mock(full_name='joe', email='joe@joe.com'),
-            Mock(full_name='bob', email='bob@bob.com')
+            Mock(full_name='bob', email='bob@bob.com'),
         ]
         mock_dds_util.return_value.get_project_url.return_value = 'projecturl'
         delivery = Mock(user_message='user message text')
         user = Mock()
         details = DeliveryDetails(delivery, user)
         context = details.get_email_context('accepturl', 'accepted', 'test', warning_message='warning!!')
+        self.assertEqual(context['service_name'], 'Duke Data Service')
         self.assertEqual(context['project_name'], 'SomeProject')
         self.assertEqual(context['recipient_name'], 'bob')
         self.assertEqual(context['recipient_email'], 'bob@bob.com')
@@ -135,6 +136,31 @@ class TestDeliveryDetails(TestCase):
         self.assertEqual(context['message'], 'test')
         self.assertEqual(context['user_message'], 'user message text')
         self.assertEqual(context['warning_message'], 'warning!!')
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSUser')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
+    def test_get_context(self, mock_dds_project_transfer, mock_dds_user, mock_dds_util):
+        mock_dds_project_transfer.fetch_one.return_value.project_dict = {
+            'name': 'SomeProject',
+        }
+        mock_dds_user.fetch_one.side_effect = [
+            Mock(full_name='joe', email='joe@joe.com'),
+            Mock(full_name='bob', email='bob@bob.com'),
+        ]
+        mock_dds_util.return_value.get_project_url.return_value = 'projecturl'
+        delivery = Mock(user_message='user message text', transfer_id='123')
+        user = Mock()
+        details = DeliveryDetails(delivery, user)
+        context = details.get_context()
+        self.assertEqual(context['service_name'], 'Duke Data Service')
+        self.assertEqual(context['transfer_id'], '123')
+        self.assertEqual(context['from_name'], 'joe')
+        self.assertEqual(context['from_email'], 'joe@joe.com')
+        self.assertEqual(context['to_name'], 'bob')
+        self.assertEqual(context['to_email'], 'bob@bob.com')
+        self.assertEqual(context['project_title'], 'SomeProject')
+        self.assertEqual(context['project_url'], 'projecturl')
 
     @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('switchboard.dds_util.DDSProject')

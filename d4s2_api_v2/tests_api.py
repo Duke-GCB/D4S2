@@ -903,9 +903,10 @@ class S3DeliveryViewSetTestCase(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('d4s2_api_v2.api.build_accept_url')
     @patch('d4s2_api_v2.api.S3DeliveryUtil')
     @patch('d4s2_api_v2.api.S3DeliveryMessage')
-    def test_send_delivery(self, mock_s3_delivery_message, mock_s3_delivery_util):
+    def test_send_delivery(self, mock_s3_delivery_message, mock_s3_delivery_util, mock_build_accept_url):
         mock_s3_delivery_message.return_value = Mock(email_text='email text')
         delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
         self.login_user1()
@@ -916,6 +917,9 @@ class S3DeliveryViewSetTestCase(APITestCase):
         delivery = S3Delivery.objects.get(pk=delivery.id)
         self.assertEqual(delivery.state, State.NOTIFIED)
         self.assertEqual(delivery.delivery_email_text, 'email text')
+        mock_s3_delivery_message.assert_has_calls([
+            call(delivery, self.normal_user1, mock_build_accept_url.return_value)
+        ])
 
     @patch('d4s2_api_v2.api.S3DeliveryUtil')
     @patch('d4s2_api_v2.api.S3DeliveryMessage')

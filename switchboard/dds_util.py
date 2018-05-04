@@ -5,6 +5,8 @@ from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
 from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
 
+DDS_SERVICE_NAME = 'Duke Data Service'
+
 
 class DDSUtil(object):
     def __init__(self, user):
@@ -227,21 +229,19 @@ class DeliveryDetails(object):
 
     def get_email_context(self, accept_url, process_type, reason, warning_message=''):
         try:
-            sender = self.get_from_user()
-            receiver = self.get_to_user()
-            project = self.get_project()
-            project_url = self.get_project_url()
+            base_context = self.get_context()
             user_message = self.get_user_message()
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
 
         return {
-            'project_name': project.name,
-            'recipient_name': receiver.full_name,
-            'recipient_email': receiver.email,
-            'sender_email': sender.email,
-            'sender_name': sender.full_name,
-            'project_url': project_url,
+            'service_name': base_context['service_name'],
+            'project_name': base_context['project_title'],
+            'recipient_name': base_context['to_name'],
+            'recipient_email': base_context['to_email'],
+            'sender_email': base_context['from_email'],
+            'sender_name': base_context['from_name'],
+            'project_url': base_context['project_url'],
             'accept_url': accept_url,
             'type': process_type,  # accept or decline
             'message': reason,  # decline reason
@@ -255,11 +255,12 @@ class DeliveryDetails(object):
         project = self.get_project()
         project_url = self.get_project_url()
         return {
-            'service': 'Duke Data Service',
+            'service_name': DDS_SERVICE_NAME,
             'transfer_id': str(self.delivery.transfer_id),
             'from_name': from_user.full_name,
             'from_email': from_user.email,
             'to_name': to_user.full_name,
+            'to_email': to_user.email,
             'project_title': project.name,
             'project_url': project_url
         }

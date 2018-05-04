@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from mock import patch, Mock
+from mock import patch, Mock, call
 from d4s2_api.views import *
 from d4s2_api.models import *
 from django.contrib.auth.models import User as django_user
@@ -134,7 +134,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(mock_delivery_message.called)
         # Make sure transfer_id is in the email message
         ownership_url = reverse('ownership-prompt')
-        expected_absolute_url = APIRequestFactory().request().build_absolute_uri(ownership_url) + '?transfer_id=abcd'
+        expected_absolute_url = APIRequestFactory().request().build_absolute_uri(ownership_url) + '?transfer_id=abcd&delivery_type=dds'
         mock_delivery_message.assert_called_with(h, self.user, expected_absolute_url)
         self.assertTrue(instance.send.called)
 
@@ -290,3 +290,12 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Share.objects.get().user_message, user_message)
 
 
+class BuildAcceptUrlTestCase(APITestCase):
+
+    def test_build_accept_url(self):
+        request = Mock()
+        transfer_id = '123'
+        delivery_type = 'test'
+        accept_url = build_accept_url(request, transfer_id, delivery_type)
+        request.build_absolute_uri.assert_has_calls([call('/ownership/?transfer_id=123&delivery_type=test')])
+        self.assertEqual(accept_url, request.build_absolute_uri.return_value)
