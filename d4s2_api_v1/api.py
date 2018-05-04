@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import detail_route
 from d4s2_api.models import DDSDelivery, Share
-from d4s2_api.serializers import DeliverySerializer, ShareSerializer
+from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
 from d4s2_api.utils import ShareMessage, DeliveryMessage
 from switchboard.dds_util import DDSUtil
 from django.core.urlresolvers import reverse
