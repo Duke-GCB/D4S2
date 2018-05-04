@@ -1,5 +1,5 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes
-from d4s2_api.utils import ProcessedMessage, DeliveryMessage
+from d4s2_api.utils import MessageFactory
 import boto3
 import botocore
 
@@ -45,7 +45,7 @@ class S3DeliveryUtil(object):
         pass
 
     def get_warning_message(self):
-        return None
+        return ''
 
     def _grant_user_read_permissions(self, s3_user):
         """
@@ -199,16 +199,6 @@ class S3Resource(object):
         return bucket_acl.owner['ID']
 
 
-class S3ProcessedMessage(ProcessedMessage):
-    def make_delivery_details(self, deliverable, user):
-        return S3DeliveryDetails(deliverable, user)
-
-
-class S3DeliveryMessage(DeliveryMessage):
-    def make_delivery_details(self, deliverable, user):
-        return S3DeliveryDetails(deliverable, user)
-
-
 class S3BucketUtil(object):
     def __init__(self, endpoint, user):
         """
@@ -242,3 +232,36 @@ class S3Exception(Exception):
 
 class S3NoSuchBucket(S3Exception):
     pass
+
+
+class S3DeliveryType:
+    name = 's3'
+    delivery_cls = S3Delivery
+    transfer_in_background = True
+
+    @staticmethod
+    def make_delivery_details(*args):
+        return S3DeliveryDetails(*args)
+
+    @staticmethod
+    def make_delivery_util(*args):
+        return S3DeliveryUtil(*args)
+
+    @staticmethod
+    def transfer_delivery(delivery, user):
+        delivery_util = S3DeliveryType.make_delivery_util(delivery, user)
+        delivery_util.accept_project_transfer()
+        delivery_util.share_with_additional_users()
+        warning_message = delivery_util.get_warning_message()
+        message_factory = S3MessageFactory(delivery, user)
+        message = message_factory.make_processed_message('accepted', warning_message=warning_message)
+        message.send()
+        delivery.mark_accepted(user.get_username(), message.email_text)
+        return warning_message
+
+
+class S3MessageFactory(MessageFactory):
+    def __init__(self, s3_delivery, user):
+        super(S3MessageFactory, self).__init__(
+            S3DeliveryDetails(s3_delivery, user)
+        )

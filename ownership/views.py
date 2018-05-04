@@ -6,59 +6,19 @@ try:
     from urllib.parse import urlencode
 except ImportError:
     from urllib import urlencode
-
-from d4s2_api.models import DDSDelivery, S3Delivery
-from d4s2_api.models import State, ShareRole
-from d4s2_api.utils import DeliveryUtil, ProcessedMessage
-from switchboard.s3_util import S3DeliveryDetails, S3DeliveryUtil, S3ProcessedMessage
-from switchboard.dds_util import DeliveryDetails
+from d4s2_api.models import State
+from switchboard.s3_util import S3Exception, S3DeliveryType
+from switchboard.dds_util import DDSDeliveryType
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
 TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
-SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 
 class ResponseType:
     ERROR = 'error'
     TEMPLATE = 'template'
     REDIRECT = 'redirect'
-
-
-class DDSDeliveryType:
-    name = 'dds'
-    delivery_cls = DDSDelivery
-
-    @staticmethod
-    def make_delivery_details(*args):
-        return DeliveryDetails(*args)
-
-    @staticmethod
-    def make_delivery_util(*args):
-        return DeliveryUtil(*args,
-                            share_role=ShareRole.DOWNLOAD,
-                            share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
-
-    @staticmethod
-    def make_processed_message(*args, **kwargs):
-        return ProcessedMessage(*args, **kwargs)
-
-
-class S3DeliveryType:
-    name = 's3'
-    delivery_cls = S3Delivery
-
-    @staticmethod
-    def make_delivery_details(*args):
-        return S3DeliveryDetails(*args)
-
-    @staticmethod
-    def make_delivery_util(*args):
-        return S3DeliveryUtil(*args)
-
-    @staticmethod
-    def make_processed_message(*args, **kwargs):
-        return S3ProcessedMessage(*args, **kwargs)
 
 
 class DeliveryViewBase(TemplateView):
@@ -201,14 +161,9 @@ class ProcessView(DeliveryViewBase):
         delivery = self.delivery
         request = self.request
         try:
-            delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
-            delivery_util.accept_project_transfer()
-            delivery_util.share_with_additional_users()
-            warning_message = delivery_util.get_warning_message()
-            message = self.delivery_type.make_processed_message(delivery, request.user, 'accepted', warning_message=warning_message)
-            self.warning_message = warning_message
-            message.send()
-            delivery.mark_accepted(request.user.get_username(), message.email_text)
+            self.warning_message = self.delivery_type.transfer_delivery(delivery, request.user)
+        except S3Exception as e:
+            self.set_error_details(500, 'Unable to transfer s3 ownership: {}'.format(e.message))
         except DataServiceError as e:
             self.set_error_details(500, 'Unable to transfer ownership: {}'.format(e.message))
         except Exception as e:

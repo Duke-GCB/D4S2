@@ -118,9 +118,9 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
-    @patch('d4s2_api.views.DeliveryMessage')
-    def test_send_delivery(self, mock_delivery_message):
-        instance = mock_delivery_message.return_value
+    @patch('d4s2_api.views.DDSMessageFactory')
+    def test_send_delivery(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
@@ -131,16 +131,16 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         h = DDSDelivery.objects.get(pk=h.pk)
         self.assertFalse(h.is_new())
-        self.assertTrue(mock_delivery_message.called)
+        self.assertTrue(mock_message_factory.return_value.make_delivery_message.called)
         # Make sure transfer_id is in the email message
         ownership_url = reverse('ownership-prompt')
         expected_absolute_url = APIRequestFactory().request().build_absolute_uri(ownership_url) + '?transfer_id=abcd&delivery_type=dds'
-        mock_delivery_message.assert_called_with(h, self.user, expected_absolute_url)
+        mock_message_factory.return_value.make_delivery_message.assert_called_with(expected_absolute_url)
         self.assertTrue(instance.send.called)
 
-    @patch('d4s2_api.views.DeliveryMessage')
-    def test_send_delivery_fails(self, mock_delivery_message):
-        instance = mock_delivery_message.return_value
+    @patch('d4s2_api.views.DDSMessageFactory')
+    def test_send_delivery_fails(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
@@ -149,7 +149,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         url = reverse('ddsdelivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(mock_delivery_message.called)
+        self.assertFalse(mock_message_factory.return_value.make_delivery_message.called)
         self.assertFalse(instance.send.called)
 
     @patch('d4s2_api.views.DDSUtil')
@@ -166,9 +166,9 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
-    @patch('d4s2_api.views.DeliveryMessage')
-    def test_force_send_share(self, mock_delivery_message):
-        instance = mock_delivery_message.return_value
+    @patch('d4s2_api.views.DDSMessageFactory')
+    def test_force_send_share(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
@@ -176,7 +176,8 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         url = reverse('ddsdelivery-send', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(mock_delivery_message.called)
+        self.assertTrue(mock_message_factory.called)
+        self.assertTrue(mock_message_factory.return_value.make_delivery_message.called)
         self.assertTrue(instance.send.called)
 
 
@@ -228,9 +229,9 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         d =  Share.objects.get(pk=d.pk)
         self.assertEqual(d.project_id, 'project3')
 
-    @patch('d4s2_api.views.ShareMessage')
-    def test_send_share(self, mock_share_message):
-        instance = mock_share_message.return_value
+    @patch('d4s2_api.views.DDSMessageFactory')
+    def test_send_share(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         d =  Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
@@ -240,12 +241,12 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d = Share.objects.get(pk=d.pk)
         self.assertTrue(d.is_notified())
-        self.assertTrue(mock_share_message.called)
+        self.assertTrue(mock_message_factory.return_value.make_share_message.called)
         self.assertTrue(instance.send.called)
 
-    @patch('d4s2_api.views.ShareMessage')
-    def test_send_share_fails(self, mock_share_message):
-        instance = mock_share_message.return_value
+    @patch('d4s2_api.views.DDSMessageFactory')
+    def test_send_share_fails(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
         d =  Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         self.assertFalse(d.is_notified())
@@ -253,21 +254,21 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         url = reverse('share-send', args=(d.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(mock_share_message.called)
+        self.assertFalse(mock_message_factory.return_value.make_share_message.called)
         self.assertFalse(instance.send.called)
 
-    @patch('d4s2_api.views.ShareMessage')
-    def test_force_send_share(self, mock_share_message):
-        instance = mock_share_message.return_value
+    @patch('d4s2_api.views.DDSMessageFactory')
+    def test_force_send_share(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        d =  Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         self.assertFalse(d.is_notified())
         d.mark_notified('email text')
         url = reverse('share-send', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(mock_share_message.called)
+        self.assertTrue(mock_message_factory.return_value.make_share_message.called)
         self.assertTrue(instance.send.called)
 
     def test_filter_shares(self):
@@ -276,7 +277,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         response=self.client.get(url, {'to_user_id': 'user2'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-        response=self.client.get(url, {'project_id': 'project23'}, format='json')
+        response = self.client.get(url, {'project_id': 'project23'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
