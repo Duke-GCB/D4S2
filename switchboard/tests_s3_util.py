@@ -462,5 +462,7 @@ class FunctionsTestCase(S3DeliveryTestBase):
             decorated_func(self.s3_delivery.id)
 
         errors = S3DeliveryError.objects.filter(delivery=self.s3_delivery)
+        self.s3_delivery.refresh_from_db()
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].message, 'Oops')
+        self.assertEqual(self.s3_delivery.state, State.FAILED)

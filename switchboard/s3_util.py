@@ -41,24 +41,53 @@ def record_delivery_exceptions(func):
 @background
 @record_delivery_exceptions
 def transfer_delivery(delivery_id):
+    """
+    Transfer delivery in s3 to recipient. This is the beginning of the transfer process.
+    At the end, S3TransferOperation will call the next background function: notify_sender_delivery_accepted.
+    :param delivery_id: str: id of delivery to transfer
+    """
     transfer_operation = S3TransferOperation(delivery_id)
     transfer_operation.transfer_delivery_step()
+
 
 @background
 @record_delivery_exceptions
 def notify_sender_delivery_accepted(delivery_id, warning_message):
+    """
+    Send email to the delivery sender that the transfer was accepted. At the end, S3TransferOperation will call the
+    next background function: notify_receiver_transfer_complete.
+    :param delivery_id: str: id of delivery that is being transferred
+    :param warning_message: str: warning message generated during s3 transfer
+    """
     transfer_operation = S3TransferOperation(delivery_id)
     transfer_operation.notify_sender_delivery_accepted_step(warning_message)
+
 
 @background
 @record_delivery_exceptions
 def notify_receiver_transfer_complete(delivery_id, warning_message, sender_accepted_email_text):
+    """
+    Send email to the delivery recipient that the transfer was accepted. At the end, S3TransferOperation will call the
+    next background function: mark_delivery_complete.
+    :param delivery_id: str: id of delivery that is being transferred
+    :param warning_message: str:
+    :param sender_accepted_email_text: str:
+    :return:
+    """
     transfer_operation = S3TransferOperation(delivery_id)
     transfer_operation.notify_receiver_transfer_complete_step(warning_message, sender_accepted_email_text)
+
 
 @background
 @record_delivery_exceptions
 def mark_delivery_complete(delivery_id, sender_accepted_email_text, recipient_accepted_email_text):
+    """
+    Mark the delivery as accepted. This is the end of the transfer process.
+    :param delivery_id: str: id of delivery to mark completed
+    :param sender_accepted_email_text: str:
+    :param recipient_accepted_email_text: str:
+    :return:
+    """
     transfer_operation = S3TransferOperation(delivery_id)
     transfer_operation.mark_accepted(sender_accepted_email_text, recipient_accepted_email_text)
 
@@ -307,6 +336,9 @@ class S3MessageFactory(MessageFactory):
 
 
 class S3TransferOperation(object):
+    """
+    Object used in background process to run transfer steps and schedules next background step.
+    """
     # properties to enable testing background operations
     notify_sender_delivery_accepted_func = notify_sender_delivery_accepted
     notify_receiver_transfer_complete_func = notify_receiver_transfer_complete
@@ -318,6 +350,9 @@ class S3TransferOperation(object):
         self.from_user = self.delivery.from_user.user
 
     def transfer_delivery_step(self):
+        """
+        Transfer delivery in s3 to recipient, schedules execution of notify_sender_delivery_accepted
+        """
         print("transfer_delivery delivery_id: {}".format(self.delivery.id))
         self.assure_transferring()
         delivery_util = S3DeliveryUtil(self.delivery, self.from_user)
@@ -327,6 +362,11 @@ class S3TransferOperation(object):
         self.notify_sender_delivery_accepted_func(self.delivery.id, warning_message)
 
     def notify_sender_delivery_accepted_step(self, warning_message):
+        """
+        Send email to the delivery sender that the transfer was accepted, schedules execution of
+        notify_receiver_transfer_complete.
+        :param warning_message: str: warning that may have occurred during the transfer operation
+        """
         print("notify_sender_delivery_accepted delivery_id: {}".format(self.delivery.id))
         self.assure_transferring()
         message = self.make_accepted_message(warning_message, self.from_user)
@@ -334,6 +374,12 @@ class S3TransferOperation(object):
         self.notify_receiver_transfer_complete_func(self.delivery.id, warning_message, message.email_text)
 
     def notify_receiver_transfer_complete_step(self, warning_message, sender_accepted_email_text):
+        """
+        Send email to the delivery recipient that the transfer was accepted, schedules execution of
+        mark_delivery_complete.
+        :param warning_message: str: warning that may have occurred during the transfer operation
+        :param sender_accepted_email_text: str: text of email message sent to recipient
+        """
         print("notify_receiver_transfer_complete delivery_id: {}".format(self.delivery.id))
         self.assure_transferring()
         message = self.make_accepted_message(warning_message, self.to_user)
@@ -343,12 +389,24 @@ class S3TransferOperation(object):
                                          message.email_text)
 
     def mark_delivery_complete_step(self, sender_accepted_email_text, recipient_accepted_email_text):
+        """
+        Mark delivery as accepted and save email text sent to sender and recipient.
+        This is the last step in transferring a delivery.
+        :param sender_accepted_email_text: str: text of email message sent to sender
+        :param recipient_accepted_email_text: str: text of email message sent to recipient
+        """
         print("mark_delivery_complete delivery_id: {}".format(self.delivery.id))
         self.delivery.mark_accepted(self.to_user.get_username(),
                                     sender_accepted_email_text,
                                     recipient_accepted_email_text)
 
     def make_accepted_message(self, warning_message, user):
+        """
+        Create accepted email message based on email template settings for a user.
+        :param warning_message: str: warning message from s3 transfer
+        :param user: django user to lookup an email template for
+        :return: utils.Message: email message
+        """
         message_factory = S3MessageFactory(self.delivery, user)
         return message_factory.make_processed_message('accepted', warning_message=warning_message)
 
