@@ -353,7 +353,7 @@ class S3TransferOperation(object):
         """
         Transfer delivery in s3 to recipient, schedules execution of notify_sender_delivery_accepted
         """
-        print("transfer_delivery delivery_id: {}".format(self.delivery.id))
+        print("Transferring s3 delivery {}".format(self.delivery.id))
         self.assure_transferring()
         delivery_util = S3DeliveryUtil(self.delivery, self.from_user)
         delivery_util.accept_project_transfer()
@@ -367,7 +367,7 @@ class S3TransferOperation(object):
         notify_receiver_transfer_complete.
         :param warning_message: str: warning that may have occurred during the transfer operation
         """
-        print("notify_sender_delivery_accepted delivery_id: {}".format(self.delivery.id))
+        print("Notifying sender delivery {} has been accepted.".format(self.delivery.id))
         self.assure_transferring()
         message = self.make_processed_message('accepted', warning_message)
         message.send()
@@ -380,7 +380,7 @@ class S3TransferOperation(object):
         :param warning_message: str: warning that may have occurred during the transfer operation
         :param sender_accepted_email_text: str: text of email message sent to recipient
         """
-        print("notify_receiver_transfer_complete delivery_id: {}".format(self.delivery.id))
+        print("Notifying receiver transfer of delivery {} is complete.".format(self.delivery.id))
         self.assure_transferring()
         message = self.make_processed_message('accepted_recipient', warning_message)
         message.send()
@@ -395,7 +395,7 @@ class S3TransferOperation(object):
         :param sender_accepted_email_text: str: text of email message sent to sender
         :param recipient_accepted_email_text: str: text of email message sent to recipient
         """
-        print("mark_delivery_complete delivery_id: {}".format(self.delivery.id))
+        print("Marking delivery {} complete.".format(self.delivery.id))
         self.delivery.mark_accepted(self.to_user.get_username(),
                                     sender_accepted_email_text,
                                     recipient_accepted_email_text)
