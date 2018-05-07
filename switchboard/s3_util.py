@@ -352,7 +352,7 @@ class S3TransferOperation(object):
         Transfer delivery in s3 to recipient, schedules execution of notify_sender_delivery_accepted
         """
         print("Transferring s3 delivery {}".format(self.delivery.id))
-        self.assure_transferring()
+        self.ensure_transferring()
         delivery_util = S3DeliveryUtil(self.delivery, self.from_user)
         delivery_util.accept_project_transfer()
         delivery_util.share_with_additional_users()
@@ -366,7 +366,7 @@ class S3TransferOperation(object):
         :param warning_message: str: warning that may have occurred during the transfer operation
         """
         print("Notifying sender delivery {} has been accepted.".format(self.delivery.id))
-        self.assure_transferring()
+        self.ensure_transferring()
         message = self.make_processed_message('accepted', warning_message)
         message.send()
         self.background_funcs.notify_receiver_transfer_complete(self.delivery.id, warning_message, message.email_text)
@@ -379,7 +379,7 @@ class S3TransferOperation(object):
         :param sender_accepted_email_text: str: text of email message sent to recipient
         """
         print("Notifying receiver transfer of delivery {} is complete.".format(self.delivery.id))
-        self.assure_transferring()
+        self.ensure_transferring()
         message = self.make_processed_message('accepted_recipient', warning_message)
         message.send()
         self.background_funcs.mark_delivery_complete(self.delivery.id,
@@ -408,7 +408,7 @@ class S3TransferOperation(object):
         message_factory = S3MessageFactory(self.delivery, self.from_user)
         return message_factory.make_processed_message(process_type, warning_message=warning_message)
 
-    def assure_transferring(self):
+    def ensure_transferring(self):
         """
         Make sure the delivery is in transferring state since the background decorator retries after exceptions.
         """

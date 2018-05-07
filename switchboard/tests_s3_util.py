@@ -438,13 +438,13 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
 
     @patch('switchboard.s3_util.S3Delivery')
     @patch('switchboard.s3_util.S3DeliveryType')
-    def test_assure_transferring(self, mock_s3_delivery_type, mock_s3_delivery):
+    def test_ensure_transferring(self, mock_s3_delivery_type, mock_s3_delivery):
         operation = S3TransferOperation(delivery_id='delivery1')
         operation.delivery.state = State.NEW
-        operation.assure_transferring()
+        operation.ensure_transferring()
         self.assertEqual(True, operation.delivery.mark_transferring.called)
 
         operation.delivery.mark_transferring.reset_mock()
         operation.delivery.state = State.TRANSFERRING
-        operation.assure_transferring()
+        operation.ensure_transferring()
         self.assertEqual(False, operation.delivery.mark_transferring.called)
