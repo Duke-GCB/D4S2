@@ -30,9 +30,10 @@ class BackgroundFunctions(object):
         """
         try:
             transfer_operation = S3TransferOperation(delivery_id)
+            transfer_operation.ensure_transferring()
             transfer_operation.transfer_delivery_step()
         except Exception as e:
-            BackgroundFunctions.record_exception(delivery_id, e)
+            BackgroundFunctions.set_failed_and_record_exception(delivery_id, e)
             raise
 
     @staticmethod
@@ -46,9 +47,10 @@ class BackgroundFunctions(object):
         """
         try:
             transfer_operation = S3TransferOperation(delivery_id)
+            transfer_operation.ensure_transferring()
             transfer_operation.notify_sender_delivery_accepted_step(warning_message)
         except Exception as e:
-            BackgroundFunctions.record_exception(delivery_id, e)
+            BackgroundFunctions.set_failed_and_record_exception(delivery_id, e)
             raise
 
     @staticmethod
@@ -64,9 +66,10 @@ class BackgroundFunctions(object):
         """
         try:
             transfer_operation = S3TransferOperation(delivery_id)
+            transfer_operation.ensure_transferring()
             transfer_operation.notify_receiver_transfer_complete_step(warning_message, sender_accepted_email_text)
         except Exception as e:
-            BackgroundFunctions.record_exception(delivery_id, e)
+            BackgroundFunctions.set_failed_and_record_exception(delivery_id, e)
             raise
 
     @staticmethod
@@ -83,11 +86,16 @@ class BackgroundFunctions(object):
             transfer_operation = S3TransferOperation(delivery_id)
             transfer_operation.mark_delivery_complete_step(sender_accepted_email_text, recipient_accepted_email_text)
         except Exception as e:
-            BackgroundFunctions.record_exception(delivery_id, e)
+            BackgroundFunctions.set_failed_and_record_exception(delivery_id, e)
             raise
 
     @staticmethod
-    def record_exception(delivery_id, e):
+    def set_failed_and_record_exception(delivery_id, e):
+        """
+        Set delivery to failed state and record delivery.
+        :param delivery_id: str: id of delivery to mark failed
+        :param e: Exception: exception that occurred processing this delivery
+        """
         error_message = str(e)
         delivery = S3Delivery.objects.get(pk=delivery_id)
         S3DeliveryError.objects.create(delivery=delivery, message=error_message)
@@ -352,7 +360,6 @@ class S3TransferOperation(object):
         Transfer delivery in s3 to recipient, schedules execution of notify_sender_delivery_accepted
         """
         print("Transferring s3 delivery {}".format(self.delivery.id))
-        self.ensure_transferring()
         delivery_util = S3DeliveryUtil(self.delivery, self.from_user)
         delivery_util.accept_project_transfer()
         delivery_util.share_with_additional_users()
@@ -366,7 +373,6 @@ class S3TransferOperation(object):
         :param warning_message: str: warning that may have occurred during the transfer operation
         """
         print("Notifying sender delivery {} has been accepted.".format(self.delivery.id))
-        self.ensure_transferring()
         message = self.make_processed_message('accepted', warning_message)
         message.send()
         self.background_funcs.notify_receiver_transfer_complete(self.delivery.id, warning_message, message.email_text)
@@ -379,7 +385,6 @@ class S3TransferOperation(object):
         :param sender_accepted_email_text: str: text of email message sent to recipient
         """
         print("Notifying receiver transfer of delivery {} is complete.".format(self.delivery.id))
-        self.ensure_transferring()
         message = self.make_processed_message('accepted_recipient', warning_message)
         message.send()
         self.background_funcs.mark_delivery_complete(self.delivery.id,

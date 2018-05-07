@@ -376,7 +376,6 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
         operation.transfer_delivery_step()
 
         self.s3_delivery.refresh_from_db()
-        self.assertEqual(self.s3_delivery.state, State.TRANSFERRING)
         self.assertTrue(mock_s3_delivery_util.return_value.accept_project_transfer.called)
         self.assertTrue(mock_s3_delivery_util.return_value.share_with_additional_users.called)
         operation.background_funcs.notify_sender_delivery_accepted.assert_called_with(self.s3_delivery.id, 'warning')
@@ -391,7 +390,6 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
         operation.notify_sender_delivery_accepted_step(warning_message='oops')
 
         self.s3_delivery.refresh_from_db()
-        self.assertEqual(self.s3_delivery.state, State.TRANSFERRING)
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
             'accepted', warning_message='oops')
         self.assertTrue(mock_message.send.called)
@@ -409,7 +407,6 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
                                                          sender_accepted_email_text='sender email')
 
         self.s3_delivery.refresh_from_db()
-        self.assertEqual(self.s3_delivery.state, State.TRANSFERRING)
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
             'accepted_recipient', warning_message='oops')
         self.assertTrue(mock_message.send.called)
