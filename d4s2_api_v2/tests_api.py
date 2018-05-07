@@ -2,9 +2,8 @@ from django.core.urlresolvers import reverse, NoReverseMatch
 from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase
-from d4s2_api.tests_views import AuthenticatedResourceTestCase
+from d4s2_api_v1.tests_api import AuthenticatedResourceTestCase
 from mock import patch, Mock
-from d4s2_api.views import *
 from d4s2_api.models import *
 from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket

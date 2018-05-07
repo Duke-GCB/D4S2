@@ -1,6 +1,6 @@
 from django.test import TestCase
 from d4s2_api.models import DDSDelivery, DDSDeliveryShareUser
-from d4s2_api.serializers import DeliverySerializer, SHARE_USERS_INVALID_MSG
+from d4s2_api_v1.serializers import DeliverySerializer, SHARE_USERS_INVALID_MSG
 from mock import MagicMock
 
 

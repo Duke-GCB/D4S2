@@ -2,7 +2,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from mock import patch, Mock, call
-from d4s2_api.views import *
+from d4s2_api_v1.api import *
 from d4s2_api.models import *
 from django.contrib.auth.models import User as django_user
 from switchboard.mocks_ddsutil import MockDDSProject, MockDDSUser
@@ -38,7 +38,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.post(url, {}, format='json')
         self.assertUnauthorized(response)
 
-    @patch('d4s2_api.views.DDSUtil')
+    @patch('d4s2_api_v1.api.DDSUtil')
     def test_create_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('ddsdelivery-list')
@@ -50,7 +50,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
-    @patch('d4s2_api.views.DDSUtil')
+    @patch('d4s2_api_v1.api.DDSUtil')
     def test_create_delivery_with_shared_ids(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('ddsdelivery-list')
@@ -88,7 +88,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(DDSDelivery.objects.count(), 0)
 
-    @patch('d4s2_api.views.DDSUtil')
+    @patch('d4s2_api_v1.api.DDSUtil')
     def test_update_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
@@ -118,7 +118,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
-    @patch('d4s2_api.views.DDSMessageFactory')
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_delivery(self, mock_message_factory):
         instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
@@ -138,7 +138,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         mock_message_factory.return_value.make_delivery_message.assert_called_with(expected_absolute_url)
         self.assertTrue(instance.send.called)
 
-    @patch('d4s2_api.views.DDSMessageFactory')
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_delivery_fails(self, mock_message_factory):
         instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
@@ -152,7 +152,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertFalse(mock_message_factory.return_value.make_delivery_message.called)
         self.assertFalse(instance.send.called)
 
-    @patch('d4s2_api.views.DDSUtil')
+    @patch('d4s2_api_v1.api.DDSUtil')
     def test_deliver_with_user_message(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('ddsdelivery-list')
@@ -166,7 +166,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
-    @patch('d4s2_api.views.DDSMessageFactory')
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_force_send_share(self, mock_message_factory):
         instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
@@ -229,7 +229,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         d =  Share.objects.get(pk=d.pk)
         self.assertEqual(d.project_id, 'project3')
 
-    @patch('d4s2_api.views.DDSMessageFactory')
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share(self, mock_message_factory):
         instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
@@ -244,7 +244,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(mock_message_factory.return_value.make_share_message.called)
         self.assertTrue(instance.send.called)
 
-    @patch('d4s2_api.views.DDSMessageFactory')
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share_fails(self, mock_message_factory):
         instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
@@ -257,7 +257,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertFalse(mock_message_factory.return_value.make_share_message.called)
         self.assertFalse(instance.send.called)
 
-    @patch('d4s2_api.views.DDSMessageFactory')
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_force_send_share(self, mock_message_factory):
         instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
