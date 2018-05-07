@@ -11,11 +11,13 @@ def wrap_s3_exceptions(func):
     :param func: function to wrap
     :return: func: wrapped function
     """
+
     def wrapped(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except botocore.exceptions.ClientError as e:
             raise S3Exception(str(e))
+
     return wrapped
 
 
@@ -367,7 +369,7 @@ class S3TransferOperation(object):
         """
         print("notify_sender_delivery_accepted delivery_id: {}".format(self.delivery.id))
         self.assure_transferring()
-        message = self.make_accepted_message(warning_message, self.from_user)
+        message = self.make_processed_message('accepted', warning_message)
         message.send()
         self.background_funcs.notify_receiver_transfer_complete(self.delivery.id, warning_message, message.email_text)
 
@@ -380,7 +382,7 @@ class S3TransferOperation(object):
         """
         print("notify_receiver_transfer_complete delivery_id: {}".format(self.delivery.id))
         self.assure_transferring()
-        message = self.make_accepted_message(warning_message, self.from_user)
+        message = self.make_processed_message('accepted_recipient', warning_message)
         message.send()
         self.background_funcs.mark_delivery_complete(self.delivery.id,
                                                      sender_accepted_email_text,
@@ -398,15 +400,15 @@ class S3TransferOperation(object):
                                     sender_accepted_email_text,
                                     recipient_accepted_email_text)
 
-    def make_accepted_message(self, warning_message, user):
+    def make_processed_message(self, process_type, warning_message):
         """
-        Create accepted email message based on email template settings for a user.
+        Create email message based on email template settings for the delivery from user and process_type.
+        :param process_type: str: name of the template to return
         :param warning_message: str: warning message from s3 transfer
-        :param user: django user to lookup an email template for
         :return: utils.Message: email message
         """
-        message_factory = S3MessageFactory(self.delivery, user)
-        return message_factory.make_processed_message('accepted', warning_message=warning_message)
+        message_factory = S3MessageFactory(self.delivery, self.from_user)
+        return message_factory.make_processed_message(process_type, warning_message=warning_message)
 
     def assure_transferring(self):
         """

@@ -411,7 +411,7 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
         self.s3_delivery.refresh_from_db()
         self.assertEqual(self.s3_delivery.state, State.TRANSFERRING)
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
-            'accepted', warning_message='oops')
+            'accepted_recipient', warning_message='oops')
         self.assertTrue(mock_message.send.called)
         operation.background_funcs.mark_delivery_complete.assert_called_with(
             self.s3_delivery.id, 'sender email', 'receiver email')
@@ -428,9 +428,9 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3Delivery')
     @patch('switchboard.s3_util.S3DeliveryType')
     @patch('switchboard.s3_util.S3MessageFactory')
-    def test_make_accepted_message(self, mock_s3_message_factory, mock_s3_delivery_type, mock_s3_delivery):
+    def test_make_processed_message(self, mock_s3_message_factory, mock_s3_delivery_type, mock_s3_delivery):
         operation = S3TransferOperation(delivery_id='delivery1')
-        message = operation.make_accepted_message(warning_message='warning msg', user=operation.to_user)
+        message = operation.make_processed_message(process_type='accepted', warning_message='warning msg')
         self.assertEqual(message, mock_s3_message_factory.return_value.make_processed_message.return_value)
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
             'accepted', warning_message='warning msg'
