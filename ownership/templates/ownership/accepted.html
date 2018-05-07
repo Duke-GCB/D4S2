@@ -2,6 +2,14 @@
 {% block title %}Delivery Accepted{% endblock %}
 {% block content %}
 <h4>Delivery Service</h4>
+{% if delivery_type == 's3' %}
+<p>
+    Project {{ project_title }} is now being transferred to you.
+</p>
+<p>
+    You will receive an email when this process is complete.
+</p>
+{% else %}
 <p>
     Delivery of {{ project_title }} has been accepted.
 </p>
@@ -13,4 +21,5 @@
 <p>
     View this data in {{ service_name }} at <a href="{{ project_url }}">{{ project_url }}.</a>
 </p>
+{%  endif %}
 {% endblock %}
