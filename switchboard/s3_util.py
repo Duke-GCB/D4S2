@@ -11,13 +11,11 @@ def wrap_s3_exceptions(func):
     :param func: function to wrap
     :return: func: wrapped function
     """
-
     def wrapped(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except botocore.exceptions.ClientError as e:
             raise S3Exception(str(e))
-
     return wrapped
 
 
