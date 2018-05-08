@@ -198,6 +198,12 @@ class S3Resource(object):
         bucket_acl = self.s3.BucketAcl(bucket_name)
         return bucket_acl.owner['ID']
 
+    def get_objects_for_bucket(self, bucket_name):
+        s3_objects = []
+        for s3_object_summary in self.s3.Bucket(bucket_name).objects.all():
+            s3_objects.append(s3_object_summary.Object())
+        return s3_objects
+
 
 class S3BucketUtil(object):
     def __init__(self, endpoint, user):
@@ -224,6 +230,19 @@ class S3BucketUtil(object):
                 return False
             else:
                 raise S3Exception(e)
+
+    def get_objects_manifest(self, bucket_name):
+        manifest = []
+        for s3_object in self.s3.get_objects_for_bucket(bucket_name):
+            manifest.append({
+                'metadata': s3_object.metadata,
+                'e_tag': s3_object.e_tag,
+                'last_modified': s3_object.last_modified.isoformat(),
+                'content_length': s3_object.content_length,
+                'content_type': s3_object.content_type,
+                'version_id': s3_object.version_id
+            })
+        return manifest
 
 
 class S3Exception(Exception):

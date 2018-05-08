@@ -13,7 +13,7 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateException
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
 from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket
-
+import json
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -247,6 +247,7 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
         accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')
+        self._record_object_manifest(s3_delivery, request.user)
         self._give_agent_permission(s3_delivery, request.user)
         self._send_delivery_message(s3_delivery, request.user, accept_url)
         return self.retrieve(request)
@@ -264,6 +265,19 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
             s3_delivery_util.give_agent_permissions()
         except S3Exception as ex:
             raise WrappedS3Exception(ex)
+
+    @staticmethod
+    def _record_object_manifest(s3_delivery, user):
+        """
+        Update delivery recording the object manifest based on data in s3
+        :param s3_delivery: S3Delivery: details about what we will deliver
+        :param user: user who's credentials to use to talk to s3
+        """
+        bucket = s3_delivery.bucket
+        s3_bucket_util = S3BucketUtil(bucket.endpoint, user)
+        objects_manifest = s3_bucket_util.get_objects_manifest(bucket_name=bucket.name)
+        s3_delivery.object_manifest = json.dumps(objects_manifest)
+        s3_delivery.save()
 
     @staticmethod
     def _send_delivery_message(s3_delivery, user, accept_url):

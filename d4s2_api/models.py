@@ -406,6 +406,7 @@ class S3Delivery(DeliveryBase):
     from_user = models.ForeignKey(S3User, related_name='sent_deliveries')
     to_user = models.ForeignKey(S3User, related_name='received_deliveries')
     transfer_id = models.UUIDField(default=uuid.uuid4)
+    object_manifest = models.TextField(help_text='JSON array of object metadata from bucket at time of sending bucket')
 
     def __str__(self):
         return 'S3 Delivery bucket: {} State: {} Performed by: {}'.format(
