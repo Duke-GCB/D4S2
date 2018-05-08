@@ -295,6 +295,18 @@ class S3ResourceTestCase(TestCase):
         self.assertEqual(s3_resource.get_bucket_owner('somebucket'), self.s3_user.s3_id)
         mock_s3.BucketAcl.assert_called_with('somebucket')
 
+    @patch('switchboard.s3_util.boto3')
+    def test_get_objects_for_bucket(self, mock_boto3):
+        mock_s3 = mock_boto3.session.Session.return_value.resource.return_value
+        s3_resource = S3Resource(self.s3_user)
+        mock_object_summary1 = Mock()
+        mock_object_summary1.Object.return_value = '<s3_object1>'
+        mock_object_summary2 = Mock()
+        mock_object_summary2.Object.return_value = '<s3_object2>'
+        mock_s3.Bucket.return_value.objects.all.return_value = [mock_object_summary1, mock_object_summary2]
+        s3_objects = s3_resource.get_objects_for_bucket(bucket_name='somebucket')
+        self.assertEqual(s3_objects, ['<s3_object1>', '<s3_object2>'])
+
 
 class S3BucketUtilTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3Resource')
@@ -329,6 +341,38 @@ class S3BucketUtilTestCase(S3DeliveryTestBase):
         mock_s3_resource.return_value.get_bucket_owner.side_effect = AccessDeniedClientError
 
         self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), False)
+
+    @patch('switchboard.s3_util.S3Resource')
+    def test_get_objects_manifest(self, mock_s3_resource):
+        mock_last_modified = Mock()
+        mock_last_modified.isoformat.return_value = '2001-01-01 12:30'
+        mock_s3_resource.return_value.get_objects_for_bucket.return_value = [
+            Mock(
+                metadata={'md5':'123'},
+                e_tag='sometag',
+                last_modified=mock_last_modified,
+                content_length=100,
+                content_type='text/plain',
+                version_id='1233'
+            )
+        ]
+
+        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
+        objects_manifest = s3_bucket_util.get_objects_manifest(bucket_name='test1')
+
+        mock_s3_resource.return_value.get_objects_for_bucket.assert_called_with('test1')
+        self.assertEqual(objects_manifest, [
+            {
+                'content_length': 100,
+                'e_tag': 'sometag',
+                'version_id': '1233',
+                'last_modified': '2001-01-01 12:30',
+                'content_type': 'text/plain',
+                'metadata': {
+                    'md5': '123'
+                }
+            }
+        ])
 
 
 class AccessDeniedClientError(Exception):
