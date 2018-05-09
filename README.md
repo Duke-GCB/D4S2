@@ -36,7 +36,11 @@ Installation - Local
 
         $ python manage.py runserver
 
-8. The server is running and the API can be explored at [http://127.0.0.1:8000/api/v1/](http://127.0.0.1:8000/api/v1/)
+8. Start the background task runner:
+
+        $ python manage.py process_tasks
+
+9. The server is running and the API can be explored at [http://127.0.0.1:8000/api/v1/](http://127.0.0.1:8000/api/v1/)
 
 
 Installation - Docker Compose
