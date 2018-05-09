@@ -445,3 +445,13 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
         operation.delivery.state = State.TRANSFERRING
         operation.ensure_transferring()
         self.assertEqual(False, operation.delivery.mark_transferring.called)
+
+    def test_set_failed_and_record_exception(self):
+        operation = S3TransferOperation(delivery_id=self.s3_delivery.id)
+        operation.set_failed_and_record_exception(ValueError("oops"))
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.state, State.FAILED)
+        errors = S3DeliveryError.objects.filter(delivery=self.s3_delivery)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].message, 'oops')
