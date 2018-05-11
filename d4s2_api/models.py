@@ -46,6 +46,7 @@ class State(object):
         (NOTIFIED, 'Notified'),
         (ACCEPTED, 'Accepted'),
         (DECLINED, 'Declined'),
+        (FAILED, 'Failed'),
         (TRANSFERRING, 'Transferring'),
     )
     DELIVERY_CHOICES = STATES
