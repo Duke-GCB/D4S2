@@ -4,6 +4,7 @@ import uuid
 from django.db import models
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
 from django.contrib.auth.models import User, Group
+from django.contrib.postgres.fields import JSONField
 from simple_history.models import HistoricalRecords
 
 DEFAULT_EMAIL_TEMPLATE_SET_NAME = 'default'
@@ -394,6 +395,10 @@ class S3Bucket(models.Model):
         unique_together = ('endpoint', 'name')
 
 
+class S3ObjectManifest(models.Model):
+    content = JSONField(help_text='JSON array of object metadata from bucket at time of sending bucket')
+
+
 class S3Delivery(DeliveryBase):
     """
     Represents a delivery of a s3 bucket from one user to another.
@@ -406,7 +411,7 @@ class S3Delivery(DeliveryBase):
     from_user = models.ForeignKey(S3User, related_name='sent_deliveries')
     to_user = models.ForeignKey(S3User, related_name='received_deliveries')
     transfer_id = models.UUIDField(default=uuid.uuid4)
-    object_manifest = models.TextField(help_text='JSON array of object metadata from bucket at time of sending bucket')
+    manifest = models.OneToOneField(S3ObjectManifest, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return 'S3 Delivery bucket: {} State: {} Performed by: {}'.format(

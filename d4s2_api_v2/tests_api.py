@@ -919,7 +919,7 @@ class S3DeliveryViewSetTestCase(APITestCase):
         delivery = S3Delivery.objects.get(pk=delivery.id)
         self.assertEqual(delivery.state, State.NOTIFIED)
         self.assertEqual(delivery.delivery_email_text, 'email text')
-        self.assertEqual(delivery.object_manifest, '[{"meta": "123"}]')
+        self.assertEqual(delivery.manifest.content, [{"meta": "123"}])
         mock_s3_message_factory.assert_called_with(delivery, self.normal_user1)
         mock_s3_message_factory.return_value.make_delivery_message.assert_called_with(
             mock_build_accept_url.return_value)

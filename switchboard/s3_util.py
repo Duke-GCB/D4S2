@@ -235,6 +235,7 @@ class S3BucketUtil(object):
         manifest = []
         for s3_object in self.s3.get_objects_for_bucket(bucket_name):
             manifest.append({
+                'key': s3_object.key,
                 'metadata': s3_object.metadata,
                 'e_tag': s3_object.e_tag,
                 'last_modified': s3_object.last_modified.isoformat(),

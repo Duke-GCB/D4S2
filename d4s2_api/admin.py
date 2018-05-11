@@ -36,3 +36,4 @@ class S3DeliveryAdmin(SimpleHistoryAdmin):
 
 admin.site.register(S3Delivery, S3DeliveryAdmin)
 admin.site.register(S3DeliveryError)
+admin.site.register(S3ObjectManifest)

@@ -348,6 +348,7 @@ class S3BucketUtilTestCase(S3DeliveryTestBase):
         mock_last_modified.isoformat.return_value = '2001-01-01 12:30'
         mock_s3_resource.return_value.get_objects_for_bucket.return_value = [
             Mock(
+                key='file1.txt',
                 metadata={'md5':'123'},
                 e_tag='sometag',
                 last_modified=mock_last_modified,
@@ -363,6 +364,7 @@ class S3BucketUtilTestCase(S3DeliveryTestBase):
         mock_s3_resource.return_value.get_objects_for_bucket.assert_called_with('test1')
         self.assertEqual(objects_manifest, [
             {
+                'key': 'file1.txt',
                 'content_length': 100,
                 'e_tag': 'sometag',
                 'version_id': '1233',

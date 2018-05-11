@@ -10,10 +10,12 @@ from switchboard.dds_util import DDSUtil
 from switchboard.s3_util import S3DeliveryUtil, S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
-from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateException
+from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, \
+    EmailTemplateException, S3ObjectManifest
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
 from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket
 import json
+
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -276,7 +278,7 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         bucket = s3_delivery.bucket
         s3_bucket_util = S3BucketUtil(bucket.endpoint, user)
         objects_manifest = s3_bucket_util.get_objects_manifest(bucket_name=bucket.name)
-        s3_delivery.object_manifest = json.dumps(objects_manifest)
+        s3_delivery.manifest = S3ObjectManifest.objects.create(content=objects_manifest)
         s3_delivery.save()
 
     @staticmethod
