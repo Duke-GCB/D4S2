@@ -6,11 +6,11 @@ stages:
 
 variables:
   DOCKER_DRIVER: overlay2
-  DOCKER_REGISTRY: gitlab.dhe.duke.edu:4567
-  CONTAINER_IMAGE: gitlab.dhe.duke.edu:4567/dcl9/d4s2:${CI_BUILD_REF}
-  CONTAINER_IMAGE_LATEST: gitlab.dhe.duke.edu:4567/dcl9/d4s2:latest
-  CONTAINER_IMAGE_APACHE: gitlab.dhe.duke.edu:4567/dcl9/d4s2:${CI_BUILD_REF}-apache
-  CONTAINER_IMAGE_APACHE_LATEST: gitlab.dhe.duke.edu:4567/dcl9/d4s2:latest-apache
+  DOCKER_REGISTRY: ${CI_REGISTRY}
+  CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}
+  CONTAINER_IMAGE_LATEST: ${CI_REGISTRY_IMAGE}:latest
+  CONTAINER_IMAGE_APACHE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
+  CONTAINER_IMAGE_APACHE_LATEST: ${CI_REGISTRY_IMAGE}:latest-apache
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/dcl9/gcb-ansible-deploy.git
   PLAYBOOK_DIR: gcb-ansible-deploy
   DEPLOY_PLAYBOOK: d4s2-webapp.yml
