@@ -491,7 +491,7 @@ class SendDeliveryOperation(S3Operation):
     background_funcs = SendDeliveryBackgroundFunctions
 
     def __init__(self, delivery_id, accept_url):
-        super(S3TransferOperation, self).__init__(delivery_id)
+        super(SendDeliveryOperation, self).__init__(delivery_id)
         self.accept_url = accept_url
 
     @staticmethod
@@ -530,7 +530,6 @@ class SendDeliveryOperation(S3Operation):
         """
         from_user = self.delivery.from_user
         message_factory = S3MessageFactory(self.delivery, from_user.user)
-        accept_url = ''
-        message = message_factory.make_delivery_message(accept_url)
+        message = message_factory.make_delivery_message(self.accept_url)
         message.send()
         self.delivery.mark_notified(message.email_text)

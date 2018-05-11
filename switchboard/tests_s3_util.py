@@ -2,7 +2,8 @@ from django.test import TestCase
 from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
-    S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError
+    S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError, SendDeliveryBackgroundFunctions, \
+    SendDeliveryOperation
 
 
 class S3DeliveryTestBase(TestCase):
@@ -501,3 +502,47 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
         errors = S3DeliveryError.objects.filter(delivery=self.s3_delivery)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].message, 'oops')
+
+
+class SendDeliveryOperationTestCase(S3DeliveryTestBase):
+    def test_run(self):
+        SendDeliveryOperation.background_funcs = Mock()
+        SendDeliveryOperation.run(self.s3_delivery, 'http://someurl.com')
+        SendDeliveryOperation.background_funcs.record_object_manifest.assert_called_with(
+            self.s3_delivery.id, 'http://someurl.com')
+
+    @patch('switchboard.s3_util.S3BucketUtil')
+    def test_record_object_manifest_step(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.get_objects_manifest.return_value = [{'key': '123'}]
+
+        operation = SendDeliveryOperation(self.s3_delivery.id, 'http://someurl.com')
+        operation.background_funcs = Mock()
+        operation.record_object_manifest_step()
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.manifest.content, [{'key': '123'}])
+        operation.background_funcs.give_agent_permission.assert_called_with(self.s3_delivery.id, 'http://someurl.com')
+
+    @patch('switchboard.s3_util.S3DeliveryUtil')
+    def test_give_agent_permission_step(self, mock_s3_delivery_util):
+        operation = SendDeliveryOperation(self.s3_delivery.id, 'http://someurl.com')
+        operation.background_funcs = Mock()
+        operation.give_agent_permission_step()
+
+        self.assertTrue(mock_s3_delivery_util.return_value.give_agent_permissions.called)
+        operation.background_funcs.send_delivery_message.assert_called_with(self.s3_delivery.id, 'http://someurl.com')
+
+    @patch('switchboard.s3_util.S3MessageFactory')
+    def test_send_delivery_message_step(self, mock_s3_message_factory):
+        mock_s3_message_factory.return_value.make_delivery_message.return_value = \
+            Mock(email_text='emailtxt')
+
+        operation = SendDeliveryOperation(self.s3_delivery.id, 'http://someurl.com')
+        operation.send_delivery_message_step()
+
+        mock_s3_message_factory.return_value.make_delivery_message.assert_called_with('http://someurl.com')
+        self.assertTrue(mock_s3_message_factory.return_value.make_delivery_message.return_value.send.called)
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.state, State.NOTIFIED)
+        self.assertEqual(self.s3_delivery.delivery_email_text, 'emailtxt')
