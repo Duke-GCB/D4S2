@@ -402,7 +402,7 @@ class S3DeliveryTypeTestCase(TestCase):
         mock_delivery_util.assert_called_once_with('arg1', 'arg2')
         self.assertEqual(util, mock_delivery_util.return_value)
 
-    @patch('switchboard.s3_util.BackgroundFunctions')
+    @patch('switchboard.s3_util.TransferBackgroundFunctions')
     def test_transfer_delivery(self, mock_background_funcs):
         mock_delivery = Mock()
         mock_delivery.id = '123'

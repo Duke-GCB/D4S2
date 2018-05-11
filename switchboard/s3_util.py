@@ -1,4 +1,5 @@
-from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes, S3DeliveryError, State
+from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes, S3DeliveryError, State, S3ObjectManifest, \
+    EmailTemplateException
 from d4s2_api.utils import MessageFactory
 import boto3
 import botocore
@@ -19,7 +20,7 @@ def wrap_s3_exceptions(func):
     return wrapped
 
 
-class BackgroundFunctions(object):
+class TransferBackgroundFunctions(object):
     @staticmethod
     @background
     def transfer_delivery(delivery_id):
@@ -341,7 +342,7 @@ class S3DeliveryType:
     @staticmethod
     def transfer_delivery(delivery, _):
         delivery.mark_transferring()
-        BackgroundFunctions.transfer_delivery(delivery.id)
+        TransferBackgroundFunctions.transfer_delivery(delivery.id)
 
 
 class S3MessageFactory(MessageFactory):
@@ -351,16 +352,33 @@ class S3MessageFactory(MessageFactory):
         )
 
 
-class S3TransferOperation(object):
-    """
-    Object used in background process to run transfer steps and schedules next background step.
-    """
-    background_funcs = BackgroundFunctions
-
+class S3Operation(object):
     def __init__(self, delivery_id):
+        """
+        :param delivery_id: int: S3Delivery id we will perform an operation upon
+        """
         self.delivery = S3Delivery.objects.get(pk=delivery_id)
         self.to_user = self.delivery.to_user.user
         self.from_user = self.delivery.from_user.user
+
+    def set_failed_and_record_exception(self, e):
+        """
+        Set delivery to failed state and record delivery.
+        :param e: Exception: exception that occurred processing this delivery
+        """
+        error_message = str(e)
+        S3DeliveryError.objects.create(delivery=self.delivery, message=error_message)
+        self.delivery.mark_failed()
+
+
+class S3TransferOperation(S3Operation):
+    """
+    Object used in background process to run transfer steps and schedules next background step.
+    """
+    background_funcs = TransferBackgroundFunctions
+
+    def __init__(self, delivery_id):
+        super(S3TransferOperation, self).__init__(delivery_id)
 
     def transfer_delivery_step(self):
         """
@@ -435,3 +453,84 @@ class S3TransferOperation(object):
         error_message = str(e)
         S3DeliveryError.objects.create(delivery=self.delivery, message=error_message)
         self.delivery.mark_failed()
+
+
+class SendDeliveryBackgroundFunctions(object):
+    @staticmethod
+    @background
+    def give_agent_permission(delivery_id, accept_url):
+        operation = SendDeliveryOperation(delivery_id, accept_url)
+        try:
+            operation.give_agent_permission_step()
+        except Exception as e:
+            operation.set_failed_and_record_exception(e)
+            raise
+
+    @staticmethod
+    @background
+    def record_object_manifest(delivery_id, accept_url):
+        operation = SendDeliveryOperation(delivery_id, accept_url)
+        try:
+            operation.record_object_manifest_step()
+        except Exception as e:
+            operation.set_failed_and_record_exception(e)
+            raise
+
+    @staticmethod
+    @background
+    def send_delivery_message(delivery_id, accept_url):
+        operation = SendDeliveryOperation(delivery_id, accept_url)
+        try:
+            operation.send_delivery_message_step()
+        except Exception as e:
+            operation.set_failed_and_record_exception(e)
+            raise
+
+
+class SendDeliveryOperation(S3Operation):
+    background_funcs = SendDeliveryBackgroundFunctions
+
+    def __init__(self, delivery_id, accept_url):
+        super(S3TransferOperation, self).__init__(delivery_id)
+        self.accept_url = accept_url
+
+    @staticmethod
+    def run(s3_delivery, accept_url):
+        """
+        Run first background process in this operation
+        :param s3_delivery:
+        :param accept_url:
+        :return:
+        """
+        SendDeliveryOperation.background_funcs.record_object_manifest(s3_delivery.id, accept_url)
+
+    def record_object_manifest_step(self):
+        """
+        Update delivery recording the object manifest based on data in s3
+        """
+        bucket = self.delivery.bucket
+        from_user = self.delivery.from_user
+        s3_bucket_util = S3BucketUtil(bucket.endpoint, from_user.user)
+        objects_manifest = s3_bucket_util.get_objects_manifest(bucket_name=bucket.name)
+        self.delivery.manifest = S3ObjectManifest.objects.create(content=objects_manifest)
+        self.delivery.save()
+        self.background_funcs.give_agent_permission(self.delivery.id, self.accept_url)
+
+    def give_agent_permission_step(self):
+        """
+        Give agent permission to transfer the project to another user.
+        """
+        s3_delivery_util = S3DeliveryUtil(self.delivery, self.delivery.from_user.user)
+        s3_delivery_util.give_agent_permissions()
+        self.background_funcs.send_delivery_message(self.delivery.id, self.accept_url)
+
+    def send_delivery_message_step(self):
+        """
+        Send email to delivery recipient and update delivery status.
+        """
+        from_user = self.delivery.from_user
+        message_factory = S3MessageFactory(self.delivery, from_user.user)
+        accept_url = ''
+        message = message_factory.make_delivery_message(accept_url)
+        message.send()
+        self.delivery.mark_notified(message.email_text)

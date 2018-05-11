@@ -13,8 +13,9 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, \
     EmailTemplateException, S3ObjectManifest
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
-from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket
+from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket, SendDeliveryOperation
 import json
+from background_task import background
 
 
 class DataServiceUnavailable(APIException):
@@ -249,9 +250,7 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
         accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')
-        self._record_object_manifest(s3_delivery, request.user)
-        self._give_agent_permission(s3_delivery, request.user)
-        self._send_delivery_message(s3_delivery, request.user, accept_url)
+        SendDeliveryOperation.run(s3_delivery, accept_url)
         return self.retrieve(request)
 
     @staticmethod
