@@ -44,33 +44,27 @@ class S3DeliveryTestBase(TestCase):
 
 class S3DeliveryUtilTestCase(S3DeliveryTestBase):
     def test_s3_agent_property(self):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_agent = s3_delivery_util.s3_agent
         self.assertEqual(s3_agent.type, S3UserTypes.AGENT)
         self.assertEqual(s3_agent.id, self.s3_agent_user.id)
 
-    def test_s3_current_user_property(self):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
-        current_s3_user = s3_delivery_util.current_s3_user
-        self.assertEqual(current_s3_user.type, S3UserTypes.NORMAL)
-        self.assertEqual(current_s3_user.id, self.s3_from_user.id)
-
     def test_destination_bucket_name_property(self):
         self.s3_bucket.name = 'mouse'
         self.s3_bucket.save()
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         destination_bucket_name = s3_delivery_util.destination_bucket_name
         self.assertEqual(destination_bucket_name, 'delivery_mouse')
 
         self.s3_bucket.name = 'ThisBucket'
         self.s3_bucket.save()
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         destination_bucket_name = s3_delivery_util.destination_bucket_name
         self.assertEqual(destination_bucket_name, 'delivery_ThisBucket')
 
     @patch('switchboard.s3_util.S3Resource')
     def test_give_agent_permissions(self, mock_s3_resource):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_delivery_util.give_agent_permissions()
         mock_s3_resource.return_value.grant_bucket_acl.assert_called_with(
             'mouse',
@@ -88,7 +82,7 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
             mock_s3_cleanup_bucket
         ]
 
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.to_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_delivery_util.accept_project_transfer()
 
         # First we grant read permissions to to_user while retaining control for agent user
@@ -113,7 +107,7 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
 
     @patch('switchboard.s3_util.S3Resource')
     def test_decline_delivery(self, mock_s3_resource):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.to_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_delivery_util.decline_delivery('test reason')
         mock_s3_resource.return_value.grant_bucket_acl.assert_called_with(
             'mouse', grant_full_control_user=self.s3_from_user
@@ -399,8 +393,8 @@ class S3DeliveryTypeTestCase(TestCase):
 
     @patch('switchboard.s3_util.S3DeliveryUtil')
     def test_makes_dds_delivery_util(self, mock_delivery_util):
-        util = self.delivery_type.make_delivery_util('arg1', 'arg2')
-        mock_delivery_util.assert_called_once_with('arg1', 'arg2')
+        util = self.delivery_type.make_delivery_util('s3delivery', 'user')
+        mock_delivery_util.assert_called_once_with('s3delivery')
         self.assertEqual(util, mock_delivery_util.return_value)
 
     @patch('switchboard.s3_util.TransferBackgroundFunctions')

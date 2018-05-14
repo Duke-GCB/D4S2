@@ -91,18 +91,19 @@ class TransferBackgroundFunctions(object):
 
 
 class S3DeliveryUtil(object):
-    def __init__(self, s3_delivery, user):
+    def __init__(self, s3_delivery):
+        """
+        :param s3_delivery: S3Delivery
+        """
         self.s3_delivery = s3_delivery
         self.endpoint = s3_delivery.bucket.endpoint
         self.source_bucket_name = s3_delivery.bucket.name
-        self.user = user
         self.s3_agent = S3User.objects.get(type=S3UserTypes.AGENT, endpoint=self.endpoint)
-        self.current_s3_user = S3User.objects.get(user=self.user, endpoint=self.endpoint)
         self.destination_bucket_name = 'delivery_{}'.format(self.source_bucket_name)
 
     @wrap_s3_exceptions
     def give_agent_permissions(self):
-        s3 = S3Resource(self.current_s3_user)
+        s3 = S3Resource(self.s3_delivery.from_user)
         s3.grant_bucket_acl(self.source_bucket_name,
                             grant_full_control_user=self.s3_agent)
         print("Gave agent {} Full Control".format(self.s3_agent.s3_id))
@@ -136,7 +137,7 @@ class S3DeliveryUtil(object):
         print("Gave agent {} full and to_user {} read perms".format(self.s3_agent, s3_user))
 
     def _copy_files_to_new_destination_bucket(self):
-        s3 = S3Resource(self.current_s3_user)
+        s3 = S3Resource(self.s3_delivery.to_user)
         s3.create_bucket(self.destination_bucket_name)
         s3.copy_bucket(self.source_bucket_name, self.destination_bucket_name)
 
@@ -336,8 +337,8 @@ class S3DeliveryType:
         return S3DeliveryDetails(*args)
 
     @staticmethod
-    def make_delivery_util(*args):
-        return S3DeliveryUtil(*args)
+    def make_delivery_util(delivery, _):
+        return S3DeliveryUtil(delivery)
 
     @staticmethod
     def transfer_delivery(delivery, _):
@@ -385,7 +386,7 @@ class S3TransferOperation(S3Operation):
         Transfer delivery in s3 to recipient, schedules execution of notify_sender_delivery_accepted
         """
         print("Transferring s3 delivery {}".format(self.delivery.id))
-        delivery_util = S3DeliveryUtil(self.delivery, self.from_user)
+        delivery_util = S3DeliveryUtil(self.delivery)
         delivery_util.accept_project_transfer()
         delivery_util.share_with_additional_users()
         warning_message = delivery_util.get_warning_message()
@@ -520,7 +521,7 @@ class SendDeliveryOperation(S3Operation):
         """
         Give agent permission to transfer the project to another user.
         """
-        s3_delivery_util = S3DeliveryUtil(self.delivery, self.delivery.from_user.user)
+        s3_delivery_util = S3DeliveryUtil(self.delivery)
         s3_delivery_util.give_agent_permissions()
         self.background_funcs.send_delivery_message(self.delivery.id, self.accept_url)
 

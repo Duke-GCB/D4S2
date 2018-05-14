@@ -7,11 +7,10 @@ from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
 from switchboard.dds_util import DDSUtil
-from switchboard.s3_util import S3DeliveryUtil, S3BucketUtil
+from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
-from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, \
-    EmailTemplateException, S3ObjectManifest
+from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
 from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket, SendDeliveryOperation
 
