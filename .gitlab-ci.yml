@@ -64,10 +64,11 @@ release-image:
   - master
 
 # Deploy images using ansible-playbook
-# Clones the internal (light) playbook dir that uses public roles submodule
+# Clones the private gcb-ansible-cd playbook from GitLab that uses public roles submodule
 # Passes in docker registry credentials as ansible extra variables
 # Requires that ansible has already been installed on the gitlab runner host, and that the
 # SSH private key (DEPLOY_KEY) can login and sudo all
+# Also requires the symmetric git-crypt key to be placed on the gitlab runner (GIT_CRYPT_KEY)
 deploy:
   stage: deploy
   tags:
@@ -77,7 +78,17 @@ deploy:
   - cd $PLAYBOOK_DIR
   - git crypt unlock $GIT_CRYPT_KEY
   - ansible-galaxy install -r install_roles.yml
-  - ansible-playbook -e d4s2_docker_image=$CONTAINER_IMAGE_APACHE -e ansible_python_interpreter=/usr/bin/python3 -e docker_registry=$DOCKER_REGISTRY -e docker_username=gitlab-ci-token -e docker_password=$CI_JOB_TOKEN -u $DEPLOY_USER --private-key=$DEPLOY_KEY -i inventory -l $DEPLOY_HOST $DEPLOY_PLAYBOOK
+  - ansible-playbook
+    -e d4s2_docker_image=$CONTAINER_IMAGE_APACHE
+    -e ansible_python_interpreter=/usr/bin/python3
+    -e docker_registry=$DOCKER_REGISTRY
+    -e docker_username=gitlab-ci-token
+    -e docker_password=$CI_JOB_TOKEN
+    -u $DEPLOY_USER
+    --private-key=$DEPLOY_KEY
+    -i inventory
+    -l $DEPLOY_HOST
+    $DEPLOY_PLAYBOOK
   environment:
     name: development
     url: https://bespin-float-70.genome.duke.edu
