@@ -9,8 +9,8 @@ variables:
   DOCKER_REGISTRY: ${CI_REGISTRY}
   CONTAINER_IMAGE_BASE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}
   CONTAINER_IMAGE_BASE_LATEST: ${CI_REGISTRY_IMAGE}:latest
-  CONTAINER_IMAGE_APACHE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
-  CONTAINER_IMAGE_APACHE_LATEST: ${CI_REGISTRY_IMAGE}:latest-apache
+  CONTAINER_IMAGE_RELEASE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
+  CONTAINER_IMAGE_RELEASE_LATEST: ${CI_REGISTRY_IMAGE}:latest-apache
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/gcb-informatics/gcb-ansible-cd.git
   PLAYBOOK_DIR: gcb-ansible-cd
   DEPLOY_PLAYBOOK: d4s2-webapp.yml
@@ -33,9 +33,9 @@ build:
   - docker-build
   script:
   - docker build -t $CONTAINER_IMAGE_BASE .
-  - docker build --build-arg BASE_IMAGE=${CONTAINER_IMAGE_BASE} -t $CONTAINER_IMAGE_APACHE production
+  - docker build --build-arg BASE_IMAGE=${CONTAINER_IMAGE_BASE} -t $CONTAINER_IMAGE_RELEASE production
   - docker push $CONTAINER_IMAGE_BASE
-  - docker push $CONTAINER_IMAGE_APACHE
+  - docker push $CONTAINER_IMAGE_RELEASE
 
 # Test the code inside the built docker image using docker-compose
 test:
@@ -55,11 +55,11 @@ release-image:
   - docker-build
   script:
   - docker pull $CONTAINER_IMAGE_BASE
-  - docker pull $CONTAINER_IMAGE_APACHE
+  - docker pull $CONTAINER_IMAGE_RELEASE
   - docker tag $CONTAINER_IMAGE_BASE $CONTAINER_IMAGE_BASE_LATEST
-  - docker tag $CONTAINER_IMAGE_APACHE $CONTAINER_IMAGE_APACHE_LATEST
+  - docker tag $CONTAINER_IMAGE_RELEASE $CONTAINER_IMAGE_RELEASE_LATEST
   - docker push $CONTAINER_IMAGE_BASE_LATEST
-  - docker push $CONTAINER_IMAGE_APACHE_LATEST
+  - docker push $CONTAINER_IMAGE_RELEASE_LATEST
   only:
   - deploy-dev
   - deploy-prod
@@ -70,7 +70,7 @@ release-image:
 # Requires that ansible has already been installed on the gitlab runner host, and that the
 # SSH private key (DEPLOY_KEY) can login and sudo all
 # Also requires the symmetric git-crypt key to be placed on the gitlab runner (GIT_CRYPT_KEY)
-deploy:
+deploy-dev:
   stage: deploy
   tags:
   - docker-build
@@ -80,7 +80,7 @@ deploy:
   - git crypt unlock $GIT_CRYPT_KEY
   - ansible-galaxy install -r install_roles.yml
   - ansible-playbook
-    -e d4s2_docker_image=$CONTAINER_IMAGE_APACHE
+    -e d4s2_docker_image=$CONTAINER_IMAGE_RELEASE
     -e ansible_python_interpreter=/usr/bin/python3
     -e docker_registry=$DOCKER_REGISTRY
     -e docker_username=gitlab-ci-token
