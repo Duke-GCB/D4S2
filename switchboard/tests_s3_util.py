@@ -2,7 +2,8 @@ from django.test import TestCase
 from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
-    S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError
+    S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError, SendDeliveryBackgroundFunctions, \
+    SendDeliveryOperation
 
 
 class S3DeliveryTestBase(TestCase):
@@ -43,33 +44,27 @@ class S3DeliveryTestBase(TestCase):
 
 class S3DeliveryUtilTestCase(S3DeliveryTestBase):
     def test_s3_agent_property(self):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_agent = s3_delivery_util.s3_agent
         self.assertEqual(s3_agent.type, S3UserTypes.AGENT)
         self.assertEqual(s3_agent.id, self.s3_agent_user.id)
 
-    def test_s3_current_user_property(self):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
-        current_s3_user = s3_delivery_util.current_s3_user
-        self.assertEqual(current_s3_user.type, S3UserTypes.NORMAL)
-        self.assertEqual(current_s3_user.id, self.s3_from_user.id)
-
     def test_destination_bucket_name_property(self):
         self.s3_bucket.name = 'mouse'
         self.s3_bucket.save()
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         destination_bucket_name = s3_delivery_util.destination_bucket_name
         self.assertEqual(destination_bucket_name, 'delivery_mouse')
 
         self.s3_bucket.name = 'ThisBucket'
         self.s3_bucket.save()
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         destination_bucket_name = s3_delivery_util.destination_bucket_name
         self.assertEqual(destination_bucket_name, 'delivery_ThisBucket')
 
     @patch('switchboard.s3_util.S3Resource')
     def test_give_agent_permissions(self, mock_s3_resource):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.from_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_delivery_util.give_agent_permissions()
         mock_s3_resource.return_value.grant_bucket_acl.assert_called_with(
             'mouse',
@@ -87,7 +82,7 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
             mock_s3_cleanup_bucket
         ]
 
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.to_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_delivery_util.accept_project_transfer()
 
         # First we grant read permissions to to_user while retaining control for agent user
@@ -112,7 +107,7 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
 
     @patch('switchboard.s3_util.S3Resource')
     def test_decline_delivery(self, mock_s3_resource):
-        s3_delivery_util = S3DeliveryUtil(self.s3_delivery, self.to_user)
+        s3_delivery_util = S3DeliveryUtil(self.s3_delivery)
         s3_delivery_util.decline_delivery('test reason')
         mock_s3_resource.return_value.grant_bucket_acl.assert_called_with(
             'mouse', grant_full_control_user=self.s3_from_user
@@ -294,6 +289,18 @@ class S3ResourceTestCase(TestCase):
         self.assertEqual(s3_resource.get_bucket_owner('somebucket'), self.s3_user.s3_id)
         mock_s3.BucketAcl.assert_called_with('somebucket')
 
+    @patch('switchboard.s3_util.boto3')
+    def test_get_objects_for_bucket(self, mock_boto3):
+        mock_s3 = mock_boto3.session.Session.return_value.resource.return_value
+        s3_resource = S3Resource(self.s3_user)
+        mock_object_summary1 = Mock()
+        mock_object_summary1.Object.return_value = '<s3_object1>'
+        mock_object_summary2 = Mock()
+        mock_object_summary2.Object.return_value = '<s3_object2>'
+        mock_s3.Bucket.return_value.objects.all.return_value = [mock_object_summary1, mock_object_summary2]
+        s3_objects = s3_resource.get_objects_for_bucket(bucket_name='somebucket')
+        self.assertEqual(s3_objects, ['<s3_object1>', '<s3_object2>'])
+
 
 class S3BucketUtilTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3Resource')
@@ -329,6 +336,40 @@ class S3BucketUtilTestCase(S3DeliveryTestBase):
 
         self.assertEqual(s3_bucket_util.user_owns_bucket(bucket_name='test1'), False)
 
+    @patch('switchboard.s3_util.S3Resource')
+    def test_get_objects_manifest(self, mock_s3_resource):
+        mock_last_modified = Mock()
+        mock_last_modified.isoformat.return_value = '2001-01-01 12:30'
+        mock_s3_resource.return_value.get_objects_for_bucket.return_value = [
+            Mock(
+                key='file1.txt',
+                metadata={'md5':'123'},
+                e_tag='sometag',
+                last_modified=mock_last_modified,
+                content_length=100,
+                content_type='text/plain',
+                version_id='1233'
+            )
+        ]
+
+        s3_bucket_util = S3BucketUtil(self.endpoint, self.to_user)
+        objects_manifest = s3_bucket_util.get_objects_manifest(bucket_name='test1')
+
+        mock_s3_resource.return_value.get_objects_for_bucket.assert_called_with('test1')
+        self.assertEqual(objects_manifest, [
+            {
+                'key': 'file1.txt',
+                'content_length': 100,
+                'e_tag': 'sometag',
+                'version_id': '1233',
+                'last_modified': '2001-01-01 12:30',
+                'content_type': 'text/plain',
+                'metadata': {
+                    'md5': '123'
+                }
+            }
+        ])
+
 
 class AccessDeniedClientError(Exception):
     def __init__(self):
@@ -352,11 +393,11 @@ class S3DeliveryTypeTestCase(TestCase):
 
     @patch('switchboard.s3_util.S3DeliveryUtil')
     def test_makes_dds_delivery_util(self, mock_delivery_util):
-        util = self.delivery_type.make_delivery_util('arg1', 'arg2')
-        mock_delivery_util.assert_called_once_with('arg1', 'arg2')
+        util = self.delivery_type.make_delivery_util('s3delivery', 'user')
+        mock_delivery_util.assert_called_once_with('s3delivery')
         self.assertEqual(util, mock_delivery_util.return_value)
 
-    @patch('switchboard.s3_util.BackgroundFunctions')
+    @patch('switchboard.s3_util.TransferBackgroundFunctions')
     def test_transfer_delivery(self, mock_background_funcs):
         mock_delivery = Mock()
         mock_delivery.id = '123'
@@ -455,3 +496,47 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
         errors = S3DeliveryError.objects.filter(delivery=self.s3_delivery)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].message, 'oops')
+
+
+class SendDeliveryOperationTestCase(S3DeliveryTestBase):
+    def test_run(self):
+        SendDeliveryOperation.background_funcs = Mock()
+        SendDeliveryOperation.run(self.s3_delivery, 'http://someurl.com')
+        SendDeliveryOperation.background_funcs.record_object_manifest.assert_called_with(
+            self.s3_delivery.id, 'http://someurl.com')
+
+    @patch('switchboard.s3_util.S3BucketUtil')
+    def test_record_object_manifest_step(self, mock_s3_bucket_util):
+        mock_s3_bucket_util.return_value.get_objects_manifest.return_value = [{'key': '123'}]
+
+        operation = SendDeliveryOperation(self.s3_delivery.id, 'http://someurl.com')
+        operation.background_funcs = Mock()
+        operation.record_object_manifest_step()
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.manifest.content, [{'key': '123'}])
+        operation.background_funcs.give_agent_permission.assert_called_with(self.s3_delivery.id, 'http://someurl.com')
+
+    @patch('switchboard.s3_util.S3DeliveryUtil')
+    def test_give_agent_permission_step(self, mock_s3_delivery_util):
+        operation = SendDeliveryOperation(self.s3_delivery.id, 'http://someurl.com')
+        operation.background_funcs = Mock()
+        operation.give_agent_permission_step()
+
+        self.assertTrue(mock_s3_delivery_util.return_value.give_agent_permissions.called)
+        operation.background_funcs.send_delivery_message.assert_called_with(self.s3_delivery.id, 'http://someurl.com')
+
+    @patch('switchboard.s3_util.S3MessageFactory')
+    def test_send_delivery_message_step(self, mock_s3_message_factory):
+        mock_s3_message_factory.return_value.make_delivery_message.return_value = \
+            Mock(email_text='emailtxt')
+
+        operation = SendDeliveryOperation(self.s3_delivery.id, 'http://someurl.com')
+        operation.send_delivery_message_step()
+
+        mock_s3_message_factory.return_value.make_delivery_message.assert_called_with('http://someurl.com')
+        self.assertTrue(mock_s3_message_factory.return_value.make_delivery_message.return_value.send.called)
+
+        self.s3_delivery.refresh_from_db()
+        self.assertEqual(self.s3_delivery.state, State.NOTIFIED)
+        self.assertEqual(self.s3_delivery.delivery_email_text, 'emailtxt')
