@@ -7,8 +7,8 @@ stages:
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_REGISTRY: ${CI_REGISTRY}
-  CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}
-  CONTAINER_IMAGE_LATEST: ${CI_REGISTRY_IMAGE}:latest
+  CONTAINER_IMAGE_BASE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}
+  CONTAINER_IMAGE_BASE_LATEST: ${CI_REGISTRY_IMAGE}:latest
   CONTAINER_IMAGE_APACHE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
   CONTAINER_IMAGE_APACHE_LATEST: ${CI_REGISTRY_IMAGE}:latest-apache
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/gcb-informatics/gcb-ansible-cd.git
@@ -32,9 +32,9 @@ build:
   tags:
   - docker-build
   script:
-  - docker build -t $CONTAINER_IMAGE .
-  - docker build --build-arg BASE_IMAGE=${CONTAINER_IMAGE} -t $CONTAINER_IMAGE_APACHE production
-  - docker push $CONTAINER_IMAGE
+  - docker build -t $CONTAINER_IMAGE_BASE .
+  - docker build --build-arg BASE_IMAGE=${CONTAINER_IMAGE_BASE} -t $CONTAINER_IMAGE_APACHE production
+  - docker push $CONTAINER_IMAGE_BASE
   - docker push $CONTAINER_IMAGE_APACHE
 
 # Test the code inside the built docker image using docker-compose
@@ -54,11 +54,11 @@ release-image:
   tags:
   - docker-build
   script:
-  - docker pull $CONTAINER_IMAGE
+  - docker pull $CONTAINER_IMAGE_BASE
   - docker pull $CONTAINER_IMAGE_APACHE
-  - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE_LATEST
+  - docker tag $CONTAINER_IMAGE_BASE $CONTAINER_IMAGE_BASE_LATEST
   - docker tag $CONTAINER_IMAGE_APACHE $CONTAINER_IMAGE_APACHE_LATEST
-  - docker push $CONTAINER_IMAGE_LATEST
+  - docker push $CONTAINER_IMAGE_BASE_LATEST
   - docker push $CONTAINER_IMAGE_APACHE_LATEST
   only:
   - master

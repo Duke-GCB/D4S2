@@ -4,7 +4,7 @@ services:
     image: postgres:9
     env_file: d4s2.test.env
   web:
-    image: "$CONTAINER_IMAGE"
+    image: "$CONTAINER_IMAGE_BASE"
     env_file: d4s2.test.env
     depends_on:
       - db
