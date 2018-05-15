@@ -12,7 +12,7 @@ variables:
   CONTAINER_IMAGE_APACHE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
   CONTAINER_IMAGE_APACHE_LATEST: ${CI_REGISTRY_IMAGE}:latest-apache
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/gcb-informatics/gcb-ansible-cd.git
-  PLAYBOOK_DIR: gcb-ansible-deploy
+  PLAYBOOK_DIR: gcb-ansible-cd
   DEPLOY_PLAYBOOK: d4s2-webapp.yml
   DEPLOY_HOST: bespin-float-70.genome.duke.edu
   DEPLOY_USER: ubuntu
