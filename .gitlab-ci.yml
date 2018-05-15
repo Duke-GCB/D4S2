@@ -80,3 +80,14 @@ deploy-dev:
     name: development
   only:
   - deploy-dev
+
+deploy-prod:
+  stage: deploy
+  tags:
+  - docker-build
+  script:
+  - ./gitlab-deploy.sh
+  environment:
+    name: production
+  only:
+  - deploy-prod
