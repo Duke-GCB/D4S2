@@ -23,6 +23,7 @@ variables:
 # The gitlab runner environment will have CI_JOB_TOKEN set, which can be used as the
 # docker password for the GitLab container registry
 before_script:
+  - echo "Logging in to $DOCKER_REGISTRY"
   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $DOCKER_REGISTRY
 
 # Build docker images. Always build the base image before the apache image
