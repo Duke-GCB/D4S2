@@ -15,5 +15,5 @@ ansible-playbook \
   -u $DEPLOY_USER \
   --private-key=$DEPLOY_KEY \
   -i inventory \
-  -l $DEPLOY_HOST \
+  -l $DEPLOY_GROUP \
   $DEPLOY_PLAYBOOK
