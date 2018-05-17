@@ -199,22 +199,22 @@ class S3ResourceTestCase(TestCase):
             Mock(key='key1'),
             Mock(key='key2')
         ]
-        mock_destination_bucket = Mock()
         mock_bucket_constructor = mock_boto3.session.Session.return_value.resource.return_value.Bucket
-        mock_bucket_constructor.side_effect = [
-            mock_source_bucket,
-            mock_destination_bucket,
-        ]
+        mock_bucket_constructor.return_value = mock_source_bucket
 
         s3_resource = S3Resource(self.s3_user)
         s3_resource.copy_bucket(source_bucket_name='from_bucket', destination_bucket_name='to_bucket')
 
-        mock_bucket_constructor.assert_has_calls([
-            call('from_bucket'), call('to_bucket')
-        ])
-        mock_destination_bucket.copy.assert_has_calls([
-            call(CopySource={'Bucket': 'from_bucket', 'Key': 'key1'}, Key='key1'),
-            call(CopySource={'Bucket': 'from_bucket', 'Key': 'key2'}, Key='key2')
+        mock_bucket_constructor.assert_called_with('from_bucket')
+        s3_resource.s3.meta.client.copy_object.assert_has_calls([
+            call(Bucket='to_bucket',
+                 CopySource={'Bucket': 'from_bucket', 'Key': 'key1'},
+                 Key='key1',
+                 MetadataDirective='COPY'),
+            call(Bucket='to_bucket',
+                 CopySource={'Bucket': 'from_bucket', 'Key': 'key2'},
+                 Key='key2',
+                 MetadataDirective='COPY')
         ])
 
     @patch('switchboard.s3_util.boto3')
