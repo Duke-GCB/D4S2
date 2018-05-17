@@ -16,8 +16,6 @@ variables:
   PLAYBOOK_DIR: gcb-ansible-cd
   # Ansible playbook to use
   DEPLOY_PLAYBOOK: d4s2-webapp.yml
-  # SSH username to use when running ansible
-  DEPLOY_USER: ubuntu
   # SSH key to use when running ansible
   DEPLOY_KEY: /home/gitlab-runner/.ssh/bespin-gitlab-runner-deploy-id_rsa
   # Decryption key for gcb-ansible-cd
@@ -66,7 +64,7 @@ deploy-dev:
   tags:
   - docker-build
   script:
-  - DEPLOY_GROUP=d4s2-dev ./gitlab-deploy.sh
+  - DEPLOY_USER=ubuntu DEPLOY_GROUP=d4s2-dev ./gitlab-deploy.sh
   environment:
     name: development
   only:
@@ -77,7 +75,7 @@ deploy-prod:
   tags:
   - docker-build
   script:
-  - DEPLOY_GROUP=d4s2-prod ./gitlab-deploy.sh
+  - DEPLOY_USER=gcbdeploy DEPLOY_GROUP=d4s2-prod ./gitlab-deploy.sh
   environment:
     name: production
   only:
