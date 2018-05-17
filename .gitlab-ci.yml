@@ -6,15 +6,26 @@ stages:
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_REGISTRY: ${CI_REGISTRY}
+  # Docker image to build for base image
   CONTAINER_IMAGE_BASE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}
+  # Docker image to build for apache image
   CONTAINER_IMAGE_RELEASE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
+  # Git Repo of ansible playbooks
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/gcb-informatics/gcb-ansible-cd.git
+  # Directory to place ansible playbooks repo
   PLAYBOOK_DIR: gcb-ansible-cd
+  # Ansible playbook to use
   DEPLOY_PLAYBOOK: d4s2-webapp.yml
+  # SSH username to use when running ansible
   DEPLOY_USER: ubuntu
+  # SSH key to use when running ansible
   DEPLOY_KEY: /home/gitlab-runner/.ssh/bespin-gitlab-runner-deploy-id_rsa
+  # Decryption key for gcb-ansible-cd
   GIT_CRYPT_KEY: /home/gitlab-runner/.git-crypt/gcb-ansible-cd-git-crypt.key
+  # Causes docker-compose commands to use this file
   COMPOSE_FILE: docker-compose.test.yml
+  # Prevent simultaneous builds from using the same container names during test
+  COMPOSE_PROJECT_NAME: d4s2-${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}
 
 # The gitlab runner environment will have CI_JOB_TOKEN set, which can be used as the
 # docker password for the GitLab container registry
