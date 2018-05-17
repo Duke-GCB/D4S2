@@ -222,15 +222,17 @@ class S3Resource(object):
 
     def copy_bucket(self, source_bucket_name, destination_bucket_name):
         # TODO: compare this on a large project vs aws cli sync
-        # http://boto3.readthedocs.io/en/latest/reference/services/s3.html#S3.Bucket.copy
-        # for many small files it sounds like this may be slower
         source_bucket = self.s3.Bucket(source_bucket_name)
-        destination_bucket = self.s3.Bucket(destination_bucket_name)
         for file_object in source_bucket.objects.all():
-            destination_bucket.copy(CopySource={
-                'Bucket': source_bucket_name,
-                'Key': file_object.key
-            }, Key=file_object.key)
+            self.s3.meta.client.copy_object(
+                CopySource={
+                    'Bucket': source_bucket_name,
+                    'Key': file_object.key
+                },
+                Bucket=destination_bucket_name,
+                Key=file_object.key,
+                MetadataDirective='COPY'
+            )
 
     def delete_bucket(self, bucket_name):
         bucket = self.s3.Bucket(bucket_name)
