@@ -1,16 +1,13 @@
 stages:
 - build
 - test
-- release
 - deploy
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_REGISTRY: ${CI_REGISTRY}
   CONTAINER_IMAGE_BASE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}
-  CONTAINER_IMAGE_BASE_LATEST: ${CI_REGISTRY_IMAGE}:latest
   CONTAINER_IMAGE_RELEASE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
-  CONTAINER_IMAGE_RELEASE_LATEST: ${CI_REGISTRY_IMAGE}:latest-apache
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/gcb-informatics/gcb-ansible-cd.git
   PLAYBOOK_DIR: gcb-ansible-cd
   DEPLOY_PLAYBOOK: d4s2-webapp.yml
@@ -46,23 +43,6 @@ test:
   - docker-compose up -d
   - docker-compose run web python manage.py test
   - docker-compose down
-
-# Tag built docker images. Pulls from repo and pushes back in case running on a different host than build
-# Only release from deploy branches
-release-image:
-  stage: release
-  tags:
-  - docker-build
-  script:
-  - docker pull $CONTAINER_IMAGE_BASE
-  - docker pull $CONTAINER_IMAGE_RELEASE
-  - docker tag $CONTAINER_IMAGE_BASE $CONTAINER_IMAGE_BASE_LATEST
-  - docker tag $CONTAINER_IMAGE_RELEASE $CONTAINER_IMAGE_RELEASE_LATEST
-  - docker push $CONTAINER_IMAGE_BASE_LATEST
-  - docker push $CONTAINER_IMAGE_RELEASE_LATEST
-  only:
-  - deploy-dev
-  - deploy-prod
 
 # Deploy images using ansible-playbook
 # Clones the private gcb-ansible-cd playbook from GitLab that uses public roles submodule
