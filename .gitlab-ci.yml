@@ -6,10 +6,10 @@ stages:
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_REGISTRY: ${CI_REGISTRY}
-  # Docker image to build for base image
+  # Docker image name to use when building base image
   CONTAINER_IMAGE_BASE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}
-  # Docker image to build for apache image
-  CONTAINER_IMAGE_RELEASE: ${CI_REGISTRY_IMAGE}:${CI_BUILD_REF}-apache
+  # Docker image name to use when building apache image
+  CONTAINER_IMAGE_RELEASE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}-apache
   # Git Repo of ansible playbooks
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/gcb-informatics/gcb-ansible-cd.git
   # Directory to place ansible playbooks repo
