@@ -18,6 +18,9 @@ services:
     # docker-compose doesn't allow specifying the entrypoint while preserving
     # the Dockerfile's command
     command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/usr/src/app
+      - ./d4s2/settings.docker:/usr/src/app/d4s2/settings.py
   tasks:
     build: .
     env_file: d4s2.env
@@ -29,5 +32,8 @@ services:
     # docker-compose doesn't allow specifying the entrypoint while preserving
     # the Dockerfile's command
     command: python manage.py process_tasks
+    volumes:
+      - .:/usr/src/app
+      - ./d4s2/settings.docker:/usr/src/app/d4s2/settings.py
 volumes:
   postgres_data:
