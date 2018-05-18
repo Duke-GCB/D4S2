@@ -1,0 +1,14 @@
+version: '2'
+services:
+  db:
+    image: postgres:9
+    env_file: d4s2.test.env
+  web:
+    image: "$CONTAINER_IMAGE_BASE"
+    env_file: d4s2.test.env
+    depends_on:
+      - db
+    entrypoint:
+      - /usr/src/app/d4s2/wait-for-postgres.sh
+      - db
+    command: python manage.py runserver 0.0.0.0:8000

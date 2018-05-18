@@ -1,4 +1,5 @@
-FROM dukegcb/d4s2
+ARG BASE_IMAGE=dukegcb/d4s2
+FROM ${BASE_IMAGE}
 MAINTAINER dan.leehr@duke.edu
 
 # apache2 / supervisor
