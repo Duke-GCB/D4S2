@@ -578,8 +578,7 @@ class DDSDeliveryErrorTestCase(TestCase):
         self.assertEqual(deliveries[0].message, 'Error1')
         self.assertEqual(deliveries[1].message, 'Error2')
 
-
-class S3DeliveryErrorTestCase(TestCase):
+class S3DeliveryBaseTestCase(TestCase):
     def setUp(self):
         self.user1 = User.objects.create(username='user1')
         self.user2 = User.objects.create(username='user2')
@@ -597,6 +596,8 @@ class S3DeliveryErrorTestCase(TestCase):
         self.delivery2 = S3Delivery.objects.create(bucket=self.s3_bucket2,
                                                    from_user=self.s3_user1, to_user=self.s3_user2)
 
+
+class S3DeliveryErrorTestCase(S3DeliveryBaseTestCase):
     def test_create_errors(self):
         S3DeliveryError.objects.create(message='Something failed', delivery=self.delivery1)
         S3DeliveryError.objects.create(message='Other failed', delivery=self.delivery1)
@@ -618,3 +619,19 @@ class S3DeliveryErrorTestCase(TestCase):
         self.assertEqual(len(deliveries), 2)
         self.assertEqual(deliveries[0].message, 'Error1')
         self.assertEqual(deliveries[1].message, 'Error2')
+
+
+class S3ObjectManifestTestCase(S3DeliveryBaseTestCase):
+    def test_create(self):
+        object_manifest = S3ObjectManifest.objects.create(content=[{'state': 'good', 'value': 1}])
+        self.delivery1.manifest = object_manifest;
+        self.delivery1.save()
+
+    def test_read(self):
+        object_manifest = S3ObjectManifest.objects.create(content=[{'state': 'bad', 'value': 0}])
+        self.delivery1.manifest = object_manifest;
+        self.delivery1.save()
+
+        manifests = S3ObjectManifest.objects.all()
+        self.assertEqual(len(manifests), 1)
+        self.assertEqual(manifests[0].content, [{'state': 'bad', 'value': 0}])
