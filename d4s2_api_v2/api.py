@@ -118,6 +118,15 @@ class DDSUsersViewSet(DDSViewSet):
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSUser.fetch_one, dds_util, dds_user_id)
 
+    @list_route(methods=['get'], url_path='current-dds-user')
+    def current_dds_user(self, request):
+        dds_util = DDSUtil(self.request.user)
+        remote_dds_user = dds_util.get_current_user()
+        # Hack, fields don't line up
+        current_dds_user = DDSUser.fetch_one(dds_util, remote_dds_user.id)
+        serializer = DDSUserSerializer(current_dds_user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class DDSProjectsViewSet(DDSViewSet):
     """
