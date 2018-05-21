@@ -3,7 +3,7 @@ from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase
 from d4s2_api_v1.tests_api import AuthenticatedResourceTestCase
-from mock import patch, Mock
+from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket
@@ -175,6 +175,42 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(user['full_name'], 'Joseph Smith')
         self.assertEqual(user['email'], 'joe@joe.joe')
 
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_current_dds_user(self, mock_dds_util):
+        # setup the mock RemoteUser
+        mock_remote_user = Mock()
+        mock_remote_user.id = 'current-user-call-1'
+        mock_dds_util.return_value.get_current_user.return_value = mock_remote_user
+
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'id': 'current-user-call-2',
+            'username': 'joe1',
+            'full_name': 'Joseph Smith',
+            'email': 'joe@joe.joe',
+            'first_name': 'Joe',
+            'last_name': 'Smith'
+        }
+        mock_dds_util.return_value.get_user.return_value = mock_response
+
+        url = reverse('v2-dukedsuser-list') + 'current-duke-ds-user/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Assert that get_current_user was called to identify the current user
+        self.assertTrue(mock_dds_util.return_value.get_current_user.called)
+        self.assertEqual(mock_dds_util.return_value.get_current_user.call_count, 1)
+        # Assert that the user id from the first call was used to fetch user details for the second
+        mock_dds_util.return_value.get_user.assert_called_with('current-user-call-1')
+        self.assertEqual(mock_dds_util.return_value.get_user.call_count, 1)
+
+        user = response.data
+        self.assertEqual(user['id'], 'current-user-call-2')
+        self.assertEqual(user['username'], 'joe1')
+        self.assertEqual(user['full_name'], 'Joseph Smith')
+        self.assertEqual(user['email'], 'joe@joe.joe')
+        self.assertEqual(user['first_name'], 'Joe')
+        self.assertEqual(user['last_name'], 'Smith')
 
 class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
