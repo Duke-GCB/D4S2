@@ -4,6 +4,9 @@ from d4s2_api.utils import MessageFactory
 import boto3
 import botocore
 from background_task import background
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def wrap_s3_exceptions(func):
@@ -106,7 +109,7 @@ class S3DeliveryUtil(object):
         s3 = S3Resource(self.s3_delivery.from_user)
         s3.grant_bucket_acl(self.source_bucket_name,
                             grant_full_control_user=self.s3_agent)
-        print("Gave agent {} Full Control".format(self.s3_agent.s3_id))
+        logger.info("Gave agent {} Full Control".format(self.s3_agent.s3_id))
 
     @wrap_s3_exceptions
     def accept_project_transfer(self):
@@ -134,7 +137,7 @@ class S3DeliveryUtil(object):
         s3.grant_objects_acl(self.source_bucket_name,
                              grant_full_control_user=self.s3_agent,
                              grant_read_user=s3_user)
-        print("Gave agent {} full and to_user {} read perms".format(self.s3_agent, s3_user))
+        logger.info("Gave agent {} full and to_user {} read perms".format(self.s3_agent, s3_user))
 
     def _copy_files_to_new_destination_bucket(self):
         s3 = S3Resource(self.s3_delivery.to_user)
@@ -147,12 +150,12 @@ class S3DeliveryUtil(object):
 
     @wrap_s3_exceptions
     def decline_delivery(self, reason):
-        print("Declining delivery for reason: {}".format(reason))
+        logger.info("Declining delivery for reason: {}".format(reason))
         from_s3_user = self.s3_delivery.from_user
         s3 = S3Resource(self.s3_agent)
         s3.grant_bucket_acl(self.source_bucket_name,
                             grant_full_control_user=from_s3_user)
-        print("Gave from user {} Full Control".format(from_s3_user.s3_id))
+        logger.info("Gave from user {} Full Control".format(from_s3_user.s3_id))
 
 
 class S3DeliveryDetails(object):
@@ -387,7 +390,7 @@ class S3TransferOperation(S3Operation):
         """
         Transfer delivery in s3 to recipient, schedules execution of notify_sender_delivery_accepted
         """
-        print("Transferring s3 delivery {}".format(self.delivery.id))
+        logger.info("Transferring s3 delivery {}".format(self.delivery.id))
         delivery_util = S3DeliveryUtil(self.delivery)
         delivery_util.accept_project_transfer()
         delivery_util.share_with_additional_users()
@@ -400,7 +403,7 @@ class S3TransferOperation(S3Operation):
         notify_receiver_transfer_complete.
         :param warning_message: str: warning that may have occurred during the transfer operation
         """
-        print("Notifying sender delivery {} has been accepted.".format(self.delivery.id))
+        logger.info("Notifying sender delivery {} has been accepted.".format(self.delivery.id))
         message = self.make_processed_message('accepted', warning_message)
         message.send()
         self.background_funcs.notify_receiver_transfer_complete(self.delivery.id, warning_message, message.email_text)
@@ -412,7 +415,7 @@ class S3TransferOperation(S3Operation):
         :param warning_message: str: warning that may have occurred during the transfer operation
         :param sender_accepted_email_text: str: text of email message sent to recipient
         """
-        print("Notifying receiver transfer of delivery {} is complete.".format(self.delivery.id))
+        logger.info("Notifying receiver transfer of delivery {} is complete.".format(self.delivery.id))
         message = self.make_processed_message('accepted_recipient', warning_message)
         message.send()
         self.background_funcs.mark_delivery_complete(self.delivery.id,
@@ -426,7 +429,7 @@ class S3TransferOperation(S3Operation):
         :param sender_accepted_email_text: str: text of email message sent to sender
         :param recipient_accepted_email_text: str: text of email message sent to recipient
         """
-        print("Marking delivery {} complete.".format(self.delivery.id))
+        logger.info("Marking delivery {} complete.".format(self.delivery.id))
         self.delivery.mark_accepted(self.to_user.get_username(),
                                     sender_accepted_email_text,
                                     recipient_accepted_email_text)
