@@ -136,10 +136,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # It writes emails to the console and does not send them
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# For production,s witch this to the smtp backend
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.duke.edu'
-
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'DEFAULT_AUTHENTICATION_CLASSES': (

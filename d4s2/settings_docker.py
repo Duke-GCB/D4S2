@@ -25,7 +25,7 @@ DATABASES = {
         'USER': os.getenv('POSTGRES_USER'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
         'HOST': os.getenv('POSTGRES_HOST', 'db'),
-        'PORT': 5432,
+        'PORT': os.getenv('POSTGRES_PORT', 5432),
     }
 }
 
@@ -34,3 +34,16 @@ if os.getenv('D4S2_SMTP_HOST') is not None:
   EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
   EMAIL_HOST = os.getenv('D4S2_SMTP_HOST')
 
+# Additional production security settings
+if os.getenv('D4S2_PRODUCTION'):
+  ALLOWED_HOSTS = [os.getenv('D4S2_ALLOWED_HOST')]
+  SECURE_HSTS_SECONDS = 3600
+  SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+  SECURE_CONTENT_TYPE_NOSNIFF = True
+  SESSION_COOKIE_SECURE = True
+  SECURE_BROWSER_XSS_FILTER = True
+  SECURE_SSL_REDIRECT = True
+  CSRF_COOKIE_HTTPONLY = True
+  CSRF_COOKIE_SECURE = True
+  X_FRAME_OPTIONS = 'DENY'
+  DEBUG = False
