@@ -22,5 +22,4 @@ WORKDIR /app/
 # Collect static files.
 RUN D4S2_SECRET_KEY=DUMMY python manage.py collectstatic --noinput
 
-# Set the command to run gunicorn
-CMD ["gunicorn","-b","0.0.0.0:8000","d4s2.wsgi:application"]
+CMD run.sh
