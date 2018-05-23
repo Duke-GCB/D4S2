@@ -34,4 +34,3 @@ if os.getenv('D4S2_SMTP_HOST') is not None:
   EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
   EMAIL_HOST = os.getenv('D4S2_SMTP_HOST')
 
-STATIC_ROOT='/usr/src/static'
