@@ -13,6 +13,9 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
 from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket, SendDeliveryOperation
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DataServiceUnavailable(APIException):
@@ -31,6 +34,7 @@ class WrappedDataServiceException(APIException):
 
 class BadRequestException(APIException):
     status_code = 400
+
     def __init__(self, detail):
         self.detail = detail
 
@@ -60,8 +64,10 @@ class DDSViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             return func(*args)
         except WrappedDataServiceException:
+            logger.exception('WrappedDataServiceException calling %s', func)
             raise # passes along status code, e.g. 404
         except Exception as e:
+            logger.exception('Exception calling %s', func)
             raise DataServiceUnavailable(e)
 
 
@@ -120,7 +126,7 @@ class DDSUsersViewSet(DDSViewSet):
 
     @list_route(methods=['get'], url_path='current-duke-ds-user')
     def current_duke_ds_user(self, request):
-        dds_util = DDSUtil(self.request.user)
+        dds_util = DDSUtil(request.user)
         remote_dds_user = dds_util.get_current_user()
         # dds_util.get_current_user() returns a ddsc.core.remotestore.RemoteUser
         # which does not have first_name and last_name fields, so we
