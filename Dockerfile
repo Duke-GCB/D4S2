@@ -5,6 +5,9 @@ MAINTAINER dan.leehr@duke.edu
 ENV TZ=US/Eastern
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# Install postgres package
+RUN apt-get update && apt-get install -y postgresql-client
+
 # Install requirements
 ADD requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
