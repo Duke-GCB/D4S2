@@ -48,7 +48,7 @@ test:
   - docker-build
   script:
   - docker-compose up -d
-  - docker-compose run web python manage.py test
+  - docker-compose run web sh -c "until pg_isready -h db;do sleep 1; done; python manage.py test"
   - docker-compose down
 
 # Deploy images using ansible-playbook
