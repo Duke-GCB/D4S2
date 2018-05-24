@@ -4,6 +4,11 @@
 
 set -e
 
+if [ -z "$POSTGRES_HOST" ]; then
+  echo "ERROR: Please set POSTGRES_HOST"
+  exit 1
+fi
+
 # 1. Wait for postgres to be ready
 until pg_isready -h "$POSTGRES_HOST"; do
   >&2 echo "Postgres is unavailable - sleeping"
