@@ -177,35 +177,26 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_current_dds_user(self, mock_dds_util):
-        # setup the mock RemoteUser
-        mock_remote_user = Mock()
-        mock_remote_user.id = 'current-user-call-1'
-        mock_dds_util.return_value.get_current_user.return_value = mock_remote_user
+        mock_current_user = Mock(
+            id='current-user-id',
+            username='joe1',
+            full_name='Joseph Smith',
+            email='joe@joe.joe',
+            first_name='Joe',
+            last_name='Smith'
+        )
+        mock_dds_util.return_value.get_current_user.return_value = mock_current_user
 
-        mock_response = Mock()
-        mock_response.json.return_value = {
-            'id': 'current-user-call-2',
-            'username': 'joe1',
-            'full_name': 'Joseph Smith',
-            'email': 'joe@joe.joe',
-            'first_name': 'Joe',
-            'last_name': 'Smith'
-        }
-        mock_dds_util.return_value.get_user.return_value = mock_response
-
-        url = reverse('v2-dukedsuser-list') + 'current-duke-ds-user/'
+        url = reverse('v2-dukedsuser-current-duke-ds-user')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Assert that get_current_user was called to identify the current user
         self.assertTrue(mock_dds_util.return_value.get_current_user.called)
         self.assertEqual(mock_dds_util.return_value.get_current_user.call_count, 1)
-        # Assert that the user id from the first call was used to fetch user details for the second
-        mock_dds_util.return_value.get_user.assert_called_with('current-user-call-1')
-        self.assertEqual(mock_dds_util.return_value.get_user.call_count, 1)
 
         user = response.data
-        self.assertEqual(user['id'], 'current-user-call-2')
+        self.assertEqual(user['id'], 'current-user-id')
         self.assertEqual(user['username'], 'joe1')
         self.assertEqual(user['full_name'], 'Joseph Smith')
         self.assertEqual(user['email'], 'joe@joe.joe')

@@ -122,11 +122,7 @@ class DDSUsersViewSet(DDSViewSet):
     def current_duke_ds_user(self, request):
         dds_util = DDSUtil(self.request.user)
         remote_dds_user = dds_util.get_current_user()
-        # dds_util.get_current_user() returns a ddsc.core.remotestore.RemoteUser
-        # which does not have first_name and last_name fields, so we
-        # make a second API call through DDSUser
-        current_dds_user = DDSUser.fetch_one(dds_util, remote_dds_user.id)
-        serializer = DDSUserSerializer(current_dds_user)
+        serializer = DDSUserSerializer(remote_dds_user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
