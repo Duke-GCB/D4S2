@@ -1,15 +1,21 @@
 version: '3'
 services:
   db:
-    image: postgres
+    image: postgres:9.5
     env_file: d4s2.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  api:
+  app:
     build: .
     env_file: d4s2.env
     depends_on:
       - db
+  tasks:
+    build: .
+    env_file: d4s2.env
+    depends_on:
+      - db
+    command: sh -c "until pg_isready -h db;do sleep 5; done; python manage.py process_tasks"
   web:
     image: nginx
     volumes:
@@ -17,9 +23,9 @@ services:
       - ./certdata/ssl/cacert.pem:/etc/nginx/cert.crt:ro
       - ./certdata/ssl/privkey.pem:/etc/nginx/cert.key:ro
     depends_on:
-      - api
+      - app
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
 volumes:
   postgres_data:

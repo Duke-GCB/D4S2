@@ -12,7 +12,7 @@ fi
 # 1. Wait for postgres to be ready
 until pg_isready -h "$POSTGRES_HOST"; do
   >&2 echo "Postgres is unavailable - sleeping"
-  sleep 1
+  sleep 5
 done
 
 # 2. Run a django migration
