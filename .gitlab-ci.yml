@@ -6,12 +6,12 @@ stages:
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_REGISTRY: ${CI_REGISTRY}
-  # Docker image name to use when building base image
-  CONTAINER_IMAGE_BASE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}
-  # Docker image name to use when building apache image
-  CONTAINER_IMAGE_RELEASE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}-apache
+  # Docker image name to use when building
+  CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_BUILD_REF}
   # Git Repo of ansible playbooks
   PLAYBOOK_REPO_URL: https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.dhe.duke.edu/gcb-informatics/gcb-ansible-cd.git
+  # Playbook branch or ref to checkout
+  PLAYBOOK_REF: reorg-d4s2-docker
   # Directory to place ansible playbooks repo
   PLAYBOOK_DIR: gcb-ansible-cd
   # Ansible playbook to use
@@ -38,10 +38,8 @@ build:
   tags:
   - docker-build
   script:
-  - docker build -t $CONTAINER_IMAGE_BASE .
-  - docker build --build-arg BASE_IMAGE=${CONTAINER_IMAGE_BASE} -t $CONTAINER_IMAGE_RELEASE production
-  - docker push $CONTAINER_IMAGE_BASE
-  - docker push $CONTAINER_IMAGE_RELEASE
+  - docker build -t $CONTAINER_IMAGE .
+  - docker push $CONTAINER_IMAGE
 
 # Test the code inside the built docker image using docker-compose
 test:
