@@ -1,7 +1,7 @@
 D4S2: Data Delivery Service
 ==================================
 
-Web service to facilitate notification and transfer of projects in in Duke Data Service and S3 Object Stores.
+Web service to facilitate notification and transfer of projects in Duke Data Service and S3 Object Stores.
 
 
 Installation - Local Development
