@@ -1,26 +1,28 @@
 FROM python:2.7
 MAINTAINER dan.leehr@duke.edu
 
+# Set timezone
 ENV TZ=US/Eastern
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN apt-get update && apt-get install -y \
-		gcc \
-		gettext \
-		mysql-client libmysqlclient-dev \
-		postgresql-client libpq-dev \
-		sqlite3 \
-	--no-install-recommends && rm -rf /var/lib/apt/lists/*
+# Install postgres package
+RUN apt-get update && apt-get install -y postgresql-client
 
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
+# Install requirements
+ADD requirements.txt /app/requirements.txt
+RUN pip install -r /app/requirements.txt
 
-COPY requirements.txt /usr/src/app/
-RUN pip install --no-cache-dir -r requirements.txt
+# Add application source to /app
+ADD . /app/
 
-COPY . /usr/src/app
-COPY d4s2/settings.docker /usr/src/app/d4s2/settings.py
+# Set the django settings module to our docker settings file
+ENV DJANGO_SETTINGS_MODULE d4s2.settings_docker
 
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+WORKDIR /app/
+
+# Collect static files.
+RUN D4S2_SECRET_KEY=DUMMY python manage.py collectstatic --noinput
+
+CMD /app/run.sh

@@ -124,14 +124,12 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 # Email
 # For development we'll just use the console backend.
 # It writes emails to the console and does not send them
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# For production,s witch this to the smtp backend
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.duke.edu'
 
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),

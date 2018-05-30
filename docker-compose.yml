@@ -1,39 +1,31 @@
 version: '3'
 services:
   db:
-    image: postgres
+    image: postgres:9.5
     env_file: d4s2.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  web:
+  app:
     build: .
     env_file: d4s2.env
-    ports:
-      - "8000:8000"
     depends_on:
       - db
-    entrypoint:
-      - /usr/src/app/d4s2/wait-for-postgres.sh
-      - db
-    # docker-compose doesn't allow specifying the entrypoint while preserving
-    # the Dockerfile's command
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/usr/src/app
-      - ./d4s2/settings.docker:/usr/src/app/d4s2/settings.py
   tasks:
     build: .
     env_file: d4s2.env
     depends_on:
       - db
-    entrypoint:
-      - /usr/src/app/d4s2/wait-for-postgres.sh
-      - db
-    # docker-compose doesn't allow specifying the entrypoint while preserving
-    # the Dockerfile's command
-    command: python manage.py process_tasks
+    command: sh -c "until pg_isready -h db;do sleep 5; done; python manage.py process_tasks"
+  web:
+    image: nginx
     volumes:
-      - .:/usr/src/app
-      - ./d4s2/settings.docker:/usr/src/app/d4s2/settings.py
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certdata/ssl/cacert.pem:/etc/nginx/cert.crt:ro
+      - ./certdata/ssl/privkey.pem:/etc/nginx/cert.key:ro
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
 volumes:
   postgres_data:

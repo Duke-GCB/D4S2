@@ -1,5 +1,26 @@
-version: '2'
+version: '3'
 services:
-  web:
+  db:
+    image: postgres:9.5
+    env_file: d4s2.dev.env
     volumes:
-      - '.:/usr/src/app'
+      - postgres_data:/var/lib/postgresql/data
+  app:
+    build: .
+    env_file: d4s2.dev.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+  tasks:
+    build: .
+    env_file: d4s2.dev.env
+    depends_on:
+      - db
+    command: sh -c "until pg_isready -h db;do sleep 5; done; python manage.py process_tasks"
+    volumes:
+      - .:/app
+volumes:
+  postgres_data:

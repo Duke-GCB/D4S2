@@ -15,20 +15,6 @@ from d4s2.settings_base import *
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('D4S2_SECRET_KEY')
 
-# Additional production security settings
-ALLOWED_HOSTS = [os.getenv('D4S2_ALLOWED_HOST')]
-SECURE_HSTS_SECONDS = 3600
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SESSION_COOKIE_SECURE = True
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_SSL_REDIRECT = True
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SECURE = True
-X_FRAME_OPTIONS = 'DENY'
-
-DEBUG = False
-
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
@@ -38,8 +24,8 @@ DATABASES = {
         'NAME': os.getenv('POSTGRES_DB'),
         'USER': os.getenv('POSTGRES_USER'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        'HOST': 'db',
-        'PORT': 5432,
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),
+        'PORT': os.getenv('POSTGRES_PORT', 5432),
     }
 }
 
@@ -48,4 +34,17 @@ if os.getenv('D4S2_SMTP_HOST') is not None:
   EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
   EMAIL_HOST = os.getenv('D4S2_SMTP_HOST')
 
-STATIC_ROOT='/usr/src/d4s2-static'
+# Additional production security settings
+if os.getenv('D4S2_PRODUCTION'):
+  ALLOWED_HOSTS = [os.getenv('D4S2_ALLOWED_HOST')]
+  SECURE_HSTS_SECONDS = 3600
+  SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+  SECURE_CONTENT_TYPE_NOSNIFF = True
+  SESSION_COOKIE_SECURE = True
+  SECURE_BROWSER_XSS_FILTER = True
+  SECURE_SSL_REDIRECT = True
+  SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+  CSRF_COOKIE_HTTPONLY = True
+  CSRF_COOKIE_SECURE = True
+  X_FRAME_OPTIONS = 'DENY'
+  DEBUG = False
