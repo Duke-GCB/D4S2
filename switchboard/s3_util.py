@@ -329,14 +329,20 @@ class S3NoSuchBucket(S3Exception):
     pass
 
 
+class S3NotRecipientException(S3Exception):
+    pass
+
+
 class S3DeliveryType:
     name = 's3'
     delivery_cls = S3Delivery
     transfer_in_background = True
 
     @staticmethod
-    def make_delivery_details(*args):
-        return S3DeliveryDetails(*args)
+    def make_delivery_details(s3_delivery, user):
+        if s3_delivery.to_user.user != user:
+            raise S3NotRecipientException()
+        return S3DeliveryDetails(s3_delivery, user)
 
     @staticmethod
     def make_delivery_util(delivery, _):

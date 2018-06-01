@@ -2,9 +2,9 @@ import uuid
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
-from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG
+from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, NOT_RECIPIENT_MSG
 from switchboard.dds_util import SHARE_IN_RESPONSE_TO_DELIVERY_MSG
-from ownership.views import DDSDeliveryType, S3DeliveryType
+from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException
 from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole
 from switchboard.mocks_ddsutil import MockDDSUser
 from django.contrib.auth.models import User as django_user
@@ -102,6 +102,16 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn(MISSING_TRANSFER_ID_MSG, str(response.content))
         self.assertIn(transfer_id, str(response.content))
+
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_normal_with_not_recipient_exception(self, mock_get_delivery_type):
+        mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
+        transfer_id = create_delivery_get_transfer_id()
+        url = url_with_transfer_id('ownership-prompt', transfer_id)
+        mock_get_delivery_type.return_value.make_delivery_details.side_effect = S3NotRecipientException()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(NOT_RECIPIENT_MSG, str(response.content))
 
     def test_with_transfer_id_not_found(self):
         transfer_id = str(uuid.uuid4())
