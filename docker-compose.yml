@@ -10,6 +10,8 @@ services:
     env_file: d4s2.env
     depends_on:
       - db
+  ui:
+    image: datadelivery-ui
   tasks:
     build: .
     env_file: d4s2.env
