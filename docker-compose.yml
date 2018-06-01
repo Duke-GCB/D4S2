@@ -11,7 +11,7 @@ services:
     depends_on:
       - db
   ui:
-    image: datadelivery-ui
+    build: ../../javascript/datadelivery-ui
   tasks:
     build: .
     env_file: d4s2.env
