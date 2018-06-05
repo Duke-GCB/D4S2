@@ -135,6 +135,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'gcb_web_auth.dukeds_auth.DukeDSTokenAuthentication', # Allows users to authenticate with a DukeDS token
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication', # Allows users to authenticate with a JWT
         'rest_framework.authentication.TokenAuthentication', # Allows users to authenticate with D4S2 rest_framework authtoken
         'rest_framework.authentication.SessionAuthentication',
     ),
@@ -171,4 +172,13 @@ LOGGING = {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
         },
     },
+}
+
+# Configure djangorestframework-jwt
+JWT_AUTH = {
+    # Set the generated token in the following cookie
+    # But this is HTTP-only, so that doesn't help. Maybe I should leave that enabled?
+    'JWT_AUTH_COOKIE': 'gcb_web_auth_jwt',
+    # Allow token refresh
+    'JWT_ALLOW_REFRESH': True,
 }
