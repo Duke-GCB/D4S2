@@ -110,7 +110,7 @@ class AcceptTestCase(AuthenticatedTestCase):
         url = url_with_transfer_id('ownership-prompt', transfer_id)
         mock_get_delivery_type.return_value.make_delivery_details.side_effect = S3NotRecipientException()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn(NOT_RECIPIENT_MSG, str(response.content))
 
     def test_with_transfer_id_not_found(self):

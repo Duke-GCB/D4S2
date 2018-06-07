@@ -62,7 +62,7 @@ class DeliveryViewBase(TemplateView):
                 context['delivery_type'] = self.delivery_type.name
             return context
         except S3NotRecipientException:
-            self.set_error_details(401, NOT_RECIPIENT_MSG)
+            self.set_error_details(403, NOT_RECIPIENT_MSG)
 
     def _get_request_var(self, key):
         return self.request.GET.get(key) or self.request.POST.get(key)
