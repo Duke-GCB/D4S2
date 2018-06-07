@@ -7,12 +7,13 @@ try:
 except ImportError:
     from urllib import urlencode
 from d4s2_api.models import State
-from switchboard.s3_util import S3Exception, S3DeliveryType
+from switchboard.s3_util import S3Exception, S3DeliveryType, S3NotRecipientException
 from switchboard.dds_util import DDSDeliveryType
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
 TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
 REASON_REQUIRED_MSG = 'You must specify a reason for declining this project.'
+NOT_RECIPIENT_MSG = 'Unauthorized: Only the recipient can manage their deliveries.'
 
 
 class ResponseType:
@@ -54,11 +55,14 @@ class DeliveryViewBase(TemplateView):
     def get_context_data(self, **kwargs):
         context = {}
         delivery = self.delivery
-        if delivery:
-            details = self.delivery_type.make_delivery_details(delivery, self.request.user)
-            context.update(details.get_context())
-            context['delivery_type'] = self.delivery_type.name
-        return context
+        try:
+            if delivery:
+                details = self.delivery_type.make_delivery_details(delivery, self.request.user)
+                context.update(details.get_context())
+                context['delivery_type'] = self.delivery_type.name
+            return context
+        except S3NotRecipientException:
+            self.set_error_details(403, NOT_RECIPIENT_MSG)
 
     def _get_request_var(self, key):
         return self.request.GET.get(key) or self.request.POST.get(key)

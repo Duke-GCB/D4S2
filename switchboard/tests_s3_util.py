@@ -3,7 +3,7 @@ from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
     S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError, SendDeliveryBackgroundFunctions, \
-    SendDeliveryOperation
+    SendDeliveryOperation, S3NotRecipientException
 
 
 class S3DeliveryTestBase(TestCase):
@@ -386,13 +386,20 @@ class S3DeliveryTypeTestCase(TestCase):
         self.assertEqual(self.delivery_type.delivery_cls, S3Delivery)
 
     @patch('switchboard.s3_util.S3DeliveryDetails')
-    def test_makes_dds_delivery_details(self, mock_delivery_details):
-        details = self.delivery_type.make_delivery_details('arg1', 'arg2')
-        mock_delivery_details.assert_called_once_with('arg1', 'arg2')
+    def test_make_delivery_details(self, mock_delivery_details):
+        mock_delivery = Mock(to_user=Mock(user='user2'))
+        details = self.delivery_type.make_delivery_details(mock_delivery, 'user2')
+        mock_delivery_details.assert_called_once_with(mock_delivery, 'user2')
         self.assertEqual(details, mock_delivery_details.return_value)
 
+    @patch('switchboard.s3_util.S3DeliveryDetails')
+    def test_make_delivery_details_not_recipient(self, mock_delivery_details):
+        mock_delivery = Mock(to_user=Mock(user='user2'))
+        with self.assertRaises(S3NotRecipientException):
+            self.delivery_type.make_delivery_details(mock_delivery, 'user1')
+
     @patch('switchboard.s3_util.S3DeliveryUtil')
-    def test_makes_dds_delivery_util(self, mock_delivery_util):
+    def test_make_delivery_util(self, mock_delivery_util):
         util = self.delivery_type.make_delivery_util('s3delivery', 'user')
         mock_delivery_util.assert_called_once_with('s3delivery')
         self.assertEqual(util, mock_delivery_util.return_value)
