@@ -7,6 +7,7 @@ See settings.template for an example
 """
 
 import os
+import datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -181,4 +182,5 @@ JWT_AUTH = {
     'JWT_AUTH_COOKIE': 'gcb_web_auth_jwt',
     # Allow token refresh
     'JWT_ALLOW_REFRESH': True,
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=7200),
 }
