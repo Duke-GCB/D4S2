@@ -177,9 +177,6 @@ LOGGING = {
 
 # Configure djangorestframework-jwt
 JWT_AUTH = {
-    # Set the generated token in the following cookie
-    # But this is HTTP-only, so that doesn't help. Maybe I should leave that enabled?
-    'JWT_AUTH_COOKIE': 'gcb_web_auth_jwt',
     # Allow token refresh
     'JWT_ALLOW_REFRESH': True,
     'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=7200),

@@ -16,7 +16,7 @@ DukeDSClient==1.0.3
 enum34==1.1.6
 funcsigs==0.4
 future==0.16.0
-git+git://github.com/Duke-GCB/gcb-web-auth.git@django-jwt#egg=gcb-web-auth
+gcb-web-auth==0.20
 gunicorn==19.7.1
 ipython==5.1.0
 ipython-genutils==0.1.0
