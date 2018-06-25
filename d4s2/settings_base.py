@@ -7,6 +7,7 @@ See settings.template for an example
 """
 
 import os
+import datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -135,6 +136,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'gcb_web_auth.dukeds_auth.DukeDSTokenAuthentication', # Allows users to authenticate with a DukeDS token
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication', # Allows users to authenticate with a JWT
         'rest_framework.authentication.TokenAuthentication', # Allows users to authenticate with D4S2 rest_framework authtoken
         'rest_framework.authentication.SessionAuthentication',
     ),
@@ -155,3 +157,27 @@ CORS_ORIGIN_WHITELIST = (
     'localhost:4200',
     '127.0.0.1:4200',
 )
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
+        },
+    },
+}
+
+# Configure djangorestframework-jwt
+JWT_AUTH = {
+    # Allow token refresh
+    'JWT_ALLOW_REFRESH': True,
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=7200),
+}

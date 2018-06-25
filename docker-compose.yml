@@ -10,6 +10,8 @@ services:
     env_file: d4s2.env
     depends_on:
       - db
+  ui:
+    build: https://github.com/Duke-GCB/datadelivery-ui.git
   tasks:
     build: .
     env_file: d4s2.env
