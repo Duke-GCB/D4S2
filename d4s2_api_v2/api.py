@@ -136,7 +136,11 @@ class DDSProjectsViewSet(DDSViewSet):
 
     def get_queryset(self):
         dds_util = DDSUtil(self.request.user)
-        return self._ds_operation(DDSProject.fetch_list, dds_util)
+        is_deliverable = None
+        if 'is_deliverable' in self.request.query_params:
+            is_deliverable = self.request.query_params.get('is_deliverable', '') == 'true'
+        projects = self._ds_operation(DDSProject.fetch_list, dds_util, is_deliverable)
+        return projects
 
     def get_object(self):
         dds_project_id = self.kwargs.get('pk')

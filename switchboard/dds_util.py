@@ -1,16 +1,16 @@
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share
+from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, State
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
 from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
 from ddsc.core.ddsapi import DataServiceError
 from d4s2_api.utils import MessageFactory
 
-
 SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 DDS_SERVICE_NAME = 'Duke Data Service'
+PROJECT_ADMIN_ID = 'project_admin'
 
 
 class DDSUtil(object):
@@ -67,6 +67,7 @@ class DDSUtil(object):
         return self.remote_store.data_service.get_all_project_transfers()
 
     def create_project_transfer(self, project_id, to_user_ids):
+        print(project_id, to_user_ids)
         return self.remote_store.data_service.create_project_transfer(project_id, to_user_ids).json()
 
     def accept_project_transfer(self, transfer_id):
@@ -95,6 +96,9 @@ class DDSUtil(object):
 
     def get_current_user(self):
         return self.remote_store.get_current_user()
+
+    def get_user_project_permission(self, project_id, user_id):
+        return self.remote_store.data_service.get_user_project_permission(project_id, user_id).json()
 
 
 class DDSBase(object):
@@ -136,16 +140,52 @@ class DDSProject(DDSBase):
         self.id = project_dict.get('id')
         self.name = project_dict.get('name')
         self.description = project_dict.get('description')
+        self.is_deliverable = project_dict.get('is_deliverable')
 
     @staticmethod
-    def fetch_list(dds_util):
+    def fetch_list(dds_util, is_deliverable):
         response = dds_util.get_projects().json()
-        return DDSProject.from_list(response['results'])
+        deliverable_status = ProjectDeliverableStatus(dds_util)
+        for project_dict in response['results']:
+            project_dict['is_deliverable'] = deliverable_status.calculate(project_dict)
+        projects = DDSProject.from_list(response['results'])
+        if is_deliverable is not None:
+            projects = [project for project in projects if project.is_deliverable == is_deliverable]
+        return projects
 
     @staticmethod
     def fetch_one(dds_util, dds_project_id):
         response = dds_util.get_project(dds_project_id).json()
+        deliverable_status = ProjectDeliverableStatus(dds_util)
+        response['is_deliverable'] = deliverable_status.calculate(response)
         return DDSProject(response)
+
+
+class ProjectDeliverableStatus(object):
+    def __init__(self, dds_util):
+        self.dds_util = dds_util
+        current_user = self.dds_util.get_current_user()
+        self.current_user_id = current_user.id
+
+    def calculate(self, project_dict):
+        """
+        Determines if the current user can deliver the specified project.
+        Users can only deliver non-deleted projects which they have admin permissions.
+        :param project_dict: dict: DukeDS dictionary response for a single project
+        :return: boolean: True if the current user can deliver the project
+        """
+        project_id = project_dict.get('id')
+        is_deleted = project_dict.get('is_deleted')
+        return not is_deleted and self._user_has_admin_permissions(project_id)
+
+    def _user_has_admin_permissions(self, project_id):
+        """
+        Does the current user have admin privileges for project_id
+        :param project_id: str: DukeDS project id to check permissions for
+        :return: boolean: True if the current user has admin privileges
+        """
+        perms = self.dds_util.get_user_project_permission(project_id, self.current_user_id)
+        return perms['auth_role']['id'] == PROJECT_ADMIN_ID
 
 
 class DDSProjectTransfer(DDSBase):
