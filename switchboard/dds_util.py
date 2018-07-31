@@ -143,11 +143,19 @@ class DDSProject(DDSBase):
 
     @staticmethod
     def fetch_list(dds_util, is_deliverable):
+        """
+        Fetch list of DDSProjects based on dds_util with optional filtering based on is_deliverable
+        :param dds_util: DDSUtil
+        :param is_deliverable: boolean: if True or False filter projects is_deliverable by this value
+        :return: [DDSProjects]
+        """
         response = dds_util.get_projects().json()
+        # insert is_deliverable into response so it can be read during the constructor
         deliverable_status = ProjectDeliverableStatus(dds_util)
         for project_dict in response['results']:
             project_dict['is_deliverable'] = deliverable_status.calculate(project_dict)
         projects = DDSProject.from_list(response['results'])
+        # filter based on is_deliverable
         if is_deliverable is not None:
             projects = [project for project in projects if project.is_deliverable == is_deliverable]
         return projects
