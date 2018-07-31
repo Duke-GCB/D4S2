@@ -1,7 +1,7 @@
 from django.test import TestCase
 from mock import patch, Mock, MagicMock, call
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
-    SHARE_IN_RESPONSE_TO_DELIVERY_MSG
+    SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, ProjectDeliverableStatus
 from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole
 from gcb_web_auth.models import DDSEndpoint
 
@@ -83,6 +83,19 @@ class DDSUtilTestCase(TestCase):
         project_transfers_response = ddsutil.get_project_transfers()
         self.assertTrue(mock_data_service.get_all_project_transfers.called)
         self.assertEqual(project_transfers_response, mock_requests_response)
+
+    def test_get_user_project_permission(self):
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_user_project_permission.return_value.json.return_value = {
+            'auth_role': {
+                'id': PROJECT_ADMIN_ID
+            }
+        }
+        dds_util._remote_store = mock_remote_store
+        resp = dds_util.get_user_project_permission(project_id='123', user_id='456')
+        self.assertEqual(resp['auth_role']['id'], PROJECT_ADMIN_ID)
+        mock_remote_store.data_service.get_user_project_permission.assert_called_with('123', '456')
 
 
 class TestDeliveryDetails(TestCase):
@@ -273,3 +286,122 @@ class DDSDeliveryTypeTestCase(TestCase):
                                                    share_role=ShareRole.DOWNLOAD,
                                                    share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
         self.assertEqual(util, mock_delivery_util.return_value)
+
+
+class DDSProjectTestCase(TestCase):
+    def test_constructor(self):
+        project = DDSProject({
+            'id': '123',
+            'name': 'mouse',
+            'description': 'mouse rna analysis',
+            'is_deliverable': True,
+        })
+        self.assertEqual(project.id, '123')
+        self.assertEqual(project.name, 'mouse')
+        self.assertEqual(project.description, 'mouse rna analysis')
+        self.assertEqual(project.is_deliverable, True)
+
+    @patch('switchboard.dds_util.ProjectDeliverableStatus')
+    def test_fetch_list(self, mock_project_deliverable_status):
+        mock_dds_util = Mock()
+        mock_dds_util.get_projects.return_value.json.return_value = {
+            'results': [
+                {
+                    'id': '123',
+                    'name': 'mouse',
+                    'description': 'mouse RNA',
+                }
+            ]
+        }
+        mock_project_deliverable_status.return_value.calculate.return_value = True
+        projects = DDSProject.fetch_list(mock_dds_util, is_deliverable=None)
+        self.assertEqual(len(projects), 1)
+        self.assertEqual(projects[0].id, '123')
+        self.assertEqual(projects[0].name, 'mouse')
+        self.assertEqual(projects[0].description, 'mouse RNA')
+        self.assertEqual(projects[0].is_deliverable, True)
+
+    @patch('switchboard.dds_util.ProjectDeliverableStatus')
+    def test_fetch_list_not_deliverable(self, mock_project_deliverable_status):
+        mock_dds_util = Mock()
+        mock_dds_util.get_projects.return_value.json.return_value = {
+            'results': [
+                {
+                    'id': '123',
+                    'name': 'mouse',
+                    'description': 'mouse RNA',
+                }
+            ]
+        }
+        mock_project_deliverable_status.return_value.calculate.return_value = False
+        projects = DDSProject.fetch_list(mock_dds_util, is_deliverable=None)
+        self.assertEqual(len(projects), 1)
+        self.assertEqual(projects[0].id, '123')
+        self.assertEqual(projects[0].is_deliverable, False)
+
+    @patch('switchboard.dds_util.ProjectDeliverableStatus')
+    def test_fetch_list_filtering(self, mock_project_deliverable_status):
+        mock_dds_util = Mock()
+        mock_dds_util.get_projects.return_value.json.return_value = {
+            'results': [
+                {
+                    'id': '123',
+                    'name': 'mouse',
+                    'description': 'mouse RNA',
+                },
+                {
+                    'id': '456',
+                    'name': 'rat',
+                    'description': 'rat RNA',
+                },
+            ]
+        }
+        mock_project_deliverable_status.return_value.calculate.side_effect = [True, False]
+        projects = DDSProject.fetch_list(mock_dds_util, is_deliverable=True)
+        self.assertEqual(len(projects), 1)
+        self.assertEqual(projects[0].id, '123')
+        self.assertEqual(projects[0].name, 'mouse')
+        self.assertEqual(projects[0].description, 'mouse RNA')
+        self.assertEqual(projects[0].is_deliverable, True)
+
+
+class ProjectDeliverableStatusTestCase(TestCase):
+    def setUp(self):
+        self.mock_dds_util = Mock()
+        self.mock_current_user = Mock()
+        self.mock_current_user.id = '456'
+        self.mock_dds_util.get_current_user.return_value = self.mock_current_user
+
+    def test_calculate_with_admin_priv(self):
+        self.mock_dds_util.get_user_project_permission.return_value = {
+            'auth_role': {
+                'id': PROJECT_ADMIN_ID
+            }
+        }
+        status = ProjectDeliverableStatus(self.mock_dds_util)
+        project_dict = {
+            'id': '123',
+            'is_deleted': False,
+        }
+        self.assertEqual(status.calculate(project_dict), True)
+
+    def test_calculate_without_admin_priv(self):
+        self.mock_dds_util.get_user_project_permission.return_value = {
+            'auth_role': {
+                'id': 'other'
+            }
+        }
+        status = ProjectDeliverableStatus(self.mock_dds_util)
+        project_dict = {
+            'id': '123',
+            'is_deleted': False,
+        }
+        self.assertEqual(status.calculate(project_dict), False)
+
+    def test_calculate_when_project_deleted(self):
+        status = ProjectDeliverableStatus(self.mock_dds_util)
+        project_dict = {
+            'id': '123',
+            'is_deleted': True,
+        }
+        self.assertEqual(status.calculate(project_dict), False)

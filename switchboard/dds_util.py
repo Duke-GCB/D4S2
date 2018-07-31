@@ -67,7 +67,6 @@ class DDSUtil(object):
         return self.remote_store.data_service.get_all_project_transfers()
 
     def create_project_transfer(self, project_id, to_user_ids):
-        print(project_id, to_user_ids)
         return self.remote_store.data_service.create_project_transfer(project_id, to_user_ids).json()
 
     def accept_project_transfer(self, transfer_id):
