@@ -164,6 +164,7 @@ class DDSProject(DDSBase):
     def fetch_one(dds_util, dds_project_id):
         response = dds_util.get_project(dds_project_id).json()
         deliverable_status = ProjectDeliverableStatus(dds_util)
+        # insert is_deliverable into response so it can be read during the constructor
         response['is_deliverable'] = deliverable_status.calculate(response)
         return DDSProject(response)
 
