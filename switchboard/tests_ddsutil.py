@@ -1,7 +1,7 @@
 from django.test import TestCase
 from mock import patch, Mock, MagicMock, call
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
-    SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, ProjectDeliverableStatus
+    SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject
 from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole
 from gcb_web_auth.models import DDSEndpoint
 
@@ -293,16 +293,13 @@ class DDSProjectTestCase(TestCase):
         project = DDSProject({
             'id': '123',
             'name': 'mouse',
-            'description': 'mouse rna analysis',
-            'is_deliverable': True,
+            'description': 'mouse rna analysis'
         })
         self.assertEqual(project.id, '123')
         self.assertEqual(project.name, 'mouse')
         self.assertEqual(project.description, 'mouse rna analysis')
-        self.assertEqual(project.is_deliverable, True)
 
-    @patch('switchboard.dds_util.ProjectDeliverableStatus')
-    def test_fetch_list(self, mock_project_deliverable_status):
+    def test_fetch_list(self):
         mock_dds_util = Mock()
         mock_dds_util.get_projects.return_value.json.return_value = {
             'results': [
@@ -313,51 +310,8 @@ class DDSProjectTestCase(TestCase):
                 }
             ]
         }
-        mock_project_deliverable_status.return_value.calculate.return_value = True
         projects = DDSProject.fetch_list(mock_dds_util)
         self.assertEqual(len(projects), 1)
         self.assertEqual(projects[0].id, '123')
         self.assertEqual(projects[0].name, 'mouse')
         self.assertEqual(projects[0].description, 'mouse RNA')
-
-
-class ProjectDeliverableStatusTestCase(TestCase):
-    def setUp(self):
-        self.mock_dds_util = Mock()
-        self.mock_current_user = Mock()
-        self.mock_current_user.id = '456'
-        self.mock_dds_util.get_current_user.return_value = self.mock_current_user
-
-    def test_calculate_with_admin_priv(self):
-        self.mock_dds_util.get_user_project_permission.return_value = {
-            'auth_role': {
-                'id': PROJECT_ADMIN_ID
-            }
-        }
-        status = ProjectDeliverableStatus(self.mock_dds_util)
-        project_dict = {
-            'id': '123',
-            'is_deleted': False,
-        }
-        self.assertEqual(status.calculate(project_dict), True)
-
-    def test_calculate_without_admin_priv(self):
-        self.mock_dds_util.get_user_project_permission.return_value = {
-            'auth_role': {
-                'id': 'other'
-            }
-        }
-        status = ProjectDeliverableStatus(self.mock_dds_util)
-        project_dict = {
-            'id': '123',
-            'is_deleted': False,
-        }
-        self.assertEqual(status.calculate(project_dict), False)
-
-    def test_calculate_when_project_deleted(self):
-        status = ProjectDeliverableStatus(self.mock_dds_util)
-        project_dict = {
-            'id': '123',
-            'is_deleted': True,
-        }
-        self.assertEqual(status.calculate(project_dict), False)

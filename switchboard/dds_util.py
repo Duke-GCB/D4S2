@@ -142,7 +142,6 @@ class DDSProject(DDSBase):
         self.id = project_dict.get('id')
         self.name = project_dict.get('name')
         self.description = project_dict.get('description')
-        self.is_deliverable = project_dict.get('is_deliverable')
 
     @staticmethod
     def fetch_list(dds_util):
@@ -157,9 +156,6 @@ class DDSProject(DDSBase):
     @staticmethod
     def fetch_one(dds_util, dds_project_id):
         response = dds_util.get_project(dds_project_id).json()
-        deliverable_status = ProjectDeliverableStatus(dds_util)
-        # insert is_deliverable into response so it can be read during the constructor
-        response['is_deliverable'] = deliverable_status.calculate(response)
         return DDSProject(response)
 
 
@@ -173,7 +169,7 @@ class DDSProjectPermissions(DDSBase):
     @staticmethod
     def fetch_list(dds_util, project_id, user_id=None):
         """
-        Fetch list of DDSProjects based on dds_util with optional filtering based on is_deliverable
+        Fetch list of DDSProjects based on dds_util
         :param dds_util: DDSUtil
         :param project_id: str: DukeDS uuid of the project to get permissions for
         :param user_id: str: optional user id to filter
@@ -191,33 +187,6 @@ class DDSProjectPermissions(DDSBase):
         parts = dds_permissions_id.split('-')
         response = dds_util.get_project_permissions(project_id=parts[0], user_id=parts[1])
         return DDSProjectPermissions(response)
-
-
-class ProjectDeliverableStatus(object):
-    def __init__(self, dds_util):
-        self.dds_util = dds_util
-        current_user = self.dds_util.get_current_user()
-        self.current_user_id = current_user.id
-
-    def calculate(self, project_dict):
-        """
-        Determines if the current user can deliver the specified project.
-        Users can only deliver non-deleted projects which they have admin permissions.
-        :param project_dict: dict: DukeDS dictionary response for a single project
-        :return: boolean: True if the current user can deliver the project
-        """
-        project_id = project_dict.get('id')
-        is_deleted = project_dict.get('is_deleted')
-        return not is_deleted and self._user_has_admin_permissions(project_id)
-
-    def _user_has_admin_permissions(self, project_id):
-        """
-        Does the current user have admin privileges for project_id
-        :param project_id: str: DukeDS project id to check permissions for
-        :return: boolean: True if the current user has admin privileges
-        """
-        perms = self.dds_util.get_user_project_permission(project_id, self.current_user_id)
-        return perms['auth_role']['id'] == PROJECT_ADMIN_ID
 
 
 class DDSProjectTransfer(DDSBase):
