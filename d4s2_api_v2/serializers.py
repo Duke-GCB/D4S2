@@ -45,6 +45,16 @@ class DDSProjectTransferSerializer(serializers.Serializer):
         resource_name = 'duke-ds-project-transfers'
 
 
+class DDSProjectPermissionSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    project = serializers.UUIDField()
+    user = serializers.UUIDField()
+    auth_role = serializers.UUIDField()
+
+    class Meta:
+        resource_name = 'duke-ds-project-permissions'
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

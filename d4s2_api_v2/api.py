@@ -5,11 +5,12 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer
+from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions
 from switchboard.dds_util import DDSUtil
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
-    UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer
+    UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
+    DDSProjectPermissionSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
 from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket, SendDeliveryOperation
@@ -136,11 +137,7 @@ class DDSProjectsViewSet(DDSViewSet):
 
     def get_queryset(self):
         dds_util = DDSUtil(self.request.user)
-        is_deliverable = None
-        if 'is_deliverable' in self.request.query_params:
-            is_deliverable = self.request.query_params.get('is_deliverable', '') == 'true'
-        projects = self._ds_operation(DDSProject.fetch_list, dds_util, is_deliverable)
-        return projects
+        return self._ds_operation(DDSProject.fetch_list, dds_util)
 
     def get_object(self):
         dds_project_id = self.kwargs.get('pk')
@@ -160,6 +157,21 @@ class DDSProjectTransfersViewSet(DDSViewSet):
         dds_project_transfer_id = self.kwargs.get('pk')
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSProjectTransfer.fetch_one, dds_util, dds_project_transfer_id)
+
+
+class DDSProjectPermissionsViewSet(DDSViewSet):
+    serializer_class = DDSProjectPermissionSerializer
+
+    def get_queryset(self):
+        dds_util = DDSUtil(self.request.user)
+        project_id = self.request.query_params.get('project_id')
+        user_id = self.request.query_params.get('user_id')
+        return self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, project_id, user_id)
+
+    def get_object(self):
+        dds_permissions_id = self.kwargs.get('pk')
+        dds_util = DDSUtil(self.request.user)
+        return self._ds_operation(DDSProjectPermissions.fetch_one, dds_util, dds_permissions_id)
 
 
 class UserViewSet(viewsets.GenericViewSet):

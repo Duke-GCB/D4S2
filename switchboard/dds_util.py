@@ -99,6 +99,9 @@ class DDSUtil(object):
     def get_user_project_permission(self, project_id, user_id):
         return self.remote_store.data_service.get_user_project_permission(project_id, user_id).json()
 
+    def get_project_permissions(self, project_id):
+        return self.remote_store.data_service.get_project_permissions(project_id).json()
+
 
 class DDSBase(object):
     @classmethod
@@ -142,23 +145,14 @@ class DDSProject(DDSBase):
         self.is_deliverable = project_dict.get('is_deliverable')
 
     @staticmethod
-    def fetch_list(dds_util, is_deliverable):
+    def fetch_list(dds_util):
         """
-        Fetch list of DDSProjects based on dds_util with optional filtering based on is_deliverable
+        Fetch list of DDSProjects based on dds_util
         :param dds_util: DDSUtil
-        :param is_deliverable: boolean: if True or False filter projects is_deliverable by this value
         :return: [DDSProjects]
         """
         response = dds_util.get_projects().json()
-        # insert is_deliverable into response so it can be read during the constructor
-        deliverable_status = ProjectDeliverableStatus(dds_util)
-        for project_dict in response['results']:
-            project_dict['is_deliverable'] = deliverable_status.calculate(project_dict)
-        projects = DDSProject.from_list(response['results'])
-        # filter based on is_deliverable
-        if is_deliverable is not None:
-            projects = [project for project in projects if project.is_deliverable == is_deliverable]
-        return projects
+        return DDSProject.from_list(response['results'])
 
     @staticmethod
     def fetch_one(dds_util, dds_project_id):
@@ -167,6 +161,36 @@ class DDSProject(DDSBase):
         # insert is_deliverable into response so it can be read during the constructor
         response['is_deliverable'] = deliverable_status.calculate(response)
         return DDSProject(response)
+
+
+class DDSProjectPermissions(DDSBase):
+    def __init__(self, project_permission_dict):
+        self.project = project_permission_dict['project']['id']
+        self.user = project_permission_dict['user']['id']
+        self.auth_role = project_permission_dict['auth_role']['id']
+        self.id = '{}-{}'.format(self.project, self.user)
+
+    @staticmethod
+    def fetch_list(dds_util, project_id, user_id=None):
+        """
+        Fetch list of DDSProjects based on dds_util with optional filtering based on is_deliverable
+        :param dds_util: DDSUtil
+        :param project_id: str: DukeDS uuid of the project to get permissions for
+        :param user_id: str: optional user id to filter
+        :return: [ProjectPermissions]
+        """
+        if user_id:
+            response = dds_util.get_user_project_permission(project_id, user_id)
+            return [DDSProjectPermissions(response)]
+        else:
+            response = dds_util.get_project_permissions(project_id)
+            return DDSProjectPermissions.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_permissions_id):
+        parts = dds_permissions_id.split('-')
+        response = dds_util.get_project_permissions(project_id=parts[0], user_id=parts[1])
+        return DDSProjectPermissions(response)
 
 
 class ProjectDeliverableStatus(object):

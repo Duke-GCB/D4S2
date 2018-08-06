@@ -314,55 +314,11 @@ class DDSProjectTestCase(TestCase):
             ]
         }
         mock_project_deliverable_status.return_value.calculate.return_value = True
-        projects = DDSProject.fetch_list(mock_dds_util, is_deliverable=None)
+        projects = DDSProject.fetch_list(mock_dds_util)
         self.assertEqual(len(projects), 1)
         self.assertEqual(projects[0].id, '123')
         self.assertEqual(projects[0].name, 'mouse')
         self.assertEqual(projects[0].description, 'mouse RNA')
-        self.assertEqual(projects[0].is_deliverable, True)
-
-    @patch('switchboard.dds_util.ProjectDeliverableStatus')
-    def test_fetch_list_not_deliverable(self, mock_project_deliverable_status):
-        mock_dds_util = Mock()
-        mock_dds_util.get_projects.return_value.json.return_value = {
-            'results': [
-                {
-                    'id': '123',
-                    'name': 'mouse',
-                    'description': 'mouse RNA',
-                }
-            ]
-        }
-        mock_project_deliverable_status.return_value.calculate.return_value = False
-        projects = DDSProject.fetch_list(mock_dds_util, is_deliverable=None)
-        self.assertEqual(len(projects), 1)
-        self.assertEqual(projects[0].id, '123')
-        self.assertEqual(projects[0].is_deliverable, False)
-
-    @patch('switchboard.dds_util.ProjectDeliverableStatus')
-    def test_fetch_list_filtering(self, mock_project_deliverable_status):
-        mock_dds_util = Mock()
-        mock_dds_util.get_projects.return_value.json.return_value = {
-            'results': [
-                {
-                    'id': '123',
-                    'name': 'mouse',
-                    'description': 'mouse RNA',
-                },
-                {
-                    'id': '456',
-                    'name': 'rat',
-                    'description': 'rat RNA',
-                },
-            ]
-        }
-        mock_project_deliverable_status.return_value.calculate.side_effect = [True, False]
-        projects = DDSProject.fetch_list(mock_dds_util, is_deliverable=True)
-        self.assertEqual(len(projects), 1)
-        self.assertEqual(projects[0].id, '123')
-        self.assertEqual(projects[0].name, 'mouse')
-        self.assertEqual(projects[0].description, 'mouse RNA')
-        self.assertEqual(projects[0].is_deliverable, True)
 
 
 class ProjectDeliverableStatusTestCase(TestCase):
