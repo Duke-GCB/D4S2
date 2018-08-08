@@ -307,11 +307,13 @@ class DDSProjectTestCase(TestCase):
         project = DDSProject({
             'id': '123',
             'name': 'mouse',
-            'description': 'mouse rna analysis'
+            'description': 'mouse rna analysis',
+            'is_deleted': False,
         })
         self.assertEqual(project.id, '123')
         self.assertEqual(project.name, 'mouse')
         self.assertEqual(project.description, 'mouse rna analysis')
+        self.assertEqual(project.is_deleted, False)
 
     def test_fetch_list(self):
         mock_dds_util = Mock()
@@ -321,6 +323,7 @@ class DDSProjectTestCase(TestCase):
                     'id': '123',
                     'name': 'mouse',
                     'description': 'mouse RNA',
+                    'is_deleted': False,
                 }
             ]
         }
@@ -329,6 +332,7 @@ class DDSProjectTestCase(TestCase):
         self.assertEqual(projects[0].id, '123')
         self.assertEqual(projects[0].name, 'mouse')
         self.assertEqual(projects[0].description, 'mouse RNA')
+        self.assertEqual(projects[0].is_deleted, False)
 
 
 class DDSProjectPermissionsTestCase(TestCase):

@@ -203,6 +203,7 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(user['first_name'], 'Joe')
         self.assertEqual(user['last_name'], 'Smith')
 
+
 class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -231,10 +232,12 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
                     'id': 'project1',
                     'name': 'Mouse',
                     'description': 'Mouse RNA',
+                    'is_deleted': False,
                 }, {
                     'id': 'project2',
                     'name': 'Turtle',
                     'description': 'Turtle DNA',
+                    'is_deleted': False,
                 }
             ]
         }
@@ -248,11 +251,13 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['id'], 'project1')
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
+        self.assertEqual(project['is_deleted'], False)
 
         project = response.data[1]
         self.assertEqual(project['id'], 'project2')
         self.assertEqual(project['name'], 'Turtle')
         self.assertEqual(project['description'], 'Turtle DNA')
+        self.assertEqual(project['is_deleted'], False)
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_get_project(self, mock_dds_util):
@@ -261,6 +266,7 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
             'id': 'project1',
             'name': 'Mouse',
             'description': 'Mouse RNA',
+            'is_deleted': False,
         }
         mock_dds_util.return_value.get_project.return_value = mock_response
         url = reverse('v2-dukedsproject-list') + 'project1/'
@@ -272,6 +278,7 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['id'], 'project1')
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
+        self.assertEqual(project['is_deleted'], False)
 
 
 class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):

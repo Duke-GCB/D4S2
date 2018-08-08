@@ -142,11 +142,12 @@ class DDSProject(DDSBase):
         self.id = project_dict.get('id')
         self.name = project_dict.get('name')
         self.description = project_dict.get('description')
+        self.is_deleted = project_dict.get('is_deleted')
 
     @staticmethod
     def fetch_list(dds_util):
         """
-        Fetch list of DDSProjects based on dds_util
+        Fetch list of DDSProjects based on dds_util.
         :param dds_util: DDSUtil
         :return: [DDSProjects]
         """
