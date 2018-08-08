@@ -165,10 +165,19 @@ class DDSProjectPermissions(DDSBase):
         self.project = project_permission_dict['project']['id']
         self.user = project_permission_dict['user']['id']
         self.auth_role = project_permission_dict['auth_role']['id']
+        # The permission payload does not include a unique id. To work around this
+        # below the project id and user id are combined to make a unique id.
+        # There will only be one permission setting for each project/user.
         self.id = '{}{}{}'.format(self.project, DDS_PERMISSIONS_ID_SEP, self.user)
 
     @staticmethod
     def destructure_id(dds_permissions_id):
+        """
+        Converts the synthetic `id` value created in the DDSProjectPermissions constructor into the underlying
+        project and user ids.
+        :param dds_permissions_id: str: unique id for this permission object
+        :return: (project_id, user_id)
+        """
         parts = dds_permissions_id.split(DDS_PERMISSIONS_ID_SEP)
         if len(parts) != 2:
             raise ValueError("Invalid dds_permissions_id: {}".format(dds_permissions_id))

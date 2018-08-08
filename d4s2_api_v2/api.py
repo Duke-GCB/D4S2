@@ -166,6 +166,8 @@ class DDSProjectPermissionsViewSet(DDSViewSet):
         dds_util = DDSUtil(self.request.user)
         project_id = self.request.query_params.get('project')
         user_id = self.request.query_params.get('user')
+        # a project id is required due to the underlying implementation of DukeDS API
+        # permissions are only accessible for a particular project
         if project_id:
             return self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, project_id, user_id)
         else:
@@ -174,6 +176,8 @@ class DDSProjectPermissionsViewSet(DDSViewSet):
     def get_object(self):
         dds_permissions_id = self.kwargs.get('pk')
         dds_util = DDSUtil(self.request.user)
+        # DukeDS Permissions do not have a unique identifier so we destructure the synthetic id
+        # created by DDSProjectPermissions.
         try:
             project_id, user_id = DDSProjectPermissions.destructure_id(dds_permissions_id)
         except ValueError as e:
