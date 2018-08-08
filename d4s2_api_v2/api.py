@@ -166,7 +166,10 @@ class DDSProjectPermissionsViewSet(DDSViewSet):
         dds_util = DDSUtil(self.request.user)
         project_id = self.request.query_params.get('project_id')
         user_id = self.request.query_params.get('user_id')
-        return self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, project_id, user_id)
+        if project_id:
+            return self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, project_id, user_id)
+        else:
+            raise BadRequestException('Getting duke-ds-project-permissions requires a project_id query parameter')
 
     def get_object(self):
         dds_permissions_id = self.kwargs.get('pk')
