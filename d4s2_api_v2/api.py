@@ -1,12 +1,12 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, NotFound
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
 from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions
-from switchboard.dds_util import DDSUtil
+from switchboard.dds_util import DDSUtil, DDSProjectPermissionsNotFound
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
@@ -164,8 +164,8 @@ class DDSProjectPermissionsViewSet(DDSViewSet):
 
     def get_queryset(self):
         dds_util = DDSUtil(self.request.user)
-        project_id = self.request.query_params.get('project_id')
-        user_id = self.request.query_params.get('user_id')
+        project_id = self.request.query_params.get('project')
+        user_id = self.request.query_params.get('user')
         if project_id:
             return self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, project_id, user_id)
         else:
@@ -174,7 +174,11 @@ class DDSProjectPermissionsViewSet(DDSViewSet):
     def get_object(self):
         dds_permissions_id = self.kwargs.get('pk')
         dds_util = DDSUtil(self.request.user)
-        return self._ds_operation(DDSProjectPermissions.fetch_one, dds_util, dds_permissions_id)
+        try:
+            project_id, user_id = DDSProjectPermissions.destructure_id(dds_permissions_id)
+        except ValueError as e:
+            raise BadRequestException(str(e))
+        return self._ds_operation(DDSProjectPermissions.fetch_one, dds_util, project_id, user_id)
 
 
 class UserViewSet(viewsets.GenericViewSet):

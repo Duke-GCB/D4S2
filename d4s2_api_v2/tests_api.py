@@ -987,13 +987,13 @@ class DDSProjectPermissionsViewSetTestCase(AuthenticatedResourceTestCase):
             ]
         }
         mock_dds_util.return_value.get_project_permissions.return_value = permission_response
-        url = reverse('v2-dukedsprojectpermission-list') + '?project_id=project1'
+        url = reverse('v2-dukedsprojectpermission-list') + '?project=project1'
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
         project = response.data[0]
-        self.assertEqual(project['id'], 'project1-user1')
+        self.assertEqual(project['id'], 'project1_user1')
         self.assertEqual(project['project'], 'project1')
         self.assertEqual(project['user'], 'user1')
         self.assertEqual(project['auth_role'], 'file_downloader')
@@ -1012,13 +1012,13 @@ class DDSProjectPermissionsViewSetTestCase(AuthenticatedResourceTestCase):
             }
         }
         mock_dds_util.return_value.get_user_project_permission.return_value = permission_response
-        url = reverse('v2-dukedsprojectpermission-list') + '?project_id=project1&user_id=user1'
+        url = reverse('v2-dukedsprojectpermission-list') + '?project=project1&user=user1'
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(len(response.data), 1)
         permission = response.data[0]
-        self.assertEqual(permission['id'], 'project1-user1')
+        self.assertEqual(permission['id'], 'project1_user1')
         self.assertEqual(permission['project'], 'project1')
         self.assertEqual(permission['user'], 'user1')
         self.assertEqual(permission['auth_role'], 'file_downloader')
@@ -1036,14 +1036,14 @@ class DDSProjectPermissionsViewSetTestCase(AuthenticatedResourceTestCase):
                 'id': 'file_downloader'
             }
         }
-        mock_dds_util.return_value.get_project_permissions.return_value = permission_response
-        url = reverse('v2-dukedsprojectpermission-list') + 'project1-user1/'
+        mock_dds_util.return_value.get_user_project_permission.return_value = permission_response
+        url = reverse('v2-dukedsprojectpermission-list') + 'project1_user1/'
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_dds_util.return_value.get_project_permissions.assert_called_with(project_id='project1', user_id='user1')
+        mock_dds_util.return_value.get_user_project_permission.assert_called_with('project1', 'user1')
 
         permission = response.data
-        self.assertEqual(permission['id'], 'project1-user1')
+        self.assertEqual(permission['id'], 'project1_user1')
         self.assertEqual(permission['project'], 'project1')
         self.assertEqual(permission['user'], 'user1')
         self.assertEqual(permission['auth_role'], 'file_downloader')

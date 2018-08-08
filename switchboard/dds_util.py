@@ -11,7 +11,7 @@ SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 DDS_SERVICE_NAME = 'Duke Data Service'
 PROJECT_ADMIN_ID = 'project_admin'
-
+DDS_PERMISSIONS_SEP = '_'
 
 class DDSUtil(object):
     def __init__(self, user):
@@ -164,7 +164,14 @@ class DDSProjectPermissions(DDSBase):
         self.project = project_permission_dict['project']['id']
         self.user = project_permission_dict['user']['id']
         self.auth_role = project_permission_dict['auth_role']['id']
-        self.id = '{}-{}'.format(self.project, self.user)
+        self.id = '{}{}{}'.format(self.project, DDS_PERMISSIONS_SEP, self.user)
+
+    @staticmethod
+    def destructure_id(dds_permissions_id):
+        parts = dds_permissions_id.split(DDS_PERMISSIONS_SEP)
+        if len(parts) != 2:
+            raise ValueError("Invalid dds_permissions_id: {}".format(dds_permissions_id))
+        return parts[0], parts[1]
 
     @staticmethod
     def fetch_list(dds_util, project_id, user_id=None):
@@ -183,9 +190,8 @@ class DDSProjectPermissions(DDSBase):
             return DDSProjectPermissions.from_list(response['results'])
 
     @staticmethod
-    def fetch_one(dds_util, dds_permissions_id):
-        parts = dds_permissions_id.split('-')
-        response = dds_util.get_project_permissions(project_id=parts[0], user_id=parts[1])
+    def fetch_one(dds_util, project_id, user_id):
+        response = dds_util.get_user_project_permission(project_id, user_id)
         return DDSProjectPermissions(response)
 
 
