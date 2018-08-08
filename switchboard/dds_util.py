@@ -183,8 +183,8 @@ class DDSProjectPermissions(DDSBase):
         :return: [ProjectPermissions]
         """
         if user_id:
-            response = dds_util.get_user_project_permission(project_id, user_id)
-            return [DDSProjectPermissions(response)]
+            permissions = DDSProjectPermissions.fetch_one(dds_util, project_id, user_id)
+            return [permissions]
         else:
             response = dds_util.get_project_permissions(project_id)
             return DDSProjectPermissions.from_list(response['results'])
