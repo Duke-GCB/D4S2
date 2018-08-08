@@ -11,7 +11,7 @@ SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 DDS_SERVICE_NAME = 'Duke Data Service'
 PROJECT_ADMIN_ID = 'project_admin'
-DDS_PERMISSIONS_SEP = '_'
+DDS_PERMISSIONS_ID_SEP = '_'
 
 class DDSUtil(object):
     def __init__(self, user):
@@ -164,11 +164,11 @@ class DDSProjectPermissions(DDSBase):
         self.project = project_permission_dict['project']['id']
         self.user = project_permission_dict['user']['id']
         self.auth_role = project_permission_dict['auth_role']['id']
-        self.id = '{}{}{}'.format(self.project, DDS_PERMISSIONS_SEP, self.user)
+        self.id = '{}{}{}'.format(self.project, DDS_PERMISSIONS_ID_SEP, self.user)
 
     @staticmethod
     def destructure_id(dds_permissions_id):
-        parts = dds_permissions_id.split(DDS_PERMISSIONS_SEP)
+        parts = dds_permissions_id.split(DDS_PERMISSIONS_ID_SEP)
         if len(parts) != 2:
             raise ValueError("Invalid dds_permissions_id: {}".format(dds_permissions_id))
         return parts[0], parts[1]
