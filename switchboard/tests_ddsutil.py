@@ -1,7 +1,8 @@
 from django.test import TestCase
 from mock import patch, Mock, MagicMock, call
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
-    SHARE_IN_RESPONSE_TO_DELIVERY_MSG
+    SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
+    DDS_PERMISSIONS_ID_SEP
 from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole
 from gcb_web_auth.models import DDSEndpoint
 
@@ -83,6 +84,32 @@ class DDSUtilTestCase(TestCase):
         project_transfers_response = ddsutil.get_project_transfers()
         self.assertTrue(mock_data_service.get_all_project_transfers.called)
         self.assertEqual(project_transfers_response, mock_requests_response)
+
+    def test_get_user_project_permission(self):
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_user_project_permission.return_value.json.return_value = {
+            'auth_role': {
+                'id': PROJECT_ADMIN_ID
+            }
+        }
+        dds_util._remote_store = mock_remote_store
+        resp = dds_util.get_user_project_permission(project_id='123', user_id='456')
+        self.assertEqual(resp['auth_role']['id'], PROJECT_ADMIN_ID)
+        mock_remote_store.data_service.get_user_project_permission.assert_called_with('123', '456')
+
+    def test_get_project_permissions(self):
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_project_permissions.return_value.json.return_value = {
+            'auth_role': {
+                'id': PROJECT_ADMIN_ID
+            }
+        }
+        dds_util._remote_store = mock_remote_store
+        resp = dds_util.get_project_permissions(project_id='123')
+        self.assertEqual(resp['auth_role']['id'], PROJECT_ADMIN_ID)
+        mock_remote_store.data_service.get_project_permissions.assert_called_with('123')
 
 
 class TestDeliveryDetails(TestCase):
@@ -273,3 +300,120 @@ class DDSDeliveryTypeTestCase(TestCase):
                                                    share_role=ShareRole.DOWNLOAD,
                                                    share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
         self.assertEqual(util, mock_delivery_util.return_value)
+
+
+class DDSProjectTestCase(TestCase):
+    def test_constructor(self):
+        project = DDSProject({
+            'id': '123',
+            'name': 'mouse',
+            'description': 'mouse rna analysis',
+            'is_deleted': False,
+        })
+        self.assertEqual(project.id, '123')
+        self.assertEqual(project.name, 'mouse')
+        self.assertEqual(project.description, 'mouse rna analysis')
+        self.assertEqual(project.is_deleted, False)
+
+    def test_fetch_list(self):
+        mock_dds_util = Mock()
+        mock_dds_util.get_projects.return_value.json.return_value = {
+            'results': [
+                {
+                    'id': '123',
+                    'name': 'mouse',
+                    'description': 'mouse RNA',
+                    'is_deleted': False,
+                }
+            ]
+        }
+        projects = DDSProject.fetch_list(mock_dds_util)
+        self.assertEqual(len(projects), 1)
+        self.assertEqual(projects[0].id, '123')
+        self.assertEqual(projects[0].name, 'mouse')
+        self.assertEqual(projects[0].description, 'mouse RNA')
+        self.assertEqual(projects[0].is_deleted, False)
+
+
+class DDSProjectPermissionsTestCase(TestCase):
+    def test_constructor(self):
+        permissions = DDSProjectPermissions(project_permission_dict={
+            'project': {
+                'id': 'project1'
+            },
+            'user': {
+                'id': 'user1'
+            },
+            'auth_role': {
+                'id': 'file_downloader'
+            }
+        })
+        self.assertEqual(permissions.id, 'project1{}user1'.format(DDS_PERMISSIONS_ID_SEP))
+        self.assertEqual(permissions.project, 'project1')
+        self.assertEqual(permissions.user, 'user1')
+        self.assertEqual(permissions.auth_role, 'file_downloader')
+
+    def test_fetch_one(self):
+        mock_dds_util = Mock()
+        mock_dds_util.get_user_project_permission.return_value = {
+            'project': {
+                'id': 'project1'
+            },
+            'user': {
+                'id': 'user1'
+            },
+            'auth_role': {
+                'id': 'file_downloader'
+            }
+        }
+        permissions = DDSProjectPermissions.fetch_one(mock_dds_util, project_id='project1', user_id='user1')
+        self.assertEqual(permissions.id, 'project1{}user1'.format(DDS_PERMISSIONS_ID_SEP))
+        self.assertEqual(permissions.project, 'project1')
+        self.assertEqual(permissions.user, 'user1')
+        self.assertEqual(permissions.auth_role, 'file_downloader')
+
+    def test_fetch_list_without_user_id(self):
+        mock_dds_util = Mock()
+        mock_dds_util.get_project_permissions.return_value = {
+            'results': [
+                {
+                    'project': {
+                        'id': 'project1'
+                    },
+                    'user': {
+                        'id': 'user1'
+                    },
+                    'auth_role': {
+                        'id': 'file_downloader'
+                    }
+                }
+            ]
+        }
+        ary = DDSProjectPermissions.fetch_list(mock_dds_util, project_id='project1')
+        self.assertEqual(len(ary), 1)
+        permissions = ary[0]
+        self.assertEqual(permissions.id, 'project1{}user1'.format(DDS_PERMISSIONS_ID_SEP))
+        self.assertEqual(permissions.project, 'project1')
+        self.assertEqual(permissions.user, 'user1')
+        self.assertEqual(permissions.auth_role, 'file_downloader')
+
+    def test_fetch_list_with_user_id(self):
+        mock_dds_util = Mock()
+        mock_dds_util.get_user_project_permission.return_value = {
+            'project': {
+                'id': 'project1'
+            },
+            'user': {
+                'id': 'user1'
+            },
+            'auth_role': {
+                'id': 'file_downloader'
+            }
+        }
+        ary = DDSProjectPermissions.fetch_list(mock_dds_util, project_id='project1', user_id='user1')
+        self.assertEqual(len(ary), 1)
+        permissions = ary[0]
+        self.assertEqual(permissions.id, 'project1{}user1'.format(DDS_PERMISSIONS_ID_SEP))
+        self.assertEqual(permissions.project, 'project1')
+        self.assertEqual(permissions.user, 'user1')
+        self.assertEqual(permissions.auth_role, 'file_downloader')

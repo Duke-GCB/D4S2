@@ -203,6 +203,7 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(user['first_name'], 'Joe')
         self.assertEqual(user['last_name'], 'Smith')
 
+
 class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -231,10 +232,12 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
                     'id': 'project1',
                     'name': 'Mouse',
                     'description': 'Mouse RNA',
+                    'is_deleted': False,
                 }, {
                     'id': 'project2',
                     'name': 'Turtle',
                     'description': 'Turtle DNA',
+                    'is_deleted': False,
                 }
             ]
         }
@@ -248,11 +251,13 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['id'], 'project1')
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
+        self.assertEqual(project['is_deleted'], False)
 
         project = response.data[1]
         self.assertEqual(project['id'], 'project2')
         self.assertEqual(project['name'], 'Turtle')
         self.assertEqual(project['description'], 'Turtle DNA')
+        self.assertEqual(project['is_deleted'], False)
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_get_project(self, mock_dds_util):
@@ -261,6 +266,7 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
             'id': 'project1',
             'name': 'Mouse',
             'description': 'Mouse RNA',
+            'is_deleted': False,
         }
         mock_dds_util.return_value.get_project.return_value = mock_response
         url = reverse('v2-dukedsproject-list') + 'project1/'
@@ -272,6 +278,61 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['id'], 'project1')
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
+        self.assertEqual(project['is_deleted'], False)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_list_permissions(self, mock_dds_util):
+        permission_response = {
+            'results': [
+                {
+                    'project': {
+                        'id': 'project1'
+                    },
+                    'user': {
+                        'id': 'user1'
+                    },
+                    'auth_role': {
+                        'id': 'file_downloader'
+                    }
+                }
+            ]
+        }
+        mock_dds_util.return_value.get_project_permissions.return_value = permission_response
+        url = reverse('v2-dukedsproject-list') + 'project1/permissions/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        project = response.data[0]
+        self.assertEqual(project['id'], 'project1_user1')
+        self.assertEqual(project['project'], 'project1')
+        self.assertEqual(project['user'], 'user1')
+        self.assertEqual(project['auth_role'], 'file_downloader')
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_list_permissions_with_user_id_filter(self, mock_dds_util):
+        permission_response = {
+            'project': {
+                'id': 'project1'
+            },
+            'user': {
+                'id': 'user1'
+            },
+            'auth_role': {
+                'id': 'file_downloader'
+            }
+        }
+        mock_dds_util.return_value.get_user_project_permission.return_value = permission_response
+        url = reverse('v2-dukedsproject-list') + 'project1/permissions/?user=user1'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(len(response.data), 1)
+        permission = response.data[0]
+        self.assertEqual(permission['id'], 'project1_user1')
+        self.assertEqual(permission['project'], 'project1')
+        self.assertEqual(permission['user'], 'user1')
+        self.assertEqual(permission['auth_role'], 'file_downloader')
 
 
 class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):

@@ -26,6 +26,7 @@ class DDSProjectSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     description = serializers.CharField()
+    is_deleted = serializers.BooleanField()
 
     class Meta:
         resource_name = 'duke-ds-projects'
@@ -42,6 +43,16 @@ class DDSProjectTransferSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'duke-ds-project-transfers'
+
+
+class DDSProjectPermissionSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    project = serializers.UUIDField()
+    user = serializers.UUIDField()
+    auth_role = serializers.UUIDField()
+
+    class Meta:
+        resource_name = 'duke-ds-project-permissions'
 
 
 class UserSerializer(serializers.ModelSerializer):

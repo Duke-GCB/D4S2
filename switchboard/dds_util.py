@@ -7,11 +7,11 @@ from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
 from ddsc.core.ddsapi import DataServiceError
 from d4s2_api.utils import MessageFactory
 
-
 SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
 DDS_SERVICE_NAME = 'Duke Data Service'
-
+PROJECT_ADMIN_ID = 'project_admin'
+DDS_PERMISSIONS_ID_SEP = '_'
 
 class DDSUtil(object):
     def __init__(self, user):
@@ -96,6 +96,12 @@ class DDSUtil(object):
     def get_current_user(self):
         return self.remote_store.get_current_user()
 
+    def get_user_project_permission(self, project_id, user_id):
+        return self.remote_store.data_service.get_user_project_permission(project_id, user_id).json()
+
+    def get_project_permissions(self, project_id):
+        return self.remote_store.data_service.get_project_permissions(project_id).json()
+
 
 class DDSBase(object):
     @classmethod
@@ -136,9 +142,15 @@ class DDSProject(DDSBase):
         self.id = project_dict.get('id')
         self.name = project_dict.get('name')
         self.description = project_dict.get('description')
+        self.is_deleted = project_dict.get('is_deleted')
 
     @staticmethod
     def fetch_list(dds_util):
+        """
+        Fetch list of DDSProjects based on dds_util.
+        :param dds_util: DDSUtil
+        :return: [DDSProjects]
+        """
         response = dds_util.get_projects().json()
         return DDSProject.from_list(response['results'])
 
@@ -146,6 +158,38 @@ class DDSProject(DDSBase):
     def fetch_one(dds_util, dds_project_id):
         response = dds_util.get_project(dds_project_id).json()
         return DDSProject(response)
+
+
+class DDSProjectPermissions(DDSBase):
+    def __init__(self, project_permission_dict):
+        self.project = project_permission_dict['project']['id']
+        self.user = project_permission_dict['user']['id']
+        self.auth_role = project_permission_dict['auth_role']['id']
+        # The permission payload does not include a unique id. To work around this
+        # below the project id and user id are combined to make a unique id.
+        # There will only be one permission setting for each project/user.
+        self.id = '{}{}{}'.format(self.project, DDS_PERMISSIONS_ID_SEP, self.user)
+
+    @staticmethod
+    def fetch_list(dds_util, project_id, user_id=None):
+        """
+        Fetch list of DDSProjects based on dds_util
+        :param dds_util: DDSUtil
+        :param project_id: str: DukeDS uuid of the project to get permissions for
+        :param user_id: str: optional user id to filter
+        :return: [ProjectPermissions]
+        """
+        if user_id:
+            permissions = DDSProjectPermissions.fetch_one(dds_util, project_id, user_id)
+            return [permissions]
+        else:
+            response = dds_util.get_project_permissions(project_id)
+            return DDSProjectPermissions.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, project_id, user_id):
+        response = dds_util.get_user_project_permission(project_id, user_id)
+        return DDSProjectPermissions(response)
 
 
 class DDSProjectTransfer(DDSBase):
