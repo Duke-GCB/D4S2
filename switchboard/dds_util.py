@@ -171,19 +171,6 @@ class DDSProjectPermissions(DDSBase):
         self.id = '{}{}{}'.format(self.project, DDS_PERMISSIONS_ID_SEP, self.user)
 
     @staticmethod
-    def destructure_id(dds_permissions_id):
-        """
-        Converts the synthetic `id` value created in the DDSProjectPermissions constructor into the underlying
-        project and user ids.
-        :param dds_permissions_id: str: unique id for this permission object
-        :return: (project_id, user_id)
-        """
-        parts = dds_permissions_id.split(DDS_PERMISSIONS_ID_SEP)
-        if len(parts) != 2:
-            raise ValueError("Invalid dds_permissions_id: {}".format(dds_permissions_id))
-        return parts[0], parts[1]
-
-    @staticmethod
     def fetch_list(dds_util, project_id, user_id=None):
         """
         Fetch list of DDSProjects based on dds_util

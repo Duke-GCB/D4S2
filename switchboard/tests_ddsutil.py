@@ -353,13 +353,6 @@ class DDSProjectPermissionsTestCase(TestCase):
         self.assertEqual(permissions.user, 'user1')
         self.assertEqual(permissions.auth_role, 'file_downloader')
 
-    def test_destructure_id(self):
-        with self.assertRaises(ValueError):
-            DDSProjectPermissions.destructure_id('abc')
-        project_id, user_id = DDSProjectPermissions.destructure_id('project-1{}user-1'.format(DDS_PERMISSIONS_ID_SEP))
-        self.assertEqual(project_id, 'project-1')
-        self.assertEqual(user_id, 'user-1')
-
     def test_fetch_one(self):
         mock_dds_util = Mock()
         mock_dds_util.get_user_project_permission.return_value = {
