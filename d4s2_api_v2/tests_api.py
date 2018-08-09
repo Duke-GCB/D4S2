@@ -280,6 +280,60 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['description'], 'Mouse RNA')
         self.assertEqual(project['is_deleted'], False)
 
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_list_permissions(self, mock_dds_util):
+        permission_response = {
+            'results': [
+                {
+                    'project': {
+                        'id': 'project1'
+                    },
+                    'user': {
+                        'id': 'user1'
+                    },
+                    'auth_role': {
+                        'id': 'file_downloader'
+                    }
+                }
+            ]
+        }
+        mock_dds_util.return_value.get_project_permissions.return_value = permission_response
+        url = reverse('v2-dukedsproject-list') + 'project1/permissions/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        project = response.data[0]
+        self.assertEqual(project['id'], 'project1_user1')
+        self.assertEqual(project['project'], 'project1')
+        self.assertEqual(project['user'], 'user1')
+        self.assertEqual(project['auth_role'], 'file_downloader')
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_list_permissions_with_user_id_filter(self, mock_dds_util):
+        permission_response = {
+            'project': {
+                'id': 'project1'
+            },
+            'user': {
+                'id': 'user1'
+            },
+            'auth_role': {
+                'id': 'file_downloader'
+            }
+        }
+        mock_dds_util.return_value.get_user_project_permission.return_value = permission_response
+        url = reverse('v2-dukedsproject-list') + 'project1/permissions/?user=user1'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(len(response.data), 1)
+        permission = response.data[0]
+        self.assertEqual(permission['id'], 'project1_user1')
+        self.assertEqual(permission['project'], 'project1')
+        self.assertEqual(permission['user'], 'user1')
+        self.assertEqual(permission['auth_role'], 'file_downloader')
+
 
 class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
@@ -947,110 +1001,3 @@ class S3DeliveryViewSetTestCase(APITestCase):
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_send_delivery_operation.run.assert_called_with(delivery, 'https://someurl.com')
-
-
-class DDSProjectPermissionsViewSetTestCase(AuthenticatedResourceTestCase):
-    def test_fails_unauthenticated(self):
-        self.client.logout()
-        url = reverse('v2-dukedsprojectpermission-list')
-        response = self.client.post(url, {}, format='json')
-        self.assertUnauthorized(response)
-
-    def test_post_not_permitted(self):
-        url = reverse('v2-dukedsprojectpermission-list')
-        data = {}
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-
-    def test_put_not_permitted(self):
-        url = reverse('v2-dukedsprojectpermission-list')
-        data = {}
-        response = self.client.put(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-
-    @patch('d4s2_api_v2.api.DDSUtil')
-    def test_list_permissions_without_project_id(self, mock_dds_util):
-        url = reverse('v2-dukedsprojectpermission-list')
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data['detail'],
-                         'Getting duke-ds-project-permissions requires a project_id query parameter')
-
-    @patch('d4s2_api_v2.api.DDSUtil')
-    def test_list_permissions_with_project_id(self, mock_dds_util):
-        permission_response = {
-            'results': [
-                {
-                    'project': {
-                        'id': 'project1'
-                    },
-                    'user': {
-                        'id': 'user1'
-                    },
-                    'auth_role': {
-                        'id': 'file_downloader'
-                    }
-                }
-            ]
-        }
-        mock_dds_util.return_value.get_project_permissions.return_value = permission_response
-        url = reverse('v2-dukedsprojectpermission-list') + '?project=project1'
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-
-        project = response.data[0]
-        self.assertEqual(project['id'], 'project1_user1')
-        self.assertEqual(project['project'], 'project1')
-        self.assertEqual(project['user'], 'user1')
-        self.assertEqual(project['auth_role'], 'file_downloader')
-
-    @patch('d4s2_api_v2.api.DDSUtil')
-    def test_list_permissions_with_project_id_and_user_id(self, mock_dds_util):
-        permission_response = {
-            'project': {
-                'id': 'project1'
-            },
-            'user': {
-                'id': 'user1'
-            },
-            'auth_role': {
-                'id': 'file_downloader'
-            }
-        }
-        mock_dds_util.return_value.get_user_project_permission.return_value = permission_response
-        url = reverse('v2-dukedsprojectpermission-list') + '?project=project1&user=user1'
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(response.data), 1)
-        permission = response.data[0]
-        self.assertEqual(permission['id'], 'project1_user1')
-        self.assertEqual(permission['project'], 'project1')
-        self.assertEqual(permission['user'], 'user1')
-        self.assertEqual(permission['auth_role'], 'file_downloader')
-
-    @patch('d4s2_api_v2.api.DDSUtil')
-    def test_get_permission(self, mock_dds_util):
-        permission_response = {
-            'project': {
-                'id': 'project1'
-            },
-            'user': {
-                'id': 'user1'
-            },
-            'auth_role': {
-                'id': 'file_downloader'
-            }
-        }
-        mock_dds_util.return_value.get_user_project_permission.return_value = permission_response
-        url = reverse('v2-dukedsprojectpermission-list') + 'project1_user1/'
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_dds_util.return_value.get_user_project_permission.assert_called_with('project1', 'user1')
-
-        permission = response.data
-        self.assertEqual(permission['id'], 'project1_user1')
-        self.assertEqual(permission['project'], 'project1')
-        self.assertEqual(permission['user'], 'user1')
-        self.assertEqual(permission['auth_role'], 'file_downloader')

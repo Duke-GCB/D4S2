@@ -144,6 +144,14 @@ class DDSProjectsViewSet(DDSViewSet):
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSProject.fetch_one, dds_util, dds_project_id)
 
+    @detail_route(methods=['get'], serializer_class=DDSProjectPermissionSerializer)
+    def permissions(self, request, pk=None):
+        dds_util = DDSUtil(request.user)
+        user_id = request.query_params.get('user')
+        project_permissions = self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, pk, user_id)
+        serializer = DDSProjectPermissionSerializer(project_permissions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class DDSProjectTransfersViewSet(DDSViewSet):
 
@@ -157,32 +165,6 @@ class DDSProjectTransfersViewSet(DDSViewSet):
         dds_project_transfer_id = self.kwargs.get('pk')
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSProjectTransfer.fetch_one, dds_util, dds_project_transfer_id)
-
-
-class DDSProjectPermissionsViewSet(DDSViewSet):
-    serializer_class = DDSProjectPermissionSerializer
-
-    def get_queryset(self):
-        dds_util = DDSUtil(self.request.user)
-        project_id = self.request.query_params.get('project')
-        user_id = self.request.query_params.get('user')
-        # a project id is required due to the underlying implementation of DukeDS API
-        # permissions are only accessible for a particular project
-        if project_id:
-            return self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, project_id, user_id)
-        else:
-            raise BadRequestException('Getting duke-ds-project-permissions requires a project_id query parameter')
-
-    def get_object(self):
-        dds_permissions_id = self.kwargs.get('pk')
-        dds_util = DDSUtil(self.request.user)
-        # DukeDS Permissions do not have a unique identifier so we destructure the synthetic id
-        # created by DDSProjectPermissions.
-        try:
-            project_id, user_id = DDSProjectPermissions.destructure_id(dds_permissions_id)
-        except ValueError as e:
-            raise BadRequestException(str(e))
-        return self._ds_operation(DDSProjectPermissions.fetch_one, dds_util, project_id, user_id)
 
 
 class UserViewSet(viewsets.GenericViewSet):
