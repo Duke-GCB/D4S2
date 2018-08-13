@@ -303,9 +303,15 @@ class DeliveryDetails(object):
         to_user = self.get_to_user()
         project = self.get_project()
         project_url = self.get_project_url()
+        try:
+            transfer_id = str(self.delivery.transfer_id)
+        except AttributeError:
+            # Shares and previews will not yet have a transfer id
+            transfer_id = None
+
         return {
             'service_name': DDS_SERVICE_NAME,
-            'transfer_id': str(self.delivery.transfer_id),
+            'transfer_id': transfer_id,
             'from_name': from_user.full_name,
             'from_email': from_user.email,
             'to_name': to_user.full_name,

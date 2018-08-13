@@ -121,3 +121,16 @@ class S3DeliverySerializer(serializers.ModelSerializer):
         if from_user == to_user:
             raise serializers.ValidationError(str("You cannot send s3 delivery to yourself."))
         return data
+
+
+class DDSDeliveryPreviewSerializer(serializers.Serializer):
+
+    from_user_id = serializers.CharField(required=True)
+    to_user_id = serializers.CharField(required=True)
+    project_id = serializers.CharField(required=True)
+    user_message = serializers.CharField(allow_blank=True)
+    delivery_email_text = serializers.CharField(read_only=True)
+
+    class Meta:
+        resource_name = 'delivery-preview'
+

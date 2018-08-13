@@ -3,19 +3,17 @@ from rest_framework.exceptions import APIException
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
-from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions
-from switchboard.dds_util import DDSUtil, MessageFactory
+from switchboard.dds_util import DDSUtil, MessageFactory, DeliveryDetails
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
-    DDSProjectPermissionSerializer
+    DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
 from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket, SendDeliveryOperation
-from d4s2_api_v1.serializers import DeliverySerializer
-
+from d4s2_api_v2.models import DDSDeliveryPreview
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -268,43 +266,24 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         return self.retrieve(request)
 
 
-class PreviewDDSDelivery(object):
-    def __init__(self, from_user_id, to_user_id, project_id, user_message):
-        self.from_user_id = from_user_id
-        self.to_user_id = to_user_id
-        self.project_id = project_id
-        self.user_message = user_message
-        self.delivery_email_text = ''
-
-
-
-from rest_framework import serializers
-from switchboard.dds_util import DeliveryDetails
-
-class PreviewDDSDeliverySerializer(serializers.Serializer):
-
-    from_user_id = serializers.CharField(required=True)
-    to_user_id = serializers.CharField(required=True)
-    project_id = serializers.CharField(required=True)
-    user_message = serializers.CharField(allow_blank=True)
-    delivery_email_text = serializers.CharField(read_only=True)
-
-
 class DeliveryPreviewView(views.APIView):
-
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
-        # Deserialize a delivery from the incoming payload
-        serializer = PreviewDDSDeliverySerializer(data=request.data)
-        serializer.is_valid(True)
-        delivery_preview = PreviewDDSDelivery(**serializer.validated_data)
+        # Since this is not a ModelViewSet, we must handle serialization manually,
+        # including instantiation of a serializer and providing the request context.
+        serializer_context = {'request': request}
+        serializer = DDSDeliveryPreviewSerializer(data=request.data, context=serializer_context)
+        serializer.is_valid(True) # Validate and raise exception if not valid
 
+        delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
         accept_url = 'accept-url-goes-here'
         delivery_details = DeliveryDetails(delivery_preview, request.user)
 
         message_factory = MessageFactory(delivery_details)
         message = message_factory.make_delivery_message(accept_url)
         delivery_preview.delivery_email_text = message.email_text
-        serializer = DeliverySerializer(delivery_preview)
+
+        # Serialize the previewed object now with email text
+        serializer = DDSDeliveryPreviewSerializer(instance=delivery_preview, context=serializer_context)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
