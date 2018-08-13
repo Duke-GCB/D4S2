@@ -15,4 +15,5 @@ router.register(r's3-deliveries', api.S3DeliveryViewSet, 'v2-s3delivery')
 
 urlpatterns = [
     url(r'^', include(router.urls)),
+    url(r'delivery-preview', api.DeliveryPreviewView.as_view(), name='v2-delivery_preview')
 ]
