@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status, views
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
@@ -266,24 +266,22 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         return self.retrieve(request)
 
 
-class DeliveryPreviewView(views.APIView):
+class DeliveryPreviewView(generics.CreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = DDSDeliveryPreviewSerializer
 
-    def post(self, request):
-        # Since this is not a ModelViewSet, we must handle serialization manually,
-        # including instantiation of a serializer and providing the request context.
-        serializer_context = {'request': request}
-        serializer = DDSDeliveryPreviewSerializer(data=request.data, context=serializer_context)
-        serializer.is_valid(True) # Validate and raise exception if not valid
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
-        accept_url = 'accept-url-goes-here'
-        delivery_details = DeliveryDetails(delivery_preview, request.user)
+        accept_url = build_accept_url(request, None, 'dds')
 
+        delivery_details = DeliveryDetails(delivery_preview, self.request.user)
         message_factory = MessageFactory(delivery_details)
         message = message_factory.make_delivery_message(accept_url)
         delivery_preview.delivery_email_text = message.email_text
 
-        # Serialize the previewed object now with email text
-        serializer = DDSDeliveryPreviewSerializer(instance=delivery_preview, context=serializer_context)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = self.serializer_class(instance=delivery_preview, context=self.get_serializer_context())
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

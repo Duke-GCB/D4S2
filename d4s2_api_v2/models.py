@@ -6,4 +6,3 @@ class DDSDeliveryPreview(object):
         self.project_id = project_id
         self.user_message = user_message
         self.delivery_email_text = ''
-

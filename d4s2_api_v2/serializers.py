@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from switchboard.dds_util import DDSUtil
 from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery
-
+from d4s2_api_v2.models import DDSDeliveryPreview
 
 class DDSUserSerializer(serializers.Serializer):
     """
@@ -124,7 +124,6 @@ class S3DeliverySerializer(serializers.ModelSerializer):
 
 
 class DDSDeliveryPreviewSerializer(serializers.Serializer):
-
     from_user_id = serializers.CharField(required=True)
     to_user_id = serializers.CharField(required=True)
     project_id = serializers.CharField(required=True)
@@ -133,4 +132,3 @@ class DDSDeliveryPreviewSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'delivery-preview'
-
