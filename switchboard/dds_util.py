@@ -234,10 +234,17 @@ class DeliveryDetails(object):
     def get_to_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
+
     def get_project(self):
         try:
-            transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
-            return DDSProject(transfer.project_dict)
+            # Shares do not have a transfer id so fall back to reading based on project id
+            transfer_id = self.delivery.transfer_id
+            if not transfer_id:
+                # Delivery previews have the attribute, but may not have any value in it
+                raise AttributeError('transfer_id is not set')
+            else:
+                transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
+                return DDSProject(transfer.project_dict)
         except AttributeError:
             # Shares do not have a transfer id so fall back to reading based on project id
             return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
@@ -304,14 +311,14 @@ class DeliveryDetails(object):
         project = self.get_project()
         project_url = self.get_project_url()
         try:
-            transfer_id = str(self.delivery.transfer_id)
+            transfer_id = self.delivery.transfer_id or None
         except AttributeError:
-            # Shares and previews will not yet have a transfer id
+            # Shares will not yet have a transfer id
             transfer_id = None
 
         return {
             'service_name': DDS_SERVICE_NAME,
-            'transfer_id': transfer_id,
+            'transfer_id': str(transfer_id),
             'from_name': from_user.full_name,
             'from_email': from_user.email,
             'to_name': to_user.full_name,

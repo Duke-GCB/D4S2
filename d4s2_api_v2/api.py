@@ -275,7 +275,7 @@ class DeliveryPreviewView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
-        accept_url = build_accept_url(request, None, 'dds')
+        accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
 
         delivery_details = DeliveryDetails(delivery_preview, self.request.user)
         message_factory = MessageFactory(delivery_details)
