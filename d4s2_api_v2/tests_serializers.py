@@ -1,7 +1,5 @@
 from django.test import TestCase
-from d4s2_api_v2.models import DDSDeliveryPreview
 from d4s2_api_v2.serializers import DDSDeliveryPreviewSerializer
-from mock import MagicMock
 
 
 class DeliveryPreviewSerializerTestCase(TestCase):
