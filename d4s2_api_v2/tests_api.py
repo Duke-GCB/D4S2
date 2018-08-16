@@ -1075,4 +1075,3 @@ class DeliveryPreviewViewTestCase(APITestCase):
         url = reverse('v2-delivery_previews')
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
