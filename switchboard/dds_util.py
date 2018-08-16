@@ -234,7 +234,6 @@ class DeliveryDetails(object):
     def get_to_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
-
     def get_project(self):
         try:
             # Shares do not have a transfer id so fall back to reading based on project id

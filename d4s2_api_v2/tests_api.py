@@ -1002,6 +1002,7 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_send_delivery_operation.run.assert_called_with(delivery, 'https://someurl.com')
 
+
 class DeliveryPreviewViewTestCase(APITestCase):
 
     def setUp(self):
