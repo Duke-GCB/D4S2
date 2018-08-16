@@ -281,6 +281,6 @@ class DeliveryPreviewView(generics.CreateAPIView):
         message = message_factory.make_delivery_message(accept_url)
         delivery_preview.delivery_email_text = message.email_text
 
-        serializer = self.serializer_class(instance=delivery_preview, context=self.get_serializer_context())
+        serializer = self.get_serializer(instance=delivery_preview)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
