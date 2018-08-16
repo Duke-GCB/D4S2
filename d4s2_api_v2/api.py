@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions
-from switchboard.dds_util import DDSUtil, MessageFactory, DeliveryDetails
+from switchboard.dds_util import DDSUtil, DDSMessageFactory, DeliveryDetails
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
@@ -277,8 +277,7 @@ class DeliveryPreviewView(generics.CreateAPIView):
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
         accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
 
-        delivery_details = DeliveryDetails(delivery_preview, self.request.user)
-        message_factory = MessageFactory(delivery_details)
+        message_factory = DDSMessageFactory(delivery_preview, self.request.user)
         message = message_factory.make_delivery_message(accept_url)
         delivery_preview.delivery_email_text = message.email_text
 

@@ -1001,3 +1001,78 @@ class S3DeliveryViewSetTestCase(APITestCase):
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_send_delivery_operation.run.assert_called_with(delivery, 'https://someurl.com')
+
+class DeliveryPreviewViewTestCase(APITestCase):
+
+    def setUp(self):
+        self.user = user = django_user.objects.create_user(username='user', password='secret')
+        self.client.login(username='user', password='secret')
+
+    def test_cannot_get_list(self):
+        url = reverse('v2-delivery_previews')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_cannot_get_single(self):
+        url = reverse('v2-delivery_previews') + '/some-id/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch('d4s2_api_v2.api.DDSMessageFactory')
+    def test_create_preview(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
+        instance.send = Mock()
+        instance.email_text = 'Generated Email Text'
+
+        url = reverse('v2-delivery_previews')
+        data = {
+            'from_user_id': 'user-1',
+            'to_user_id': 'user-2',
+            'project_id': 'project-3',
+            'transfer_id': '',
+            'user_message':'',
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['delivery_email_text'], 'Generated Email Text')
+
+        # When previewing an email, send() should not be called
+        instance.send.assert_not_called()
+
+    @patch('d4s2_api_v2.api.build_accept_url')
+    @patch('d4s2_api_v2.api.DDSMessageFactory')
+    def test_create_preview_with_transfer_id(self, mock_message_factory, mock_build_accept_url):
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
+        instance.send = Mock()
+        instance.email_text = 'Generated Email Text'
+        mock_build_accept_url.return_value = 'https://someurl.com'
+
+        url = reverse('v2-delivery_previews')
+        data = {
+            'from_user_id': 'user-4',
+            'to_user_id': 'user-5',
+            'project_id': 'project-6',
+            'transfer_id': 'transfer-7',
+            'user_message':'',
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['delivery_email_text'], 'Generated Email Text')
+
+        # When previewing an email, send() should not be called
+        instance.send.assert_not_called()
+
+        # When providing a transfer_id, this should be passed to build_accept_url
+        args, kwargs = mock_build_accept_url.call_args
+        self.assertEqual(args[1], 'transfer-7')
+        self.assertEqual(args[2], 'dds')
+
+        # Make delivery message should be called with the accept URL
+        mock_message_factory.return_value.make_delivery_message.assert_called_with(mock_build_accept_url.return_value)
+
+    def test_cannot_preview_without_auth(self):
+        self.client.logout()
+        url = reverse('v2-delivery_previews')
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
