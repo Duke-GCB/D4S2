@@ -1,20 +1,19 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
-from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions
-from switchboard.dds_util import DDSUtil
+from switchboard.dds_util import DDSUtil, DDSMessageFactory
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
-    DDSProjectPermissionSerializer
+    DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
-from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, DeliveryViewSet, build_accept_url
-from switchboard.s3_util import S3MessageFactory, S3Exception, S3NoSuchBucket, SendDeliveryOperation
-
+from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet
+from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
+from d4s2_api_v2.models import DDSDeliveryPreview
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -265,3 +264,23 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')
         SendDeliveryOperation.run(s3_delivery, accept_url)
         return self.retrieve(request)
+
+
+class DeliveryPreviewView(generics.CreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = DDSDeliveryPreviewSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
+        accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
+
+        message_factory = DDSMessageFactory(delivery_preview, self.request.user)
+        message = message_factory.make_delivery_message(accept_url)
+        delivery_preview.delivery_email_text = message.email_text
+
+        serializer = self.get_serializer(instance=delivery_preview)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

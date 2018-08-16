@@ -234,12 +234,25 @@ class DeliveryDetails(object):
     def get_to_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.to_user_id)
 
-    def get_project(self):
+    def get_transfer_id(self):
+        # self.delivery.transfer_id may
+        # 1. be a non-empty string (for an existing delivery with a transfer_id)
+        # 2. be '' or None (for a delivery preview)
+        # 3. not exist at all (for a share email)
+        # For case 1, return the transfer_id. For 2 and 3, return an empty string.
         try:
-            transfer = DDSProjectTransfer.fetch_one(self.ddsutil, self.delivery.transfer_id)
-            return DDSProject(transfer.project_dict)
+            transfer_id = self.delivery.transfer_id
+            return transfer_id or ''
         except AttributeError:
-            # Shares do not have a transfer id so fall back to reading based on project id
+            return ''
+
+    def get_project(self):
+        # Fetch a DDSProject, by transfer_id if present
+        transfer_id = self.get_transfer_id()
+        if transfer_id:
+            transfer = DDSProjectTransfer.fetch_one(self.ddsutil, transfer_id)
+            return DDSProject(transfer.project_dict)
+        else:
             return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
 
     def get_project_url(self):
@@ -303,9 +316,11 @@ class DeliveryDetails(object):
         to_user = self.get_to_user()
         project = self.get_project()
         project_url = self.get_project_url()
+        transfer_id = self.get_transfer_id()
+
         return {
             'service_name': DDS_SERVICE_NAME,
-            'transfer_id': str(self.delivery.transfer_id),
+            'transfer_id': transfer_id,
             'from_name': from_user.full_name,
             'from_email': from_user.email,
             'to_name': to_user.full_name,

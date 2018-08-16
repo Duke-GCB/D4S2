@@ -4,7 +4,6 @@ from django.test import TestCase
 from d4s2_api.models import *
 from django.contrib.auth.models import User
 import datetime
-import json
 
 
 class TransferBaseTestCase(TestCase):

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from switchboard.dds_util import DDSUtil
 from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery
-
+from d4s2_api_v2.models import DDSDeliveryPreview
 
 class DDSUserSerializer(serializers.Serializer):
     """
@@ -121,3 +121,22 @@ class S3DeliverySerializer(serializers.ModelSerializer):
         if from_user == to_user:
             raise serializers.ValidationError(str("You cannot send s3 delivery to yourself."))
         return data
+
+
+class DDSDeliveryPreviewSerializer(serializers.Serializer):
+    """
+    A serializer to represent a delivery preview, allowing for
+    email generation before saving to database or creating a transfer in DukeDS
+    transfer_id must be provided but may be blank.
+    For new deliveries it won't be known before creating the transfer in DukeDS, but for
+    resending existing deliveries, it can be provided and will be used in the accept url
+    """
+    from_user_id = serializers.CharField(required=True)
+    to_user_id = serializers.CharField(required=True)
+    project_id = serializers.CharField(required=True)
+    transfer_id = serializers.CharField(allow_blank=True)
+    user_message = serializers.CharField(allow_blank=True)
+    delivery_email_text = serializers.CharField(read_only=True)
+
+    class Meta:
+        resource_name = 'delivery-preview'
