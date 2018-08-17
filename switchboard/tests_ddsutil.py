@@ -277,6 +277,13 @@ class DeliveryUtilTestCase(TestCase):
         delivery_util.failed_share_users.append('bob')
         self.assertEqual(delivery_util.get_warning_message(), 'Failed to share with the following user(s): joe, bob')
 
+    @patch('switchboard.dds_util.DDSUtil')
+    def test_give_sender_permission(self, mock_dds_util):
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        delivery_util.give_sender_permission()
+        mock_dds_util.return_value.share_project_with_user.assert_called_with(
+            'ghi789', 'abc123', ShareRole.DOWNLOAD)
+
 
 class DDSDeliveryTypeTestCase(TestCase):
 
@@ -300,6 +307,32 @@ class DDSDeliveryTypeTestCase(TestCase):
                                                    share_role=ShareRole.DOWNLOAD,
                                                    share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
         self.assertEqual(util, mock_delivery_util.return_value)
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSMessageFactory')
+    @patch('switchboard.dds_util.Share')
+    def test_transfer_delivery(self, mock_share, mock_dds_message_factory, mock_dds_util):
+        share_users = Mock()
+        share_users.all.return_value = [Mock(dds_id='shareuser1'), Mock(dds_id='shareuser2')]
+        mock_delivery = Mock(share_users=share_users)
+        mock_user = Mock()
+
+        warning_message = self.delivery_type.transfer_delivery(mock_delivery, mock_user)
+
+        self.assertEqual(warning_message, '')
+        mock_dds_util.return_value.accept_project_transfer.assert_called_with(mock_delivery.transfer_id)
+        mock_dds_util.return_value.share_project_with_user.assert_has_calls([
+            call(mock_delivery.project_id, 'shareuser1', 'file_downloader'),
+            call(mock_delivery.project_id, 'shareuser2', 'file_downloader'),
+            call(mock_delivery.project_id, mock_delivery.from_user_id, 'file_downloader'),
+        ])
+
+        make_processed_message = mock_dds_message_factory.return_value.make_processed_message
+        make_processed_message.assert_called_with('accepted', warning_message='')
+        make_processed_message.return_value.send.assert_called_with()
+        mock_delivery.mark_accepted.assert_called_with(
+            mock_user.get_username.return_value,
+            make_processed_message.return_value.email_text)
 
 
 class DDSProjectTestCase(TestCase):

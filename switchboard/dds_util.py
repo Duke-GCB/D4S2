@@ -363,6 +363,19 @@ class DeliveryUtil(object):
         for share_to_user in self.delivery.share_users.all():
             self._share_with_additional_user(share_to_user)
 
+    def give_sender_permission(self, share_role=ShareRole.DOWNLOAD):
+        """
+        Give delivery sending user share_role permissions for the delivered project.
+        Adds user to failed_share_users if unable to grant sender permissions.
+        :param share_role: str: role to give to the user defaults to file_downloader
+        """
+        project_id = self.delivery.project_id
+        from_user_id = self.delivery.from_user_id
+        try:
+            self.dds_util.share_project_with_user(project_id, from_user_id, share_role)
+        except DataServiceError:
+            self.failed_share_users.append(self._try_lookup_user_name(from_user_id))
+
     def _share_with_additional_user(self, share_to_user):
         try:
             project_id = self.delivery.project_id
@@ -433,6 +446,7 @@ class DDSDeliveryType:
         delivery_util = DDSDeliveryType.make_delivery_util(delivery, user)
         delivery_util.accept_project_transfer()
         delivery_util.share_with_additional_users()
+        delivery_util.give_sender_permission()
         warning_message = delivery_util.get_warning_message()
         message_factory = DDSMessageFactory(delivery, user)
         message = message_factory.make_processed_message('accepted', warning_message=warning_message)
