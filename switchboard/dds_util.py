@@ -48,7 +48,7 @@ class DDSUtil(object):
 
     def get_project_url(self, project_id):
         endpoint = DDSEndpoint.objects.first()
-        return '{}/portal/#/project/{}'.format(endpoint.portal_root, project_id)
+        return '{}/#/project/{}'.format(endpoint.portal_root, project_id)
 
     def add_user(self, user_id, project_id, auth_role):
         project = self.remote_store.fetch_remote_project_by_id(project_id)

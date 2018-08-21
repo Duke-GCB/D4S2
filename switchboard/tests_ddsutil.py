@@ -12,7 +12,7 @@ class DDSUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='ddsutil_user')
         self.user_id = 'abcd-1234-efgh-8876'
-        DDSEndpoint.objects.create(api_root='', portal_root='', openid_provider_id='')
+        DDSEndpoint.objects.create(api_root='https://api.example.com', portal_root='https://portal.example.com', openid_provider_id='openid-123')
 
         patcher = patch('switchboard.dds_util.get_dds_token')
         mock_get_dds_token = patcher.start()
@@ -110,6 +110,11 @@ class DDSUtilTestCase(TestCase):
         resp = dds_util.get_project_permissions(project_id='123')
         self.assertEqual(resp['auth_role']['id'], PROJECT_ADMIN_ID)
         mock_remote_store.data_service.get_project_permissions.assert_called_with('123')
+
+    def test_get_project_url(self):
+        dds_util = DDSUtil(user=Mock())
+        project_url = dds_util.get_project_url('123')
+        self.assertEqual(project_url, 'https://portal.example.com/#/project/123')
 
 
 class TestDeliveryDetails(TestCase):
