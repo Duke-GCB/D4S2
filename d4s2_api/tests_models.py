@@ -189,6 +189,12 @@ class DeliveryTestCase(TransferBaseTestCase):
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.user_message, user_message)
 
+    def test_mark_canceled(self):
+        delivery = DDSDelivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_canceled()
+        self.assertEqual(delivery.state, State.CANCELED)
+
 
 class ShareTestCase(TransferBaseTestCase):
 

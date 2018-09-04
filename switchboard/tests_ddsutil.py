@@ -116,6 +116,12 @@ class DDSUtilTestCase(TestCase):
         project_url = dds_util.get_project_url('123')
         self.assertEqual(project_url, 'https://portal.example.com/#/project/123')
 
+    def test_cancel_project_transfer(self):
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        dds_util._remote_store = mock_remote_store
+        dds_util.cancel_project_transfer(transfer_id='123')
+
 
 class TestDeliveryDetails(TestCase):
 

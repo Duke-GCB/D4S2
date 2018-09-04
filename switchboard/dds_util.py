@@ -75,6 +75,9 @@ class DDSUtil(object):
     def decline_project_transfer(self, transfer_id, reason):
         return self.remote_store.data_service.reject_project_transfer(transfer_id, reason).json()
 
+    def cancel_project_transfer(self, transfer_id):
+        return self.remote_store.data_service.cancel_project_transfer(transfer_id)
+
     def share_project_with_user(self, project_id, dds_user_id, auth_role):
         return self.remote_store.data_service.set_user_project_permission(project_id, dds_user_id, auth_role)
 

@@ -1,7 +1,8 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import detail_route
-from d4s2_api.models import DDSDelivery, Share
+from rest_framework.response import Response
+from d4s2_api.models import DDSDelivery, Share, State
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
 from switchboard.dds_util import DDSUtil, DDSMessageFactory
 from django.core.urlresolvers import reverse
@@ -55,6 +56,16 @@ class DeliveryViewSet(viewsets.ModelViewSet):
                                                             request.data['to_user_id'])
         request.data['transfer_id'] = project_transfer['id']
         return super(DeliveryViewSet, self).create(request, args, kwargs)
+
+    @detail_route(methods=['POST'])
+    def cancel(self, request, pk=None):
+        delivery = self.get_object()
+        if delivery.state != State.NEW and delivery.state != State.NOTIFIED:
+             raise ValidationError('Only deliveries in new and notified state can be canceled.')
+        dds_util = DDSUtil(request.user)
+        dds_util.cancel_project_transfer(delivery.transfer_id)
+        delivery.mark_canceled()
+        return self.retrieve(request)
 
 
 class ShareViewSet(viewsets.ModelViewSet):

@@ -41,6 +41,7 @@ class State(object):
     DECLINED = 3
     FAILED = 4
     TRANSFERRING = 5
+    CANCELED = 6
     STATES = (
         (NEW, 'New'),
         (NOTIFIED, 'Notified'),
@@ -48,6 +49,7 @@ class State(object):
         (DECLINED, 'Declined'),
         (FAILED, 'Failed'),
         (TRANSFERRING, 'Transferring'),
+        (CANCELED, 'Canceled')
     )
     DELIVERY_CHOICES = STATES
     SHARE_CHOICES = (
@@ -126,6 +128,10 @@ class DeliveryBase(models.Model):
 
     def mark_failed(self, save=True):
         self.state = State.FAILED
+        if save: self.save()
+
+    def mark_canceled(self, save=True):
+        self.state = State.CANCELED
         if save: self.save()
 
     class Meta:
