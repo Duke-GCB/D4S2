@@ -257,9 +257,9 @@ class TestDeliveryDetails(TestCase):
 
         details = DeliveryDetails(delivery, user)
         fetched_delivery = details.get_delivery()
-        self.assertEqual(fetched_delivery.state, State.REJECTED)
+        self.assertEqual(fetched_delivery.state, State.DECLINED)
         self.assertEqual(fetched_delivery.decline_reason, 'wrong user')
-        self.assertEqual(DDSDelivery.objects.get(id=delivery.id).state, State.REJECTED)
+        self.assertEqual(DDSDelivery.objects.get(id=delivery.id).state, State.DECLINED)
 
 
 class DeliveryUtilTestCase(TestCase):
