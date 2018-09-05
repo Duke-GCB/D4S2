@@ -125,6 +125,8 @@ class DeliveryTestCase(TransferBaseTestCase):
         delivery.state = State.FAILED
         delivery.save()
         self.assertEqual(delivery.is_complete(), True)
+        delivery.mark_rescinded()
+        self.assertEqual(delivery.is_complete(), True)
 
     def test_mark_transferring(self):
         delivery = DDSDelivery.objects.first()
