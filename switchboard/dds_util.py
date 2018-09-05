@@ -276,6 +276,10 @@ class DeliveryDetails(object):
             raise RuntimeError('No email template found')
 
     def get_delivery(self):
+        transfer_id = self.get_transfer_id()
+        if transfer_id:
+            project_transfer = self.ddsutil.get_project_transfer(transfer_id)
+            self.delivery.update_state_from_project_transfer(project_transfer)
         return self.delivery
 
     @classmethod
