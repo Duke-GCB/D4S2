@@ -117,7 +117,6 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
 class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
     def test_simple_getters(self):
         s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
-        self.assertEqual(s3_delivery_details.get_delivery(), self.s3_delivery)
         self.assertEqual(s3_delivery_details.get_from_user(), self.from_user)
         self.assertEqual(s3_delivery_details.get_to_user(), self.to_user)
 

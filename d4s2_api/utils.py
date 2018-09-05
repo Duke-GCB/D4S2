@@ -48,9 +48,12 @@ class MessageFactory(object):
         templates = self.delivery_details.get_action_template_text('delivery')
         return self._make_message(templates, accept_url=accept_url)
 
-    def make_processed_message(self, process_type, warning_message=''):
+    def make_processed_message(self, process_type, warning_message='', direction=MessageDirection.ToRecipient):
         templates = self.delivery_details.get_action_template_text(process_type)
-        return self._make_message(templates, reason='', warning_message=warning_message)
+        return self._make_message(templates, reason='',
+                                  process_type=process_type,
+                                  direction=direction,
+                                  warning_message=warning_message)
 
     def _make_message(self, templates, accept_url=None, reason=None, process_type=None,
                       direction=MessageDirection.ToRecipient, warning_message=''):

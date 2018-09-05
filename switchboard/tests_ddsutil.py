@@ -227,40 +227,6 @@ class TestDeliveryDetails(TestCase):
         mock_dds_project.assert_called_with(mock_transfer.project_dict)
         mock_dds_project.fetch_one.assert_not_called()
 
-    @patch('switchboard.dds_util.DDSUtil')
-    def test_get_delivery_updates_from_transfer_status_accepted(self, mock_ddsutil):
-        delivery = DDSDelivery.objects.create(project_id='project1',
-                                              from_user_id='user1',
-                                              to_user_id='user2',
-                                              transfer_id='transfer1')
-
-        user = Mock()
-        mock_ddsutil.return_value.get_project_transfer.return_value = {'status': 'accepted'}
-
-        details = DeliveryDetails(delivery, user)
-        fetched_delivery = details.get_delivery()
-        self.assertEqual(fetched_delivery.state, State.ACCEPTED)
-        self.assertEqual(DDSDelivery.objects.get(id=delivery.id).state, State.ACCEPTED)
-
-    @patch('switchboard.dds_util.DDSUtil')
-    def test_get_delivery_updates_from_transfer_status_rejected(self, mock_ddsutil):
-        delivery = DDSDelivery.objects.create(project_id='project1',
-                                              from_user_id='user1',
-                                              to_user_id='user2',
-                                              transfer_id='transfer1')
-
-        user = Mock()
-        mock_ddsutil.return_value.get_project_transfer.return_value = {
-            'status': 'rejected',
-            'status_comment': 'wrong user'
-        }
-
-        details = DeliveryDetails(delivery, user)
-        fetched_delivery = details.get_delivery()
-        self.assertEqual(fetched_delivery.state, State.DECLINED)
-        self.assertEqual(fetched_delivery.decline_reason, 'wrong user')
-        self.assertEqual(DDSDelivery.objects.get(id=delivery.id).state, State.DECLINED)
-
 
 class DeliveryUtilTestCase(TestCase):
     def setUp(self):

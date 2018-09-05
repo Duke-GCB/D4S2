@@ -5,7 +5,7 @@ from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
 from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
 from ddsc.core.ddsapi import DataServiceError
-from d4s2_api.utils import MessageFactory
+from d4s2_api.utils import MessageFactory, MessageDirection
 
 SHARE_IN_RESPONSE_TO_DELIVERY_MSG = 'Shared in response to project delivery.'
 
@@ -275,13 +275,6 @@ class DeliveryDetails(object):
         else:
             raise RuntimeError('No email template found')
 
-    def get_delivery(self):
-        transfer_id = self.get_transfer_id()
-        if transfer_id:
-            project_transfer = self.ddsutil.get_project_transfer(transfer_id)
-            self.delivery.update_state_from_project_transfer(project_transfer)
-        return self.delivery
-
     @classmethod
     def from_transfer_id(self, transfer_id, user):
         """
@@ -453,7 +446,9 @@ class DDSDeliveryType:
         delivery_util.give_sender_permission()
         warning_message = delivery_util.get_warning_message()
         message_factory = DDSMessageFactory(delivery, user)
-        message = message_factory.make_processed_message('accepted', warning_message=warning_message)
+        message = message_factory.make_processed_message('accepted',
+                                                         warning_message=warning_message,
+                                                         direction=MessageDirection.ToSender)
         message.send()
         delivery.mark_accepted(user.get_username(), message.email_text)
         return warning_message

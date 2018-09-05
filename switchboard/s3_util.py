@@ -1,6 +1,6 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes, S3DeliveryError, State, S3ObjectManifest, \
     EmailTemplateException
-from d4s2_api.utils import MessageFactory
+from d4s2_api.utils import MessageFactory, MessageDirection
 import boto3
 import botocore
 from background_task import background
@@ -159,9 +159,6 @@ class S3DeliveryDetails(object):
     def __init__(self, s3_delivery, user):
         self.s3_delivery = s3_delivery
         self.user = user
-
-    def get_delivery(self):
-        return self.s3_delivery
 
     def get_from_user(self):
         return self.s3_delivery.from_user.user
@@ -407,7 +404,7 @@ class S3TransferOperation(S3Operation):
         :param warning_message: str: warning that may have occurred during the transfer operation
         """
         print("Notifying sender delivery {} has been accepted.".format(self.delivery.id))
-        message = self.make_processed_message('accepted', warning_message)
+        message = self.make_processed_message('accepted', warning_message, direction=MessageDirection.ToSender)
         message.send()
         self.background_funcs.notify_receiver_transfer_complete(self.delivery.id, warning_message, message.email_text)
 
