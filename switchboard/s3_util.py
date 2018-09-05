@@ -416,7 +416,8 @@ class S3TransferOperation(S3Operation):
         :param sender_accepted_email_text: str: text of email message sent to recipient
         """
         print("Notifying receiver transfer of delivery {} is complete.".format(self.delivery.id))
-        message = self.make_processed_message('accepted_recipient', warning_message)
+        message = self.make_processed_message('accepted_recipient', warning_message,
+                                              direction=MessageDirection.ToRecipient)
         message.send()
         self.background_funcs.mark_delivery_complete(self.delivery.id,
                                                      sender_accepted_email_text,
@@ -434,15 +435,16 @@ class S3TransferOperation(S3Operation):
                                     sender_accepted_email_text,
                                     recipient_accepted_email_text)
 
-    def make_processed_message(self, process_type, warning_message):
+    def make_processed_message(self, process_type, warning_message, direction):
         """
         Create email message based on email template settings for the delivery from user and process_type.
         :param process_type: str: name of the template to return
         :param warning_message: str: warning message from s3 transfer
+        :param direction: str: MessageDirection
         :return: utils.Message: email message
         """
         message_factory = S3MessageFactory(self.delivery, self.from_user)
-        return message_factory.make_processed_message(process_type, warning_message=warning_message)
+        return message_factory.make_processed_message(process_type, warning_message=warning_message, direction=direction)
 
     def ensure_transferring(self):
         """
