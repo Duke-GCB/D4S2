@@ -58,13 +58,13 @@ class DeliveryViewSet(viewsets.ModelViewSet):
         return super(DeliveryViewSet, self).create(request, args, kwargs)
 
     @detail_route(methods=['POST'])
-    def cancel(self, request, pk=None):
+    def rescind(self, request, pk=None):
         delivery = self.get_object()
         if delivery.state != State.NEW and delivery.state != State.NOTIFIED:
-             raise ValidationError('Only deliveries in new and notified state can be canceled.')
+             raise ValidationError('Only deliveries in new and notified state can be rescinded.')
         dds_util = DDSUtil(request.user)
         dds_util.cancel_project_transfer(delivery.transfer_id)
-        delivery.mark_canceled()
+        delivery.mark_rescinded()
         return self.retrieve(request)
 
 

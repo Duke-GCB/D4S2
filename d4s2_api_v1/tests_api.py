@@ -181,23 +181,23 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(instance.send.called)
 
     @patch('d4s2_api_v1.api.DDSUtil')
-    def test_cancel_on_accepted(self, mock_ddsutil):
+    def test_rescind_on_accepted(self, mock_ddsutil):
         d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         d.mark_accepted('', '')
-        url = reverse('ddsdelivery-cancel', args=(d.pk,))
+        url = reverse('ddsdelivery-rescind', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch('d4s2_api_v1.api.DDSUtil')
-    def test_cancel_on_notified(self, mock_ddsutil):
+    def test_rescind_on_notified(self, mock_ddsutil):
         d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                        transfer_id='transfer1')
         d.mark_notified('')
-        url = reverse('ddsdelivery-cancel', args=(d.pk,))
+        url = reverse('ddsdelivery-rescind', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d.refresh_from_db()
-        self.assertEqual(d.state, State.CANCELED)
+        self.assertEqual(d.state, State.RESCINDED)
         mock_ddsutil.return_value.cancel_project_transfer.assert_called_with('transfer1')
 
 
