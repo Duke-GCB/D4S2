@@ -240,7 +240,7 @@ class TestDeliveryDetails(TestCase):
         details = DeliveryDetails(delivery, user)
         fetched_delivery = details.get_delivery()
         self.assertEqual(fetched_delivery.state, State.ACCEPTED)
-        self.assertEqual(DDSDelivery.objects.get(delivery.id).state, State.ACCEPTED)
+        self.assertEqual(DDSDelivery.objects.get(id=delivery.id).state, State.ACCEPTED)
 
     @patch('switchboard.dds_util.DDSUtil')
     def test_get_delivery_updates_from_transfer_status_rejected(self, mock_ddsutil):
@@ -250,12 +250,16 @@ class TestDeliveryDetails(TestCase):
                                               transfer_id='transfer1')
 
         user = Mock()
-        mock_ddsutil.return_value.get_project_transfer.return_value = {'status': 'rejected'}
+        mock_ddsutil.return_value.get_project_transfer.return_value = {
+            'status': 'rejected',
+            'status_comment': 'wrong user'
+        }
 
         details = DeliveryDetails(delivery, user)
         fetched_delivery = details.get_delivery()
         self.assertEqual(fetched_delivery.state, State.REJECTED)
-        self.assertEqual(DDSDelivery.objects.get(delivery.id).state, State.REJECTED)
+        self.assertEqual(fetched_delivery.decline_reason, 'wrong user')
+        self.assertEqual(DDSDelivery.objects.get(id=delivery.id).state, State.REJECTED)
 
 
 class DeliveryUtilTestCase(TestCase):
