@@ -67,9 +67,9 @@
             "owner": 1,
             "subject": "Duke Data Service delivery of {{ project_name }} canceled",
             "template_set": 1,
-            "template_type": 9
+            "template_type": 10
         },
         "model": "d4s2_api.emailtemplate",
-        "pk": 5
+        "pk": 6
     }
 ]
