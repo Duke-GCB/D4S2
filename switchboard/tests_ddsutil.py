@@ -2,7 +2,7 @@ from django.test import TestCase
 from mock import patch, Mock, MagicMock, call
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
     SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
-    DDS_PERMISSIONS_ID_SEP
+    DDS_PERMISSIONS_ID_SEP, MessageDirection
 from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole
 from gcb_web_auth.models import DDSEndpoint
 
@@ -333,7 +333,7 @@ class DDSDeliveryTypeTestCase(TestCase):
         ])
 
         make_processed_message = mock_dds_message_factory.return_value.make_processed_message
-        make_processed_message.assert_called_with('accepted', warning_message='')
+        make_processed_message.assert_called_with('accepted', MessageDirection.ToSender, warning_message='')
         make_processed_message.return_value.send.assert_called_with()
         mock_delivery.mark_accepted.assert_called_with(
             mock_user.get_username.return_value,

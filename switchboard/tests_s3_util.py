@@ -3,7 +3,7 @@ from mock import patch, Mock, call
 from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
     S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError, SendDeliveryBackgroundFunctions, \
-    SendDeliveryOperation, S3NotRecipientException
+    SendDeliveryOperation, S3NotRecipientException, MessageDirection
 
 
 class S3DeliveryTestBase(TestCase):
@@ -117,7 +117,6 @@ class S3DeliveryUtilTestCase(S3DeliveryTestBase):
 class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
     def test_simple_getters(self):
         s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
-        self.assertEqual(s3_delivery_details.get_delivery(), self.s3_delivery)
         self.assertEqual(s3_delivery_details.get_from_user(), self.from_user)
         self.assertEqual(s3_delivery_details.get_to_user(), self.to_user)
 
@@ -439,7 +438,7 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
 
         self.s3_delivery.refresh_from_db()
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
-            'accepted', warning_message='oops')
+            'accepted', MessageDirection.ToSender, warning_message='oops')
         self.assertTrue(mock_message.send.called)
         operation.background_funcs.notify_receiver_transfer_complete.assert_called_with(
             self.s3_delivery.id, 'oops', 'sender email')
@@ -456,7 +455,7 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
 
         self.s3_delivery.refresh_from_db()
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
-            'accepted_recipient', warning_message='oops')
+            'accepted_recipient', MessageDirection.ToRecipient, warning_message='oops')
         self.assertTrue(mock_message.send.called)
         operation.background_funcs.mark_delivery_complete.assert_called_with(
             self.s3_delivery.id, 'sender email', 'receiver email')
@@ -475,10 +474,11 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3MessageFactory')
     def test_make_processed_message(self, mock_s3_message_factory, mock_s3_delivery_type, mock_s3_delivery):
         operation = S3TransferOperation(delivery_id='delivery1')
-        message = operation.make_processed_message(process_type='accepted', warning_message='warning msg')
+        message = operation.make_processed_message(process_type='accepted', direction=MessageDirection.ToSender,
+                                                   warning_message='warning msg')
         self.assertEqual(message, mock_s3_message_factory.return_value.make_processed_message.return_value)
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
-            'accepted', warning_message='warning msg'
+            'accepted', MessageDirection.ToSender, warning_message='warning msg'
         )
 
     @patch('switchboard.s3_util.S3Delivery')
