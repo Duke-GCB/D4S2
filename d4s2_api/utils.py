@@ -52,6 +52,10 @@ class MessageFactory(object):
         templates = self.delivery_details.get_action_template_text(process_type)
         return self._make_message(templates, reason='', warning_message=warning_message)
 
+    def make_rescind_message(self):
+        templates = self.delivery_details.get_action_template_text('delivery_rescinded')
+        return self._make_message(templates)
+
     def _make_message(self, templates, accept_url=None, reason=None, process_type=None,
                       direction=MessageDirection.ToRecipient, warning_message=''):
         try:

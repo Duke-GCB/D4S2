@@ -69,3 +69,10 @@ class MessageFactoryTestCase(TestCase):
         factory = MessageFactory(self.delivery_details)
         factory.make_processed_message('accept', warning_message='warning details')
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
+
+    @patch('d4s2_api.utils.Message')
+    def test_make_rescind_message(self, mock_message):
+        factory = MessageFactory(self.delivery_details)
+        factory.make_rescind_message()
+        mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
+        self.delivery_details.get_action_template_text.assert_called_with('delivery_rescinded')

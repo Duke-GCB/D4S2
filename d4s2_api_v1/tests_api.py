@@ -189,7 +189,8 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch('d4s2_api_v1.api.DDSUtil')
-    def test_rescind_on_notified(self, mock_ddsutil):
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
+    def test_rescind_on_notified(self, mock_message_factory, mock_ddsutil):
         d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
                                        transfer_id='transfer1')
         d.mark_notified('')
@@ -199,6 +200,9 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         d.refresh_from_db()
         self.assertEqual(d.state, State.RESCINDED)
         mock_ddsutil.return_value.cancel_project_transfer.assert_called_with('transfer1')
+        make_rescind_message_func = mock_message_factory.return_value.make_rescind_message
+        self.assertTrue(make_rescind_message_func.called)
+        self.assertTrue(make_rescind_message_func.return_value.send.called)
 
 
 class ShareViewTestCase(AuthenticatedResourceTestCase):

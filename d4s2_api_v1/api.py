@@ -64,6 +64,9 @@ class DeliveryViewSet(viewsets.ModelViewSet):
              raise ValidationError('Only deliveries in new and notified state can be rescinded.')
         dds_util = DDSUtil(request.user)
         dds_util.cancel_project_transfer(delivery.transfer_id)
+        message_factory = DDSMessageFactory(delivery, request.user)
+        message = message_factory.make_rescind_message()
+        message.send()
         delivery.mark_rescinded()
         return self.retrieve(request)
 
