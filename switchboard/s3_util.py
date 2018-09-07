@@ -444,7 +444,7 @@ class S3TransferOperation(S3Operation):
         :return: utils.Message: email message
         """
         message_factory = S3MessageFactory(self.delivery, self.from_user)
-        return message_factory.make_processed_message(process_type, warning_message=warning_message, direction=direction)
+        return message_factory.make_processed_message(process_type, direction, warning_message=warning_message)
 
     def ensure_transferring(self):
         """

@@ -67,15 +67,14 @@ class MessageFactoryTestCase(TestCase):
     @patch('d4s2_api.utils.Message')
     def test_make_processed_message_to_sender(self, mock_message):
         factory = MessageFactory(self.delivery_details)
-        factory.make_processed_message('accepted', warning_message='warning details',
-                                       direction=MessageDirection.ToSender)
+        factory.make_processed_message('accepted', MessageDirection.ToSender, warning_message='warning details')
         mock_message.assert_called_with('joe@joe.com', 'bob@bob.com', 'actionsubject', 'actionbody', {})
         self.delivery_details.get_email_context.assert_called_with(None, 'accepted', '', 'warning details')
 
     @patch('d4s2_api.utils.Message')
     def test_make_processed_message_to_recipient(self, mock_message):
         factory = MessageFactory(self.delivery_details)
-        factory.make_processed_message('accepted_recipient', warning_message='warning details',
-                                       direction=MessageDirection.ToRecipient)
+        factory.make_processed_message('accepted_recipient', MessageDirection.ToRecipient,
+                                       warning_message='warning details')
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
         self.delivery_details.get_email_context.assert_called_with(None, 'accepted_recipient', '', 'warning details')

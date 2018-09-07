@@ -447,8 +447,8 @@ class DDSDeliveryType:
         warning_message = delivery_util.get_warning_message()
         message_factory = DDSMessageFactory(delivery, user)
         message = message_factory.make_processed_message('accepted',
-                                                         warning_message=warning_message,
-                                                         direction=MessageDirection.ToSender)
+                                                         MessageDirection.ToSender,
+                                                         warning_message=warning_message)
         message.send()
         delivery.mark_accepted(user.get_username(), message.email_text)
         return warning_message

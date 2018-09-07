@@ -438,7 +438,7 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
 
         self.s3_delivery.refresh_from_db()
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
-            'accepted', warning_message='oops', direction=MessageDirection.ToSender)
+            'accepted', MessageDirection.ToSender, warning_message='oops')
         self.assertTrue(mock_message.send.called)
         operation.background_funcs.notify_receiver_transfer_complete.assert_called_with(
             self.s3_delivery.id, 'oops', 'sender email')
@@ -455,7 +455,7 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
 
         self.s3_delivery.refresh_from_db()
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
-            'accepted_recipient', warning_message='oops', direction=MessageDirection.ToRecipient)
+            'accepted_recipient', MessageDirection.ToRecipient, warning_message='oops')
         self.assertTrue(mock_message.send.called)
         operation.background_funcs.mark_delivery_complete.assert_called_with(
             self.s3_delivery.id, 'sender email', 'receiver email')
@@ -474,11 +474,11 @@ class S3TransferOperationTestCase(S3DeliveryTestBase):
     @patch('switchboard.s3_util.S3MessageFactory')
     def test_make_processed_message(self, mock_s3_message_factory, mock_s3_delivery_type, mock_s3_delivery):
         operation = S3TransferOperation(delivery_id='delivery1')
-        message = operation.make_processed_message(process_type='accepted', warning_message='warning msg',
-                                                   direction=MessageDirection.ToSender)
+        message = operation.make_processed_message(process_type='accepted', direction=MessageDirection.ToSender,
+                                                   warning_message='warning msg')
         self.assertEqual(message, mock_s3_message_factory.return_value.make_processed_message.return_value)
         mock_s3_message_factory.return_value.make_processed_message.assert_called_with(
-            'accepted', warning_message='warning msg', direction=MessageDirection.ToSender
+            'accepted', MessageDirection.ToSender, warning_message='warning msg'
         )
 
     @patch('switchboard.s3_util.S3Delivery')

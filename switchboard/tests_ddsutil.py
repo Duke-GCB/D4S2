@@ -333,7 +333,7 @@ class DDSDeliveryTypeTestCase(TestCase):
         ])
 
         make_processed_message = mock_dds_message_factory.return_value.make_processed_message
-        make_processed_message.assert_called_with('accepted', warning_message='', direction=MessageDirection.ToSender)
+        make_processed_message.assert_called_with('accepted', MessageDirection.ToSender, warning_message='')
         make_processed_message.return_value.send.assert_called_with()
         mock_delivery.mark_accepted.assert_called_with(
             mock_user.get_username.return_value,
