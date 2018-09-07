@@ -1,6 +1,6 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes, S3DeliveryError, State, S3ObjectManifest, \
     EmailTemplateException
-from d4s2_api.utils import MessageFactory
+from d4s2_api.utils import MessageFactory, MessageDirection
 import boto3
 import botocore
 from background_task import background
@@ -159,9 +159,6 @@ class S3DeliveryDetails(object):
     def __init__(self, s3_delivery, user):
         self.s3_delivery = s3_delivery
         self.user = user
-
-    def get_delivery(self):
-        return self.s3_delivery
 
     def get_from_user(self):
         return self.s3_delivery.from_user.user
@@ -407,7 +404,7 @@ class S3TransferOperation(S3Operation):
         :param warning_message: str: warning that may have occurred during the transfer operation
         """
         print("Notifying sender delivery {} has been accepted.".format(self.delivery.id))
-        message = self.make_processed_message('accepted', warning_message)
+        message = self.make_processed_message('accepted', warning_message, direction=MessageDirection.ToSender)
         message.send()
         self.background_funcs.notify_receiver_transfer_complete(self.delivery.id, warning_message, message.email_text)
 
@@ -419,7 +416,8 @@ class S3TransferOperation(S3Operation):
         :param sender_accepted_email_text: str: text of email message sent to recipient
         """
         print("Notifying receiver transfer of delivery {} is complete.".format(self.delivery.id))
-        message = self.make_processed_message('accepted_recipient', warning_message)
+        message = self.make_processed_message('accepted_recipient', warning_message,
+                                              direction=MessageDirection.ToRecipient)
         message.send()
         self.background_funcs.mark_delivery_complete(self.delivery.id,
                                                      sender_accepted_email_text,
@@ -437,15 +435,16 @@ class S3TransferOperation(S3Operation):
                                     sender_accepted_email_text,
                                     recipient_accepted_email_text)
 
-    def make_processed_message(self, process_type, warning_message):
+    def make_processed_message(self, process_type, warning_message, direction):
         """
         Create email message based on email template settings for the delivery from user and process_type.
         :param process_type: str: name of the template to return
         :param warning_message: str: warning message from s3 transfer
+        :param direction: str: MessageDirection
         :return: utils.Message: email message
         """
         message_factory = S3MessageFactory(self.delivery, self.from_user)
-        return message_factory.make_processed_message(process_type, warning_message=warning_message)
+        return message_factory.make_processed_message(process_type, direction, warning_message=warning_message)
 
     def ensure_transferring(self):
         """

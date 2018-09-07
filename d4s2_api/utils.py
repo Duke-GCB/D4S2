@@ -48,9 +48,12 @@ class MessageFactory(object):
         templates = self.delivery_details.get_action_template_text('delivery')
         return self._make_message(templates, accept_url=accept_url)
 
-    def make_processed_message(self, process_type, warning_message=''):
+    def make_processed_message(self, process_type, direction, warning_message=''):
         templates = self.delivery_details.get_action_template_text(process_type)
-        return self._make_message(templates, reason='', warning_message=warning_message)
+        return self._make_message(templates, reason='',
+                                  process_type=process_type,
+                                  direction=direction,
+                                  warning_message=warning_message)
 
     def make_rescind_message(self):
         templates = self.delivery_details.get_action_template_text('delivery_rescinded')
