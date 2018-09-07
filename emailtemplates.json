@@ -60,5 +60,16 @@
         },
         "model": "d4s2_api.emailtemplate",
         "pk": 5
+    },
+    {
+        "fields": {
+            "body": "Hello {{ recipient_name }},\r\n\r\n{{ sender_name }} has canceled delivery of project {{ project_name }} to you.\r\n\r\nRegards,\r\n\r\nComputational Solutions\r\nDuke Center for Genomic and Computational Biology\r\ngcb-help@duke.edu\r\nhttp://www.genome.duke.edu/cores-and-services/computational-solutions",
+            "owner": 1,
+            "subject": "Duke Data Service delivery of {{ project_name }} canceled",
+            "template_set": 1,
+            "template_type": 9
+        },
+        "model": "d4s2_api.emailtemplate",
+        "pk": 5
     }
 ]
