@@ -125,7 +125,7 @@ class DeliveryTestCase(TransferBaseTestCase):
         delivery.state = State.FAILED
         delivery.save()
         self.assertEqual(delivery.is_complete(), True)
-        delivery.mark_rescinded()
+        delivery.mark_canceled()
         self.assertEqual(delivery.is_complete(), True)
 
     def test_mark_transferring(self):
@@ -161,11 +161,11 @@ class DeliveryTestCase(TransferBaseTestCase):
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.user_message, user_message)
 
-    def test_mark_rescinded(self):
+    def test_mark_canceled(self):
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
-        delivery.mark_rescinded()
-        self.assertEqual(delivery.state, State.RESCINDED)
+        delivery.mark_canceled()
+        self.assertEqual(delivery.state, State.CANCELED)
 
 
 class ShareTestCase(TransferBaseTestCase):

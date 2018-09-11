@@ -4,24 +4,24 @@ from __future__ import unicode_literals
 
 from django.db import migrations
 
-DELIVERY_RESCINDED_TYPE = 'delivery_rescinded'
+DELIVERY_CANCELED_TYPE = 'delivery_canceled'
 
 
 def load_email_template_types(apps, schema_editor):
     EmailTemplateType = apps.get_model("d4s2_api", "EmailTemplateType")
-    EmailTemplateType.objects.create(name=DELIVERY_RESCINDED_TYPE)
+    EmailTemplateType.objects.create(name=DELIVERY_CANCELED_TYPE)
 
 
 def unload_email_template_types(apps, schema_editor):
     EmailTemplateType = apps.get_model("d4s2_api", "EmailTemplateType")
-    for email_template_type in EmailTemplateType.objects.filter(name=DELIVERY_RESCINDED_TYPE):
+    for email_template_type in EmailTemplateType.objects.filter(name=DELIVERY_CANCELED_TYPE):
         email_template_type.delete()
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('d4s2_api', '0031_auto_20180905_1312'),
+        ('d4s2_api', '0031_auto_20180911_1500'),
     ]
 
     operations = [

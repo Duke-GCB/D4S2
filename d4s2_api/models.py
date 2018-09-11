@@ -41,7 +41,7 @@ class State(object):
     DECLINED = 3
     FAILED = 4
     TRANSFERRING = 5
-    RESCINDED = 6
+    CANCELED = 6
     STATES = (
         (NEW, 'New'),
         (NOTIFIED, 'Notified'),
@@ -49,7 +49,7 @@ class State(object):
         (DECLINED, 'Declined'),
         (FAILED, 'Failed'),
         (TRANSFERRING, 'Transferring'),
-        (RESCINDED, 'Rescinded')
+        (CANCELED, 'Canceled')
     )
     DELIVERY_CHOICES = STATES
     SHARE_CHOICES = (
@@ -88,7 +88,7 @@ class DeliveryBase(models.Model):
 
     def is_complete(self):
         return self.state == State.ACCEPTED or self.state == State.DECLINED or self.state == State.FAILED or \
-               self.state == State.RESCINDED
+               self.state == State.CANCELED
 
     def mark_notified(self, email_text, save=True):
         self.state = State.NOTIFIED
@@ -118,8 +118,8 @@ class DeliveryBase(models.Model):
         self.state = State.FAILED
         if save: self.save()
 
-    def mark_rescinded(self, save=True):
-        self.state = State.RESCINDED
+    def mark_canceled(self, save=True):
+        self.state = State.CANCELED
         if save: self.save()
 
     class Meta:
@@ -147,8 +147,6 @@ class DDSDelivery(DeliveryBase):
             self.project_id, State.DELIVERY_CHOICES[self.state][1], self.performed_by
         )
 
-    class Meta:
-        unique_together = ('project_id', 'from_user_id', 'to_user_id')
 
 
 class DDSDeliveryError(models.Model):
