@@ -125,6 +125,8 @@ class DeliveryTestCase(TransferBaseTestCase):
         delivery.state = State.FAILED
         delivery.save()
         self.assertEqual(delivery.is_complete(), True)
+        delivery.mark_canceled()
+        self.assertEqual(delivery.is_complete(), True)
 
     def test_mark_transferring(self):
         delivery = DDSDelivery.objects.first()
@@ -150,36 +152,6 @@ class DeliveryTestCase(TransferBaseTestCase):
         self.assertFalse(delivery.is_complete())
         return delivery
 
-    def test_updates_local_state_accepted(self):
-        delivery = self.setup_incomplete_delivery()
-        delivery.update_state_from_project_transfer({'id': self.transfer_id, 'status': 'accepted'})
-        self.assertTrue(delivery.is_complete())
-        self.assertEqual(delivery.state, State.ACCEPTED)
-        self.assertEqual(delivery.decline_reason, '')
-
-    def test_updates_local_state_rejected(self):
-        delivery = self.setup_incomplete_delivery()
-        delivery.update_state_from_project_transfer({'id': self.transfer_id, 'status': 'rejected', 'status_comment': 'Bad Data'})
-        self.assertTrue(delivery.is_complete())
-        self.assertEqual(delivery.state, State.DECLINED)
-        self.assertEqual(delivery.decline_reason, 'Bad Data')
-
-    def test_updates_local_state_pending(self):
-        delivery = self.setup_incomplete_delivery()
-        delivery.update_state_from_project_transfer({'id': self.transfer_id, 'status': 'pending'})
-        self.assertFalse(delivery.is_complete())
-        self.assertEqual(delivery.state, State.NEW)
-        self.assertEqual(delivery.decline_reason, '')
-
-    def test_update_without_changes(self):
-        delivery = self.setup_incomplete_delivery()
-        delivery.mark_declined('jsmith','Bad Data', DeliveryTestCase.DECLINE_EMAIL_TEXT)
-        self.assertTrue(delivery.is_complete())
-        delivery.update_state_from_project_transfer({'id': self.transfer_id, 'status': 'rejected', 'status_comment': 'Changed Comment'})
-        self.assertTrue(delivery.is_complete())
-        self.assertEqual(delivery.state, State.DECLINED)
-        self.assertEqual(delivery.decline_reason, 'Bad Data', 'Should not change when status doesnt change')
-
     def test_user_message(self):
         delivery = DDSDelivery.objects.first()
         self.assertIsNone(delivery.user_message)
@@ -188,6 +160,12 @@ class DeliveryTestCase(TransferBaseTestCase):
         delivery.save()
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.user_message, user_message)
+
+    def test_mark_canceled(self):
+        delivery = DDSDelivery.objects.first()
+        self.assertEqual(delivery.state, State.NEW)
+        delivery.mark_canceled()
+        self.assertEqual(delivery.state, State.CANCELED)
 
 
 class ShareTestCase(TransferBaseTestCase):

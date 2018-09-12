@@ -78,3 +78,10 @@ class MessageFactoryTestCase(TestCase):
                                        warning_message='warning details')
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
         self.delivery_details.get_email_context.assert_called_with(None, 'accepted_recipient', '', 'warning details')
+
+    @patch('d4s2_api.utils.Message')
+    def test_make_canceled_message(self, mock_message):
+        factory = MessageFactory(self.delivery_details)
+        factory.make_canceled_message()
+        mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
+        self.delivery_details.get_action_template_text.assert_called_with('delivery_canceled')
