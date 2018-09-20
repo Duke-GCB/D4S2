@@ -72,9 +72,13 @@ Installation - Docker Compose Development
 
         $ docker-compose -f docker-compose.dev.yml build
 
+5. Run migrations to setup the database
+
+        $ docker-compose -f docker-compose.dev.yml run app python manage.py migrate
+
 5. Create a superuser (A user account is required for making authenticated API requests)
 
-        $ docker-compose -f docker-compose.dev.yml run web python manage.py createsuperuser
+        $ docker-compose -f docker-compose.dev.yml run app python manage.py createsuperuser
 
 6. Start the app:
 
