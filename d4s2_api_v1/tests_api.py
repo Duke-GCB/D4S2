@@ -56,6 +56,16 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
     @patch('d4s2_api_v1.api.DDSUtil')
+    def test_create_delivery_fails_when_user_not_setup(self, mock_ddsutil):
+        self.user_email_template_set.delete()
+        setup_mock_ddsutil(mock_ddsutil)
+        url = reverse('ddsdelivery-list')
+        data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
+
+    @patch('d4s2_api_v1.api.DDSUtil')
     def test_create_delivery_with_shared_ids(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('ddsdelivery-list')
@@ -231,6 +241,14 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Share.objects.count(), 1)
         self.assertEqual(Share.objects.get().from_user_id, 'user1')
         self.assertEqual(Share.objects.get().role, 'share_role')
+
+    def test_create_share_fails_when_user_not_setup(self):
+        self.user_email_template_set.delete()
+        url = reverse('share-list')
+        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'role': 'share_role'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
     def test_list_shares(self):
         Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')

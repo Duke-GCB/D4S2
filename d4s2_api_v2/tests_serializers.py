@@ -1,5 +1,7 @@
 from django.test import TestCase
-from d4s2_api_v2.serializers import DDSDeliveryPreviewSerializer
+from d4s2_api_v2.serializers import DDSDeliveryPreviewSerializer, UserSerializer
+from django.contrib.auth.models import User as django_user
+from mock import patch
 
 
 class DeliveryPreviewSerializerTestCase(TestCase):
@@ -33,3 +35,14 @@ class DeliveryPreviewSerializerTestCase(TestCase):
         self.assertNotIn('transfer_id', self.data)
         serializer = DDSDeliveryPreviewSerializer(data=self.data)
         self.assertFalse(serializer.is_valid())
+
+
+class UserSerializerSerializerTestCase(TestCase):
+    @patch('d4s2_api_v2.serializers.UserEmailTemplateSet')
+    def test_stuff(self, mock_user_email_template_set):
+        mock_user_email_template_set.user_is_setup.return_value = True
+        user = django_user.objects.create_user(username='user', password='secret')
+        serializer = UserSerializer(user)
+        self.assertEqual(serializer.data['username'], user.username)
+        self.assertEqual(serializer.data['setup_for_delivery'], True)
+        mock_user_email_template_set.user_is_setup.assert_called_with(user)

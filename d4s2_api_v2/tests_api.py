@@ -3,6 +3,7 @@ from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase
 from d4s2_api_v1.tests_api import AuthenticatedResourceTestCase
+from d4s2_api_v2.api import EMAIL_TEMPLATES_NOT_SETUP_MSG
 from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call
@@ -1079,3 +1080,21 @@ class DeliveryPreviewViewTestCase(APITestCase):
         url = reverse('v2-delivery_previews')
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch('d4s2_api_v2.api.DDSMessageFactory')
+    def test_cannot_preview_when_user_not_setup(self, mock_message_factory):
+        self.user_email_template_set.delete()
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
+        instance.send = Mock()
+        instance.email_text = 'Generated Email Text'
+        url = reverse('v2-delivery_previews')
+        data = {
+            'from_user_id': 'user-1',
+            'to_user_id': 'user-2',
+            'project_id': 'project-3',
+            'transfer_id': '',
+            'user_message': '',
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
