@@ -31,6 +31,11 @@ class AuthenticatedResourceTestCase(APITestCase, ResponseStatusCodeTestCase):
 
 
 class DeliveryViewTestCase(AuthenticatedResourceTestCase):
+    def setUp(self):
+        super(DeliveryViewTestCase, self).setUp()
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
+        self.user_email_template_set = UserEmailTemplateSet.objects.create(
+            user=self.user, email_template_set=email_template_set)
 
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -206,6 +211,11 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
 
 class ShareViewTestCase(AuthenticatedResourceTestCase):
+    def setUp(self):
+        super(ShareViewTestCase, self).setUp()
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
+        self.user_email_template_set = UserEmailTemplateSet.objects.create(
+            user=self.user, email_template_set=email_template_set)
 
     def test_fails_unauthenticated(self):
         self.client.logout()

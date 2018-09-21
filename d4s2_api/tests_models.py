@@ -387,6 +387,11 @@ class EmailTemplateTestCase(TestCase):
         email_template = EmailTemplate.for_share(share, self.other_user)
         self.assertEqual(email_template.id, some_email_template.id)
 
+    def test_user_is_setup(self):
+        self.assertFalse(UserEmailTemplateSet.user_is_setup(self.other_user))
+        UserEmailTemplateSet.objects.create(user=self.other_user, email_template_set=self.template_set)
+        self.assertTrue(UserEmailTemplateSet.user_is_setup(self.other_user))
+
 
 class S3EndpointTestCase(TestCase):
     def test_create_and_read(self):
