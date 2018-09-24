@@ -73,6 +73,16 @@ class ShareRole(object):
     DEFAULT = DOWNLOAD
 
 
+class EmailTemplateSet(models.Model):
+    """
+    Set of email templates with unique template types.
+    """
+    name = models.CharField(max_length=64, null=False, blank=False, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class DeliveryBase(models.Model):
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
     decline_reason = models.TextField(null=False, blank=True)
@@ -82,6 +92,9 @@ class DeliveryBase(models.Model):
     recipient_completion_email_text = models.TextField(blank=True)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
+    # TODO make email_template_set required once production databases have this field filled in
+    email_template_set = models.ForeignKey(EmailTemplateSet, null=True,
+                                           help_text='Email template set to be used with this delivery')
 
     def is_new(self):
         return self.state == State.NEW
@@ -200,16 +213,6 @@ class Share(models.Model):
 
 class EmailTemplateException(BaseException):
     pass
-
-
-class EmailTemplateSet(models.Model):
-    """
-    Set of email templates with unique template types.
-    """
-    name = models.CharField(max_length=64, null=False, blank=False, unique=True)
-
-    def __str__(self):
-        return self.name
 
 
 class EmailTemplateType(models.Model):
