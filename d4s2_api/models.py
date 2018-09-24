@@ -305,7 +305,7 @@ class UserEmailTemplateSet(models.Model):
         """
         Returns True if the user has their email templates setup
         :param user: User: user to check
-        :return:
+        :return: boolean: True if user is setup correctly
         """
         return UserEmailTemplateSet.objects.filter(user=user).count() > 0
 
