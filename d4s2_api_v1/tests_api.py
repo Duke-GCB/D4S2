@@ -31,6 +31,10 @@ class AuthenticatedResourceTestCase(APITestCase, ResponseStatusCodeTestCase):
 
 
 class DeliveryViewTestCase(AuthenticatedResourceTestCase):
+    def setUp(self):
+        super(DeliveryViewTestCase, self).setUp()
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.email_template_set)
 
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -64,9 +68,9 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     def test_list_deliveries(self):
         DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
-                                transfer_id=self.transfer_id1)
+                                   transfer_id=self.transfer_id1, email_template_set=self.email_template_set)
         DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                transfer_id=self.transfer_id2)
+                                   transfer_id=self.transfer_id2, email_template_set=self.email_template_set)
         url = reverse('ddsdelivery-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -74,7 +78,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     def test_get_delivery(self):
         h = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
-                                    transfer_id=self.transfer_id1)
+                                       transfer_id=self.transfer_id1, email_template_set=self.email_template_set)
         url = reverse('ddsdelivery-detail', args=(h.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -82,7 +86,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     def test_delete_delivery(self):
         h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                    transfer_id=self.transfer_id1)
+                                       transfer_id=self.transfer_id1, email_template_set=self.email_template_set)
         url = reverse('ddsdelivery-detail', args=(h.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -92,7 +96,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
     def test_update_delivery(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                    transfer_id=self.transfer_id1)
+                                       transfer_id=self.transfer_id1, email_template_set=self.email_template_set)
         updated = {'from_user_id': self.dds_id1, 'to_user_id': self.dds_id2, 'project_id': 'project3',
                    'transfer_id': h.transfer_id}
         url = reverse('ddsdelivery-detail', args=(h.pk,))
@@ -109,7 +113,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     def test_filter_deliveries(self):
         h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                    transfer_id=self.transfer_id1)
+                                       transfer_id=self.transfer_id1, email_template_set=self.email_template_set)
         url = reverse('ddsdelivery-list')
         response=self.client.get(url, {'project_id': 'project2'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -124,7 +128,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance.send = Mock()
         instance.email_text = 'email text'
         h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                    transfer_id='abcd')
+                                       transfer_id='abcd', email_template_set=self.email_template_set)
         self.assertTrue(h.is_new())
         url = reverse('ddsdelivery-send', args=(h.pk,))
         response = self.client.post(url, data={}, format='json')
@@ -143,7 +147,8 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                       email_template_set=self.email_template_set)
         self.assertTrue(h.is_new())
         h.mark_notified('email text')
         url = reverse('ddsdelivery-send', args=(h.pk,))
@@ -171,7 +176,8 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                       email_template_set=self.email_template_set)
         d.mark_notified('email text')
         url = reverse('ddsdelivery-send', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
@@ -182,7 +188,8 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
     @patch('d4s2_api_v1.api.DDSUtil')
     def test_cancel_on_accepted(self, mock_ddsutil):
-        d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                       email_template_set=self.email_template_set)
         d.mark_accepted('', '')
         url = reverse('ddsdelivery-cancel', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
@@ -192,7 +199,7 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_cancel_on_notified(self, mock_message_factory, mock_ddsutil):
         d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                       transfer_id='transfer1')
+                                       transfer_id='transfer1', email_template_set=self.email_template_set)
         d.mark_notified('')
         url = reverse('ddsdelivery-cancel', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')

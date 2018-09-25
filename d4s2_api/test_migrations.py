@@ -110,6 +110,13 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         self.assertEqual(share.from_user_id, 'op-456')
         self.assertEqual(share.to_user_id, 'qr-789')
 
+    def tearDown(self):
+        # Delete deliveries since the migration that when email_template_set is required
+        # TestMigrations.tearDown() will not fail in
+        Delivery = self.apps.get_model('d4s2_api', 'Delivery')
+        Delivery.objects.all().delete()
+        super(DukeDSIDMigrationTestCase, self).tearDown()
+
 
 class EmailTemplateGroupMigrationTestCase(TestMigrations):
     """

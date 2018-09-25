@@ -3,7 +3,8 @@ from mock import patch, Mock, MagicMock, call
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
     SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
     DDS_PERMISSIONS_ID_SEP, MessageDirection
-from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole
+from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole, EmailTemplateSet, \
+    UserEmailTemplateSet
 from gcb_web_auth.models import DDSEndpoint
 
 
@@ -218,10 +219,12 @@ class TestDeliveryDetails(TestCase):
     @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('switchboard.dds_util.DDSProject')
     def test_get_project_from_delivery(self, mock_dds_project, mock_dds_project_transfer):
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
         delivery = DDSDelivery.objects.create(project_id='project1',
                                               from_user_id='user1',
                                               to_user_id='user2',
-                                              transfer_id='transfer1')
+                                              transfer_id='transfer1',
+                                              email_template_set=email_template_set)
         user = Mock()
         mock_transfer = Mock()
         mock_dds_project_transfer.fetch_one.return_value = mock_transfer
@@ -237,7 +240,10 @@ class TestDeliveryDetails(TestCase):
 class DeliveryUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='test_user')
-        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.email_template_set)
+        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789',
+                                                   email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
         DDSDeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
 

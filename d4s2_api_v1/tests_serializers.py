@@ -1,16 +1,18 @@
 from django.test import TestCase
-from d4s2_api.models import DDSDelivery, DDSDeliveryShareUser
+from d4s2_api.models import DDSDelivery, DDSDeliveryShareUser, EmailTemplateSet
 from d4s2_api_v1.serializers import DeliverySerializer, SHARE_USERS_INVALID_MSG
 from mock import MagicMock
 
 
 class DeliverySerializerTestCase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.data = {
             'project_id': 'project-1234',
             'from_user_id': 'user-5678',
             'to_user_id': 'user-9999',
             'transfer_id': 'abcd-1234-efgh-5678',
+            'email_template_set': self.email_template_set.id
         }
 
     def test_serializes_delivery(self):
@@ -45,7 +47,8 @@ class DeliverySerializerTestCase(TestCase):
         delivery = DDSDelivery.objects.create(project_id='projectA',
                                               from_user_id='user1',
                                               to_user_id='user2',
-                                              transfer_id='123-123')
+                                              transfer_id='123-123',
+                                              email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
         mock_request = MagicMock()
@@ -86,7 +89,8 @@ class DeliverySerializerTestCase(TestCase):
                                               transfer_id='123-123',
                                               decline_reason='Wrong person',
                                               performed_by='Bob Robertson',
-                                              delivery_email_text='here you go')
+                                              delivery_email_text='here you go',
+                                              email_template_set=self.email_template_set)
         mock_request = MagicMock()
         serializer = DeliverySerializer(delivery, context={'request': mock_request})
 
@@ -103,6 +107,7 @@ class DeliverySerializerTestCase(TestCase):
             'decline_reason': 'wrong',
             'performed_by': 'george',
             'delivery_email_text': 'here',
+            'email_template_set': self.email_template_set.id
         }
         serializer = DeliverySerializer(data=self.data)
         serializer.is_valid(raise_exception=True)

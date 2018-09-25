@@ -1,6 +1,6 @@
 from django.test import TestCase
 from mock import patch, Mock, call
-from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State
+from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State, EmailTemplateSet
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
     S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError, SendDeliveryBackgroundFunctions, \
     SendDeliveryOperation, S3NotRecipientException, MessageDirection
@@ -8,6 +8,7 @@ from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S
 
 class S3DeliveryTestBase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.user_agent = User.objects.create(username='agent',
                                               email='agent@agent.com',
                                               first_name='Agent',
@@ -39,7 +40,8 @@ class S3DeliveryTestBase(TestCase):
         self.s3_delivery = S3Delivery.objects.create(bucket=self.s3_bucket,
                                                      from_user=self.s3_from_user,
                                                      to_user=self.s3_to_user,
-                                                     user_message='user message')
+                                                     user_message='user message',
+                                                     email_template_set=self.email_template_set)
 
 
 class S3DeliveryUtilTestCase(S3DeliveryTestBase):

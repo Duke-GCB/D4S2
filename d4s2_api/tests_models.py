@@ -20,10 +20,12 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(DeliveryTestCase, self).setUp()
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         DDSDelivery.objects.create(project_id='project1',
-                                from_user_id='user1',
-                                to_user_id='user2',
-                                transfer_id=self.transfer_id)
+                                   from_user_id='user1',
+                                   to_user_id='user2',
+                                   transfer_id=self.transfer_id,
+                                   email_template_set=self.email_template_set)
 
     def test_initial_state(self):
         delivery = DDSDelivery.objects.first()
@@ -42,9 +44,10 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_can_add_share_users(self):
         delivery = DDSDelivery.objects.create(project_id='projectA',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id='123-123')
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id='123-123',
+                                              email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
         share_users = delivery.share_users.all()
@@ -53,13 +56,15 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_user_can_be_shared_multiple_deliveries(self):
         delivery1 = DDSDelivery.objects.create(project_id='projectA',
-                                            from_user_id='user1',
-                                            to_user_id='user2',
-                                            transfer_id='123-123')
+                                               from_user_id='user1',
+                                               to_user_id='user2',
+                                               transfer_id='123-123',
+                                               email_template_set=self.email_template_set)
         delivery2 = DDSDelivery.objects.create(project_id='projectB',
-                                            from_user_id='user3',
-                                            to_user_id='user4',
-                                            transfer_id='456-789')
+                                               from_user_id='user3',
+                                               to_user_id='user4',
+                                               transfer_id='456-789',
+                                               email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery1, dds_id='user3')
         DDSDeliveryShareUser.objects.create(delivery=delivery2, dds_id='user3')
         self.assertEqual(DDSDeliveryShareUser.objects.count(), 2)
@@ -68,9 +73,10 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_user_cannot_be_shared_delivery_twice(self):
         delivery = DDSDelivery.objects.create(project_id='projectA',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id='123-123')
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id='123-123',
+                                              email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         with self.assertRaises(IntegrityError):
             DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
@@ -304,9 +310,10 @@ class EmailTemplateTestCase(TestCase):
     def test_for_operation(self):
         # Create an email template
         delivery = DDSDelivery.objects.create(project_id='project1',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id=self.transfer_id)
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id=self.transfer_id,
+                                              email_template_set=self.template_set)
         EmailTemplate.objects.create(template_set=self.template_set,
                                      owner=self.user,
                                      template_type=EmailTemplateType.objects.get(name='accepted'),
@@ -495,6 +502,7 @@ class S3BucketTestCase(TestCase):
 
 class S3DeliveryCredentialTestCase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.user1 = User.objects.create(username='user1')
         self.user2 = User.objects.create(username='user2')
         self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
@@ -508,30 +516,37 @@ class S3DeliveryCredentialTestCase(TestCase):
         self.s3_bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
 
     def test_create_and_read(self):
-        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
-        S3Delivery.objects.create(bucket=self.s3_bucket2, from_user=self.s3_user1, to_user=self.s3_user2)
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                  email_template_set=self.email_template_set)
+        S3Delivery.objects.create(bucket=self.s3_bucket2, from_user=self.s3_user1, to_user=self.s3_user2,
+                                  email_template_set=self.email_template_set)
         s3_deliveries = S3Delivery.objects.order_by('bucket__name')
         self.assertEqual([s3_delivery.bucket.name for s3_delivery in s3_deliveries],
                          ['mouse', 'mouse2'])
 
     def test_prevents_creating_same_delivery_twice(self):
-        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                  email_template_set=self.email_template_set)
         with self.assertRaises(IntegrityError):
-            S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+            S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                      email_template_set=self.email_template_set)
 
 
 class DDSDeliveryErrorTestCase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.delivery1 = DDSDelivery.objects.create(
             project_id='project1',
             from_user_id='user1',
             to_user_id='user2',
-            transfer_id='transfer1')
+            transfer_id='transfer1',
+            email_template_set=self.email_template_set)
         self.delivery2 = DDSDelivery.objects.create(
             project_id='project2',
             from_user_id='user2',
             to_user_id='user3',
-            transfer_id='transfer2')
+            transfer_id='transfer2',
+            email_template_set=self.email_template_set)
 
     def test_create_errors(self):
         DDSDeliveryError.objects.create(message='Something failed', delivery=self.delivery1)
@@ -555,8 +570,10 @@ class DDSDeliveryErrorTestCase(TestCase):
         self.assertEqual(deliveries[0].message, 'Error1')
         self.assertEqual(deliveries[1].message, 'Error2')
 
+
 class S3DeliveryBaseTestCase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.user1 = User.objects.create(username='user1')
         self.user2 = User.objects.create(username='user2')
         self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
@@ -569,9 +586,11 @@ class S3DeliveryBaseTestCase(TestCase):
         self.s3_bucket = S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
         self.s3_bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
         self.delivery1 = S3Delivery.objects.create(bucket=self.s3_bucket,
-                                                   from_user=self.s3_user1, to_user=self.s3_user2)
+                                                   from_user=self.s3_user1, to_user=self.s3_user2,
+                                                   email_template_set=self.email_template_set)
         self.delivery2 = S3Delivery.objects.create(bucket=self.s3_bucket2,
-                                                   from_user=self.s3_user1, to_user=self.s3_user2)
+                                                   from_user=self.s3_user1, to_user=self.s3_user2,
+                                                   email_template_set=self.email_template_set)
 
 
 class S3DeliveryErrorTestCase(S3DeliveryBaseTestCase):

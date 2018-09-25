@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from switchboard.dds_util import DDSUtil
-from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery
+from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet
 from d4s2_api_v2.models import DDSDeliveryPreview
 
 class DDSUserSerializer(serializers.Serializer):
@@ -100,12 +100,15 @@ class S3BucketSerializer(serializers.ModelSerializer):
 
 
 class S3DeliverySerializer(serializers.ModelSerializer):
+    email_template_set = serializers.PrimaryKeyRelatedField(queryset=EmailTemplateSet.objects.all(), required=False)
+
     class Meta:
         model = S3Delivery
         resource_name = 's3delivery'
         fields = ('id', 'bucket', 'from_user', 'to_user', 'state', 'user_message',
-                  'decline_reason', 'performed_by', 'delivery_email_text', 'transfer_id',)
-        read_only_fields = ('state', 'decline_reason', 'performed_by', 'delivery_email_text', 'transfer_id',)
+                  'decline_reason', 'performed_by', 'delivery_email_text', 'transfer_id', 'email_template_set')
+        read_only_fields = ('state', 'decline_reason', 'performed_by', 'delivery_email_text', 'transfer_id',
+                            'email_template_set')
 
     def validate_from_user(self, from_user):
         if from_user.user != self.context['request'].user:
