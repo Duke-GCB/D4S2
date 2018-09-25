@@ -300,6 +300,15 @@ class UserEmailTemplateSet(models.Model):
     def __str__(self):
         return 'User Email Template Set user <{}>, set: <{}>'.format(self.user.username, self.email_template_set.name)
 
+    @staticmethod
+    def user_is_setup(user):
+        """
+        Returns True if the user has their email templates setup
+        :param user: User: user to check
+        :return: boolean: True if user is setup correctly
+        """
+        return UserEmailTemplateSet.objects.filter(user=user).count() > 0
+
 
 class S3EndpointManager(models.Manager):
     def get_by_natural_key(self, url):
