@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import detail_route
 from rest_framework.response import Response
-from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet
+from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
 from switchboard.dds_util import DDSUtil, DDSMessageFactory
 from django.core.urlresolvers import reverse
@@ -42,7 +42,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
         if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
-        message_factory = DDSMessageFactory(delivery, request.user)
+        message_factory = DDSMessageFactory(delivery, request.user, delivery.email_template_set)
         message = message_factory.make_delivery_message(accept_url)
         message.send()
         delivery.mark_notified(message.email_text)
@@ -74,7 +74,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
              raise ValidationError('Only deliveries in new and notified state can be canceled.')
         dds_util = DDSUtil(request.user)
         dds_util.cancel_project_transfer(delivery.transfer_id)
-        message_factory = DDSMessageFactory(delivery, request.user)
+        message_factory = DDSMessageFactory(delivery, request.user, delivery.email_template_set)
         message = message_factory.make_canceled_message()
         message.send()
         delivery.mark_canceled()
@@ -96,7 +96,7 @@ class ShareViewSet(viewsets.ModelViewSet):
         share = self.get_object()
         if share.is_notified() and not get_force_param(request):
             raise AlreadyNotifiedException()
-        message_factory = DDSMessageFactory(share, request.user)
+        message_factory = DDSMessageFactory.with_templates_from_user(share, request.user)
         message = message_factory.make_share_message()
         message.send()
         share.mark_notified(message.email_text)

@@ -82,6 +82,13 @@ class EmailTemplateSet(models.Model):
     def __str__(self):
         return self.name
 
+    def email_template_with_name(self, name):
+        try:
+            return EmailTemplate.objects.get(template_set=self, template_type__name=name)
+        except EmailTemplate.DoesNotExist:
+            raise EmailTemplateException(
+                "Setup Error: Unable to find email template for type {}".format(name))
+
 
 class DeliveryBase(models.Model):
     state = models.IntegerField(choices=State.DELIVERY_CHOICES, default=State.NEW, null=False)
@@ -193,6 +200,9 @@ class Share(models.Model):
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
+
+    def send_template_name(self):
+        return 'share_{}'.format(self.role)
 
     def is_notified(self):
         return self.state == State.NOTIFIED

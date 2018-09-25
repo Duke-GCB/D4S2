@@ -213,6 +213,10 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
 
 
 class ShareViewTestCase(AuthenticatedResourceTestCase):
+    def setUp(self):
+        super(ShareViewTestCase, self).setUp()
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.email_template_set)
 
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -238,7 +242,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(len(response.data), 2)
 
     def test_get_share(self):
-        d =  Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
         url = reverse('share-detail', args=(d.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -252,34 +256,35 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Share.objects.count(), 0)
 
     def test_update_share(self):
-        d =  Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         updated = {'project_id': 'project3', 'from_user_id': 'fromuser1', 'to_user_id': 'touser1'}
         url = reverse('share-detail', args=(d.pk,))
         response = self.client.put(url, data=updated, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        d =  Share.objects.get(pk=d.pk)
+        d = Share.objects.get(pk=d.pk)
         self.assertEqual(d.project_id, 'project3')
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share(self, mock_message_factory):
-        instance = mock_message_factory.return_value.make_share_message.return_value
+        instance = mock_message_factory.with_templates_from_user.return_value.make_share_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        d =  Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        instance.send_template_name.return_value = 'deliver'
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         self.assertFalse(d.is_notified())
         url = reverse('share-send', args=(d.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d = Share.objects.get(pk=d.pk)
         self.assertTrue(d.is_notified())
-        self.assertTrue(mock_message_factory.return_value.make_share_message.called)
+        mock_message_factory.with_templates_from_user.assert_called_with(d, self.user)
         self.assertTrue(instance.send.called)
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share_fails(self, mock_message_factory):
-        instance = mock_message_factory.return_value.make_share_message.return_value
+        instance = mock_message_factory.with_templates_from_user.return_value.make_share_message.return_value
         instance.send = Mock()
-        d =  Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
         self.assertFalse(d.is_notified())
         d.mark_notified('email text')
         url = reverse('share-send', args=(d.pk,))
@@ -290,7 +295,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_force_send_share(self, mock_message_factory):
-        instance = mock_message_factory.return_value.make_share_message.return_value
+        instance = mock_message_factory.with_templates_from_user.return_value.make_share_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
@@ -299,7 +304,7 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         url = reverse('share-send', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(mock_message_factory.return_value.make_share_message.called)
+        mock_message_factory.with_templates_from_user.assert_called_with(d, self.user)
         self.assertTrue(instance.send.called)
 
     def test_filter_shares(self):

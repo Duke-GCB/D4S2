@@ -1,6 +1,6 @@
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share
+from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, UserEmailTemplateSet
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
 from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
@@ -264,19 +264,19 @@ class DeliveryDetails(object):
     def get_user_message(self):
         return self.delivery.user_message
 
-    def get_share_template_text(self):
-        email_template = EmailTemplate.for_share(self.delivery, self.user)
-        if email_template:
-            return email_template.subject, email_template.body
-        else:
-            raise RuntimeError('No email template found')
-
-    def get_action_template_text(self, action_name):
-        email_template = EmailTemplate.for_user(self.user, action_name)
-        if email_template:
-            return email_template.subject, email_template.body
-        else:
-            raise RuntimeError('No email template found')
+    # def get_share_template_text(self):
+    #     email_template = EmailTemplate.for_share(self.delivery, self.user)
+    #     if email_template:
+    #         return email_template.subject, email_template.body
+    #     else:
+    #         raise RuntimeError('No email template found')
+    #
+    # def get_action_template_text(self, action_name):
+    #     email_template = EmailTemplate.for_user(self.user, action_name)
+    #     if email_template:
+    #         return email_template.subject, email_template.body
+    #     else:
+    #         raise RuntimeError('No email template found')
 
     @classmethod
     def from_transfer_id(self, transfer_id, user):
@@ -398,7 +398,7 @@ class DeliveryUtil(object):
                                      to_user_id=share_to_user.dds_id,
                                      role=self.share_role,
                                      user_message=self.share_user_message)
-        message_factory = DDSMessageFactory(share, self.user)
+        message_factory = DDSMessageFactory(share, self.user, self.delivery.email_template_set)
         message = message_factory.make_share_message()
         message.send()
         share.mark_notified(message.email_text)
@@ -438,8 +438,8 @@ class DDSDeliveryType:
     @staticmethod
     def make_delivery_util(*args):
         return DeliveryUtil(*args,
-                               share_role=ShareRole.DOWNLOAD,
-                               share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+                            share_role=ShareRole.DOWNLOAD,
+                            share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
 
     @staticmethod
     def transfer_delivery(delivery, user):
@@ -448,7 +448,7 @@ class DDSDeliveryType:
         delivery_util.share_with_additional_users()
         delivery_util.give_sender_permission()
         warning_message = delivery_util.get_warning_message()
-        message_factory = DDSMessageFactory(delivery, user)
+        message_factory = DDSMessageFactory(delivery, user, delivery.email_template_set)
         message = message_factory.make_processed_message('accepted',
                                                          MessageDirection.ToSender,
                                                          warning_message=warning_message)
@@ -458,7 +458,11 @@ class DDSDeliveryType:
 
 
 class DDSMessageFactory(MessageFactory):
-    def __init__(self, delivery, user):
-        super(DDSMessageFactory, self).__init__(
-            DeliveryDetails(delivery, user)
-        )
+    def __init__(self, delivery, user, email_template_set):
+        delivery_details = DeliveryDetails(delivery, user)
+        super(DDSMessageFactory, self).__init__(delivery_details, email_template_set)
+
+    @staticmethod
+    def with_templates_from_user(share, request_user):
+        email_template_set = UserEmailTemplateSet.objects.get(user=request_user).email_template_set
+        return DDSMessageFactory(share, request_user, email_template_set)

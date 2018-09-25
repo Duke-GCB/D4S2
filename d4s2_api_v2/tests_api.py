@@ -1020,8 +1020,10 @@ class S3DeliveryViewSetTestCase(APITestCase):
 class DeliveryPreviewViewTestCase(APITestCase):
 
     def setUp(self):
-        self.user = user = django_user.objects.create_user(username='user', password='secret')
+        self.user = django_user.objects.create_user(username='user', password='secret')
         self.client.login(username='user', password='secret')
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
+        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=email_template_set)
 
     def test_cannot_get_list(self):
         url = reverse('v2-delivery_previews')

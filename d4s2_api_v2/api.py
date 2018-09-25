@@ -286,8 +286,9 @@ class DeliveryPreviewView(generics.CreateAPIView):
 
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
         accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
-
-        message_factory = DDSMessageFactory(delivery_preview, self.request.user)
+        user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
+        message_factory = DDSMessageFactory(delivery_preview, self.request.user,
+                                            user_email_template_set.email_template_set)
         message = message_factory.make_delivery_message(accept_url)
         delivery_preview.delivery_email_text = message.email_text
 

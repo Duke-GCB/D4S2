@@ -46,34 +46,42 @@ class MessageTestCase(TestCase):
 class MessageFactoryTestCase(TestCase):
     def setUp(self):
         self.delivery_details = MagicMock()
-        self.delivery_details.get_share_template_text.return_value = ('sharesubject', 'sharebody')
-        self.delivery_details.get_action_template_text.return_value = ('actionsubject', 'actionbody')
+    #     self.delivery_details.get_share_template_text.return_value = ('sharesubject', 'sharebody')
+    #     self.delivery_details.get_action_template_text.return_value = ('actionsubject', 'actionbody')
         self.delivery_details.get_from_user.return_value = Mock(email='bob@bob.com')
         self.delivery_details.get_to_user.return_value = Mock(email='joe@joe.com')
         self.delivery_details.get_email_context.return_value = {}
 
     @patch('d4s2_api.utils.Message')
     def test_make_share_message(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        mock_email_template_set = Mock()
+        mock_email_template_set.email_template_with_name.return_value = Mock(subject='sharesubject', body='sharebody')
+        factory = MessageFactory(self.delivery_details, mock_email_template_set)
         factory.make_share_message()
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'sharesubject', 'sharebody', {})
 
     @patch('d4s2_api.utils.Message')
     def test_make_delivery_message(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        mock_email_template_set = Mock()
+        mock_email_template_set.email_template_with_name.return_value = Mock(subject='actionsubject', body='actionbody')
+        factory = MessageFactory(self.delivery_details, mock_email_template_set)
         factory.make_delivery_message(accept_url='accept url')
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
 
     @patch('d4s2_api.utils.Message')
     def test_make_processed_message_to_sender(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        mock_email_template_set = Mock()
+        mock_email_template_set.email_template_with_name.return_value = Mock(subject='actionsubject', body='actionbody')
+        factory = MessageFactory(self.delivery_details, mock_email_template_set)
         factory.make_processed_message('accepted', MessageDirection.ToSender, warning_message='warning details')
         mock_message.assert_called_with('joe@joe.com', 'bob@bob.com', 'actionsubject', 'actionbody', {})
         self.delivery_details.get_email_context.assert_called_with(None, 'accepted', '', 'warning details')
 
     @patch('d4s2_api.utils.Message')
     def test_make_processed_message_to_recipient(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        mock_email_template_set = Mock()
+        mock_email_template_set.email_template_with_name.return_value = Mock(subject='actionsubject', body='actionbody')
+        factory = MessageFactory(self.delivery_details, mock_email_template_set)
         factory.make_processed_message('accepted_recipient', MessageDirection.ToRecipient,
                                        warning_message='warning details')
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
@@ -81,7 +89,9 @@ class MessageFactoryTestCase(TestCase):
 
     @patch('d4s2_api.utils.Message')
     def test_make_canceled_message(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        mock_email_template_set = Mock()
+        mock_email_template_set.email_template_with_name.return_value = Mock(subject='actionsubject', body='actionbody')
+        factory = MessageFactory(self.delivery_details, mock_email_template_set)
         factory.make_canceled_message()
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'actionsubject', 'actionbody', {})
-        self.delivery_details.get_action_template_text.assert_called_with('delivery_canceled')
+        mock_email_template_set.email_template_with_name.assert_called_with('delivery_canceled')

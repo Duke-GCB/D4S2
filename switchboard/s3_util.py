@@ -352,9 +352,10 @@ class S3DeliveryType:
 
 
 class S3MessageFactory(MessageFactory):
-    def __init__(self, s3_delivery, user):
+    def __init__(self, s3_delivery, user, email_template_set):
         super(S3MessageFactory, self).__init__(
-            S3DeliveryDetails(s3_delivery, user)
+            S3DeliveryDetails(s3_delivery, user),
+            email_template_set
         )
 
 
