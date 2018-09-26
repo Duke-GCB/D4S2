@@ -1,8 +1,7 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import detail_route
-from rest_framework.response import Response
-from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet
+from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
 from switchboard.dds_util import DDSUtil, DDSMessageFactory
 from django.core.urlresolvers import reverse
@@ -48,12 +47,9 @@ def populate_email_template_in_request(request):
     'email_template_set' this will raise an exception.
     :param request: Request
     """
-    try:
-        prevent_email_template_set_in_request(request)
-        email_template_set = get_email_template_for_request(request)
-        request.data['email_template_set'] = email_template_set.id
-    except UserEmailTemplateSet.DoesNotExist:
-        raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
+    prevent_email_template_set_in_request(request)
+    email_template_set = get_email_template_for_request(request)
+    request.data['email_template_set'] = email_template_set.id
 
 
 class AlreadyNotifiedException(APIException):

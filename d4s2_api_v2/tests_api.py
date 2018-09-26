@@ -3,7 +3,7 @@ from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase
 from d4s2_api_v1.tests_api import AuthenticatedResourceTestCase
-from d4s2_api_v2.api import EMAIL_TEMPLATES_NOT_SETUP_MSG
+from d4s2_api_v1.api import EMAIL_TEMPLATES_NOT_SETUP_MSG
 from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call

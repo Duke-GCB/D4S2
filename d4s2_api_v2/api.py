@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions, status, generics
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
@@ -10,10 +10,9 @@ from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
-from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, UserEmailTemplateSet
+from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
-    EMAIL_TEMPLATES_NOT_SETUP_MSG, get_email_template_for_request, populate_email_template_in_request, \
-    prevent_email_template_set_in_request
+    get_email_template_for_request, populate_email_template_in_request, prevent_email_template_set_in_request
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
 
