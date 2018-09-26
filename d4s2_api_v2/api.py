@@ -12,10 +12,10 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, UserEmailTemplateSet
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
-    EMAIL_TEMPLATES_NOT_SETUP_MSG
+    EMAIL_TEMPLATES_NOT_SETUP_MSG, get_email_template_for_request
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
-from d4s2_api.utils import MessageFactory
+
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -288,7 +288,7 @@ class DeliveryPreviewView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
-        delivery_preview.email_template_set = self.email_template_set_id_for_user(request.user)
+        delivery_preview.email_template_set = get_email_template_for_request(request)
 
         accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
         message_factory = DDSMessageFactory(delivery_preview, self.request.user)
@@ -298,6 +298,3 @@ class DeliveryPreviewView(generics.CreateAPIView):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    def email_template_set_id_for_user(self, user):
-        user_email_template_set = UserEmailTemplateSet.objects.get(user=user)
-        return user_email_template_set.email_template_set.id
