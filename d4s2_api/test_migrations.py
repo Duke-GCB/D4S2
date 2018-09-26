@@ -88,7 +88,7 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         )
 
     def test_delivery_ids_migrated(self):
-        Delivery = apps.get_model('d4s2_api', 'Delivery')
+        Delivery = self.apps.get_model('d4s2_api', 'Delivery')
 
         deliveries = Delivery.objects.all()
         self.assertEqual(len(deliveries), 1)
@@ -101,7 +101,7 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         self.assertEqual(set(['gh-111', 'ij-222', 'kl-333']), set([user.dds_id for user in share_users]))
 
     def test_delivery_ids_migrated(self):
-        Share = apps.get_model('d4s2_api', 'Share')
+        Share = self.apps.get_model('d4s2_api', 'Share')
 
         shares = Share.objects.all()
         self.assertEqual(len(shares), 1)
