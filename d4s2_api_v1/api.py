@@ -28,6 +28,12 @@ def prevent_email_template_set_in_request(request):
 
 
 def get_email_template_for_request(request):
+    """
+    Given a request lookup the email_template associated with the user of the request.
+    If the user has not email template setup raises exception.
+    :param request: Request
+    :return: EmailTemplateSet
+    """
     try:
         user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
         return user_email_template_set.email_template_set
@@ -41,10 +47,9 @@ def populate_email_template_in_request(request):
     store the value as 'email_template_set' in request.data. If the request already contains a
     'email_template_set' this will raise an exception.
     :param request: Request
-    :return: EmailTemplateSet
     """
-    prevent_email_template_set_in_request(request)
     try:
+        prevent_email_template_set_in_request(request)
         email_template_set = get_email_template_for_request(request)
         request.data['email_template_set'] = email_template_set.id
     except UserEmailTemplateSet.DoesNotExist:
@@ -66,18 +71,6 @@ class DeliveryViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('project_id', 'from_user_id', 'to_user_id')
 
-    @detail_route(methods=['POST'])
-    def send(self, request, pk=None):
-        delivery = self.get_object()
-        if not delivery.is_new() and not get_force_param(request):
-            raise AlreadyNotifiedException(detail='Delivery already in progress')
-        accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
-        message_factory = DDSMessageFactory(delivery, request.user)
-        message = message_factory.make_delivery_message(accept_url)
-        message.send()
-        delivery.mark_notified(message.email_text)
-        return self.retrieve(request)
-
     # Overriding create so that we attempt to create a transfer before saving to database
     def create(self, request, *args, **kwargs):
         if request.data.get('transfer_id'):
@@ -93,6 +86,18 @@ class DeliveryViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         prevent_email_template_set_in_request(request)
         return super(DeliveryViewSet, self).update(request, args, kwargs)
+
+    @detail_route(methods=['POST'])
+    def send(self, request, pk=None):
+        delivery = self.get_object()
+        if not delivery.is_new() and not get_force_param(request):
+            raise AlreadyNotifiedException(detail='Delivery already in progress')
+        accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
+        message_factory = DDSMessageFactory(delivery, request.user)
+        message = message_factory.make_delivery_message(accept_url)
+        message.send()
+        delivery.mark_notified(message.email_text)
+        return self.retrieve(request)
 
     @detail_route(methods=['POST'])
     def cancel(self, request, pk=None):

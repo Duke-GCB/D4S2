@@ -12,7 +12,8 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, UserEmailTemplateSet
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
-    EMAIL_TEMPLATES_NOT_SETUP_MSG, get_email_template_for_request
+    EMAIL_TEMPLATES_NOT_SETUP_MSG, get_email_template_for_request, populate_email_template_in_request, \
+    prevent_email_template_set_in_request
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
 
@@ -259,12 +260,12 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         return S3Delivery.objects.filter(Q(from_user__user=self.request.user) | Q(to_user__user=self.request.user))
 
     def create(self, request, *args, **kwargs):
-        try:
-            user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
-        except UserEmailTemplateSet.DoesNotExist:
-            raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
-        request.data['email_template_set'] = user_email_template_set.email_template_set.id
+        populate_email_template_in_request(request)
         return super(S3DeliveryViewSet, self).create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        prevent_email_template_set_in_request(request)
+        return super(S3DeliveryViewSet, self).update(request, args, kwargs)
 
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
@@ -281,14 +282,13 @@ class DeliveryPreviewView(generics.CreateAPIView):
     serializer_class = DDSDeliveryPreviewSerializer
 
     def create(self, request, *args, **kwargs):
-        if not UserEmailTemplateSet.user_is_setup(request.user):
-            raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
+        email_template_set = get_email_template_for_request(request)
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
-        delivery_preview.email_template_set = get_email_template_for_request(request)
+        delivery_preview.email_template_set = email_template_set
 
         accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
         message_factory = DDSMessageFactory(delivery_preview, self.request.user)
