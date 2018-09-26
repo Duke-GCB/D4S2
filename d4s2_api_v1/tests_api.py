@@ -266,25 +266,27 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share(self, mock_message_factory):
-        instance = mock_message_factory.with_templates_from_user.return_value.make_share_message.return_value
+        instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
         instance.send_template_name.return_value = 'deliver'
-        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
         self.assertFalse(d.is_notified())
         url = reverse('share-send', args=(d.pk,))
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d = Share.objects.get(pk=d.pk)
         self.assertTrue(d.is_notified())
-        mock_message_factory.with_templates_from_user.assert_called_with(d, self.user)
+        mock_message_factory.assert_called_with(d, self.user)
         self.assertTrue(instance.send.called)
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share_fails(self, mock_message_factory):
         instance = mock_message_factory.with_templates_from_user.return_value.make_share_message.return_value
         instance.send = Mock()
-        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
         self.assertFalse(d.is_notified())
         d.mark_notified('email text')
         url = reverse('share-send', args=(d.pk,))
@@ -295,16 +297,17 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_force_send_share(self, mock_message_factory):
-        instance = mock_message_factory.with_templates_from_user.return_value.make_share_message.return_value
+        instance = mock_message_factory.return_value.make_share_message.return_value
         instance.send = Mock()
         instance.email_text = 'email text'
-        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
         self.assertFalse(d.is_notified())
         d.mark_notified('email text')
         url = reverse('share-send', args=(d.pk,))
         response = self.client.post(url, data={'force': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_message_factory.with_templates_from_user.assert_called_with(d, self.user)
+        mock_message_factory.assert_called_with(d, self.user)
         self.assertTrue(instance.send.called)
 
     def test_filter_shares(self):

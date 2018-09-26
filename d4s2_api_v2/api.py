@@ -15,7 +15,7 @@ from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_acc
     EMAIL_TEMPLATES_NOT_SETUP_MSG
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
-
+from d4s2_api.utils import MessageFactory
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -285,13 +285,16 @@ class DeliveryPreviewView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
+        delivery_preview.email_template_set = self.email_template_set_id_for_user(request.user)
+
         accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
-        user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
-        message_factory = DDSMessageFactory(delivery_preview, self.request.user,
-                                            user_email_template_set.email_template_set)
+        message_factory = DDSMessageFactory(delivery_preview, self.request.user)
         message = message_factory.make_delivery_message(accept_url)
         delivery_preview.delivery_email_text = message.email_text
-
         serializer = self.get_serializer(instance=delivery_preview)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def email_template_set_id_for_user(self, user):
+        user_email_template_set = UserEmailTemplateSet.objects.get(user=user)
+        return user_email_template_set.email_template_set.id

@@ -264,20 +264,6 @@ class DeliveryDetails(object):
     def get_user_message(self):
         return self.delivery.user_message
 
-    # def get_share_template_text(self):
-    #     email_template = EmailTemplate.for_share(self.delivery, self.user)
-    #     if email_template:
-    #         return email_template.subject, email_template.body
-    #     else:
-    #         raise RuntimeError('No email template found')
-    #
-    # def get_action_template_text(self, action_name):
-    #     email_template = EmailTemplate.for_user(self.user, action_name)
-    #     if email_template:
-    #         return email_template.subject, email_template.body
-    #     else:
-    #         raise RuntimeError('No email template found')
-
     @classmethod
     def from_transfer_id(self, transfer_id, user):
         """
@@ -397,8 +383,9 @@ class DeliveryUtil(object):
                                      from_user_id=self.delivery.to_user_id,
                                      to_user_id=share_to_user.dds_id,
                                      role=self.share_role,
-                                     user_message=self.share_user_message)
-        message_factory = DDSMessageFactory(share, self.user, self.delivery.email_template_set)
+                                     user_message=self.share_user_message,
+                                     email_template_set=self.delivery.email_template_set)
+        message_factory = DDSMessageFactory(share, self.user)
         message = message_factory.make_share_message()
         message.send()
         share.mark_notified(message.email_text)
@@ -448,7 +435,7 @@ class DDSDeliveryType:
         delivery_util.share_with_additional_users()
         delivery_util.give_sender_permission()
         warning_message = delivery_util.get_warning_message()
-        message_factory = DDSMessageFactory(delivery, user, delivery.email_template_set)
+        message_factory = DDSMessageFactory(delivery, user)
         message = message_factory.make_processed_message('accepted',
                                                          MessageDirection.ToSender,
                                                          warning_message=warning_message)
@@ -458,11 +445,6 @@ class DDSDeliveryType:
 
 
 class DDSMessageFactory(MessageFactory):
-    def __init__(self, delivery, user, email_template_set):
+    def __init__(self, delivery, user):
         delivery_details = DeliveryDetails(delivery, user)
-        super(DDSMessageFactory, self).__init__(delivery_details, email_template_set)
-
-    @staticmethod
-    def with_templates_from_user(share, request_user):
-        email_template_set = UserEmailTemplateSet.objects.get(user=request_user).email_template_set
-        return DDSMessageFactory(share, request_user, email_template_set)
+        super(DDSMessageFactory, self).__init__(delivery_details, delivery.email_template_set)

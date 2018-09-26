@@ -42,7 +42,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
         if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
-        message_factory = DDSMessageFactory(delivery, request.user, delivery.email_template_set)
+        message_factory = DDSMessageFactory(delivery, request.user)
         message = message_factory.make_delivery_message(accept_url)
         message.send()
         delivery.mark_notified(message.email_text)
@@ -74,7 +74,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
              raise ValidationError('Only deliveries in new and notified state can be canceled.')
         dds_util = DDSUtil(request.user)
         dds_util.cancel_project_transfer(delivery.transfer_id)
-        message_factory = DDSMessageFactory(delivery, request.user, delivery.email_template_set)
+        message_factory = DDSMessageFactory(delivery, request.user)
         message = message_factory.make_canceled_message()
         message.send()
         delivery.mark_canceled()
@@ -91,12 +91,23 @@ class ShareViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('project_id', 'from_user_id', 'to_user_id')
 
+    def create(self, request, *args, **kwargs):
+        if request.data.get('email_template_set'):
+            raise ValidationError('Deliveries may not be created with a email_template_set, '
+                                  'these are determined by user email template setup')
+        try:
+            user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
+        except UserEmailTemplateSet.DoesNotExist:
+            raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
+        request.data['email_template_set'] = user_email_template_set.email_template_set.id
+        return super(ShareViewSet, self).create(request, args, kwargs)
+
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         share = self.get_object()
         if share.is_notified() and not get_force_param(request):
             raise AlreadyNotifiedException()
-        message_factory = DDSMessageFactory.with_templates_from_user(share, request.user)
+        message_factory = DDSMessageFactory(share, request.user)
         message = message_factory.make_share_message()
         message.send()
         share.mark_notified(message.email_text)

@@ -84,7 +84,7 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         Share.objects.create(
             project=DukeDSProject.objects.create(project_id='mn-123'),
             from_user=DukeDSUser.objects.create(dds_id='op-456'),
-            to_user=DukeDSUser.objects.create(dds_id='qr-789')
+            to_user=DukeDSUser.objects.create(dds_id='qr-789'),
         )
 
     def test_delivery_ids_migrated(self):

@@ -72,6 +72,10 @@ class ShareRole(object):
     ROLES = (DOWNLOAD, VIEW, EDIT, UPLOAD, ADMIN)
     DEFAULT = DOWNLOAD
 
+    @staticmethod
+    def email_template_name(role):
+        return 'share_{}'.format(role)
+
 
 class EmailTemplateSet(models.Model):
     """
@@ -200,9 +204,11 @@ class Share(models.Model):
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
+    email_template_set = models.ForeignKey(EmailTemplateSet, null=True,
+                                           help_text='Email template set to be used with this share')
 
-    def send_template_name(self):
-        return 'share_{}'.format(self.role)
+    def email_template_name(self):
+        return ShareRole.email_template_name(self.role)
 
     def is_notified(self):
         return self.state == State.NOTIFIED
@@ -234,10 +240,6 @@ class EmailTemplateType(models.Model):
     def __str__(self):
         return self.name
 
-    @classmethod
-    def from_share_role(cls, role):
-        return cls.objects.get(name='share_{}'.format(role))
-
 
 class EmailTemplate(models.Model):
     """
@@ -261,46 +263,6 @@ class EmailTemplate(models.Model):
         unique_together = (
             ('template_set', 'template_type'),
         )
-
-    @classmethod
-    def for_user(cls, user, template_type_name):
-        """
-        Lookup the EmailTemplate for the provided operation and template_type_name.
-        Returns per user EmailTemplateSet specified in the database or falls back to DEFAULT_EMAIL_TEMPLATE_SET_NAME.
-        :param user: User: django user to lookup a template for
-        :param template_type_name: str: name specifying what specific operation within a template set to use
-        :return: EmailTemplate
-        """
-        try:
-
-            user_email_template_set = EmailTemplate.get_user_email_template_set(user)
-            if user_email_template_set:
-                email_template_set = user_email_template_set.email_template_set
-            else:
-                email_template_set = EmailTemplateSet.objects.get(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
-            return EmailTemplate.objects.get(
-                template_set=email_template_set,
-                template_type__name=template_type_name)
-        except (EmailTemplate.DoesNotExist, EmailTemplateSet.DoesNotExist):
-            raise EmailTemplateException(
-                "Setup Error: Unable to find email template for type {}".format(template_type_name))
-
-    @staticmethod
-    def get_user_email_template_set(user):
-        """
-        Lookup the UserEmailTemplateSet based on from_user_id or None if not found.
-        :param user: django user
-        :return: UserEmailTemplateSet or None
-        """
-        try:
-            return UserEmailTemplateSet.objects.get(user=user)
-        except (UserEmailTemplateSet.DoesNotExist):
-            return None
-
-    @classmethod
-    def for_share(cls, share, user):
-        type_name = 'share_{}'.format(share.role)
-        return cls.for_user(user, type_name)
 
 
 class UserEmailTemplateSet(models.Model):

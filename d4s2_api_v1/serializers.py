@@ -74,9 +74,12 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
+    email_template_set = serializers.PrimaryKeyRelatedField(queryset=EmailTemplateSet.objects.all(), required=False)
+
     def validate(self, data):
         return validate_delivery_data(data)
 
     class Meta:
         model = Share
-        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',)
+        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',
+                  'email_template_set')

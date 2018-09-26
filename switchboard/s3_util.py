@@ -198,13 +198,6 @@ class S3DeliveryDetails(object):
             'service_name': base_context['service_name'],
         }
 
-    def get_action_template_text(self, action_name):
-        email_template = EmailTemplate.for_user(self.user, action_name)
-        if email_template:
-            return email_template.subject, email_template.body
-        else:
-            raise RuntimeError('No email template found')
-
 
 class S3Resource(object):
     def __init__(self, s3_user):
@@ -352,10 +345,10 @@ class S3DeliveryType:
 
 
 class S3MessageFactory(MessageFactory):
-    def __init__(self, s3_delivery, user, email_template_set):
+    def __init__(self, s3_delivery, user):
         super(S3MessageFactory, self).__init__(
             S3DeliveryDetails(s3_delivery, user),
-            email_template_set
+            s3_delivery.email_template_set
         )
 
 

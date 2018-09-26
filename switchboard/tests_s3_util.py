@@ -161,20 +161,6 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
         }
         self.assertEqual(context, expected_context)
 
-    @patch('switchboard.s3_util.EmailTemplate')
-    def test_get_action_template_text(self, mock_email_template):
-        mock_email_template.for_user.return_value = Mock(subject='email subject', body='email body')
-
-        s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
-        subject, body = s3_delivery_details.get_action_template_text(action_name='accept')
-
-        self.assertEqual(subject, 'email subject')
-        self.assertEqual(body, 'email body')
-
-        mock_email_template.for_user.return_value = None
-        with self.assertRaises(RuntimeError):
-            s3_delivery_details.get_action_template_text(action_name='accept')
-
 
 class S3ResourceTestCase(TestCase):
     def setUp(self):

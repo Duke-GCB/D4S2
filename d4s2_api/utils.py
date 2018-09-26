@@ -42,8 +42,9 @@ class MessageFactory(object):
         self.email_template_set = email_template_set
 
     def make_share_message(self):
-        share_template_name = self.delivery_details.delivery.send_template_name()
-        email_template = self.email_template_set.email_template_with_name(share_template_name)
+        # This method is only applicable if the internal delivery is a share type
+        share = self.delivery_details.delivery
+        email_template = self.email_template_set.email_template_with_name(share.email_template_name())
         return self._make_message(email_template)
 
     def make_delivery_message(self, accept_url):
