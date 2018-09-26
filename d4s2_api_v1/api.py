@@ -10,6 +10,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 EMAIL_TEMPLATES_NOT_SETUP_MSG = """Email templates need to be setup for your account.
 Please contact gcb-help@duke.edu."""
 
+EMAIL_TEMPLATES_NOT_SETUP_MSG = """Email templates need to be setup for your account.
+Please contact gcb-help@duke.edu."""
+
 
 def build_accept_url(request, transfer_id, delivery_type):
     query_dict = {
@@ -56,10 +59,9 @@ class DeliveryViewSet(viewsets.ModelViewSet):
         if request.data.get('email_template_set'):
             raise ValidationError('Deliveries may not be created with a email_template_set, '
                                   'these are determined by user email template setup')
-        try:
-            user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
-        except UserEmailTemplateSet.DoesNotExist:
+        if not UserEmailTemplateSet.user_is_setup(request.user):
             raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
+        user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
         dds_util = DDSUtil(request.user)
         project_transfer = dds_util.create_project_transfer(request.data['project_id'],
                                                             request.data['to_user_id'])
@@ -95,10 +97,9 @@ class ShareViewSet(viewsets.ModelViewSet):
         if request.data.get('email_template_set'):
             raise ValidationError('Deliveries may not be created with a email_template_set, '
                                   'these are determined by user email template setup')
-        try:
-            user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
-        except UserEmailTemplateSet.DoesNotExist:
+        if not UserEmailTemplateSet.user_is_setup(request.user):
             raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
+        user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
         request.data['email_template_set'] = user_email_template_set.email_template_set.id
         return super(ShareViewSet, self).create(request, args, kwargs)
 

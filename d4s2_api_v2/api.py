@@ -281,6 +281,9 @@ class DeliveryPreviewView(generics.CreateAPIView):
     serializer_class = DDSDeliveryPreviewSerializer
 
     def create(self, request, *args, **kwargs):
+        if not UserEmailTemplateSet.user_is_setup(request.user):
+            raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

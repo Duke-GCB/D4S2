@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from switchboard.dds_util import DDSUtil
-from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet
+from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet, UserEmailTemplateSet
 from d4s2_api_v2.models import DDSDeliveryPreview
+
 
 class DDSUserSerializer(serializers.Serializer):
     """
@@ -56,10 +57,15 @@ class DDSProjectPermissionSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    setup_for_delivery = serializers.SerializerMethodField()
+
+    def get_setup_for_delivery(self, user):
+        return UserEmailTemplateSet.user_is_setup(user)
+
     class Meta:
         model = User
         resource_name = 'users'
-        fields = ('id', 'username', 'first_name', 'last_name', 'email')
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'setup_for_delivery')
 
 
 class S3EndpointSerializer(serializers.ModelSerializer):
