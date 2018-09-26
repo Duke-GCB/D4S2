@@ -48,7 +48,7 @@ class MessageFactoryTestCase(TestCase):
         self.delivery_details = MagicMock()
         self.email_template_set = Mock()
         self.delivery_details.email_template_set = self.email_template_set
-        self.email_template_set.email_template_with_name.return_value = Mock(subject='subject', body='body')
+        self.email_template_set.template_for_name.return_value = Mock(subject='subject', body='body')
         self.delivery_details.get_from_user.return_value = Mock(email='bob@bob.com')
         self.delivery_details.get_to_user.return_value = Mock(email='joe@joe.com')
         self.delivery_details.get_email_context.return_value = {}
@@ -58,7 +58,7 @@ class MessageFactoryTestCase(TestCase):
         factory = MessageFactory(self.delivery_details)
         factory.make_share_message()
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
-        self.email_template_set.email_template_with_name.assert_called_with(
+        self.email_template_set.template_for_name.assert_called_with(
             self.delivery_details.delivery.email_template_name.return_value
         )
 
@@ -67,7 +67,7 @@ class MessageFactoryTestCase(TestCase):
         factory = MessageFactory(self.delivery_details)
         factory.make_delivery_message(accept_url='accept url')
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
-        self.email_template_set.email_template_with_name.assert_called_with('delivery')
+        self.email_template_set.template_for_name.assert_called_with('delivery')
 
     @patch('d4s2_api.utils.Message')
     def test_make_processed_message_to_sender(self, mock_message):
@@ -75,7 +75,7 @@ class MessageFactoryTestCase(TestCase):
         factory.make_processed_message('accepted', MessageDirection.ToSender, warning_message='warning details')
         mock_message.assert_called_with('joe@joe.com', 'bob@bob.com', 'subject', 'body', {})
         self.delivery_details.get_email_context.assert_called_with(None, 'accepted', '', 'warning details')
-        self.email_template_set.email_template_with_name.assert_called_with('accepted')
+        self.email_template_set.template_for_name.assert_called_with('accepted')
 
     @patch('d4s2_api.utils.Message')
     def test_make_processed_message_to_recipient(self, mock_message):
@@ -84,11 +84,11 @@ class MessageFactoryTestCase(TestCase):
                                        warning_message='warning details')
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
         self.delivery_details.get_email_context.assert_called_with(None, 'accepted_recipient', '', 'warning details')
-        self.email_template_set.email_template_with_name.assert_called_with('accepted_recipient')
+        self.email_template_set.template_for_name.assert_called_with('accepted_recipient')
 
     @patch('d4s2_api.utils.Message')
     def test_make_canceled_message(self, mock_message):
         factory = MessageFactory(self.delivery_details)
         factory.make_canceled_message()
         mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
-        self.email_template_set.email_template_with_name.assert_called_with('delivery_canceled')
+        self.email_template_set.template_for_name.assert_called_with('delivery_canceled')

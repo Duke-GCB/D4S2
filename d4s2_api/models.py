@@ -10,6 +10,9 @@ from simple_history.models import HistoricalRecords
 DEFAULT_EMAIL_TEMPLATE_SET_NAME = 'default'
 
 
+# TODO make email_template_set required once production databases have this field filled in for DeliveryBase and Share
+
+
 class DDSProjectTransferDetails(object):
     class Fields(object):
         """
@@ -86,7 +89,7 @@ class EmailTemplateSet(models.Model):
     def __str__(self):
         return self.name
 
-    def email_template_with_name(self, name):
+    def template_for_name(self, name):
         try:
             return EmailTemplate.objects.get(template_set=self, template_type__name=name)
         except EmailTemplate.DoesNotExist:
@@ -103,7 +106,6 @@ class DeliveryBase(models.Model):
     recipient_completion_email_text = models.TextField(blank=True)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
-    # TODO make email_template_set required once production databases have this field filled in
     email_template_set = models.ForeignKey(EmailTemplateSet, null=True,
                                            help_text='Email template set to be used with this delivery')
 

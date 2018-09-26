@@ -44,22 +44,22 @@ class MessageFactory(object):
     def make_share_message(self):
         # This method is only applicable if the internal delivery is a share type
         share = self.delivery_details.delivery
-        email_template = self.email_template_set.email_template_with_name(share.email_template_name())
+        email_template = self.email_template_set.template_for_name(share.email_template_name())
         return self._make_message(email_template)
 
     def make_delivery_message(self, accept_url):
-        email_template = self.email_template_set.email_template_with_name('delivery')
+        email_template = self.email_template_set.template_for_name('delivery')
         return self._make_message(email_template, accept_url=accept_url)
 
     def make_processed_message(self, process_type, direction, warning_message=''):
-        email_template = self.email_template_set.email_template_with_name(process_type)
+        email_template = self.email_template_set.template_for_name(process_type)
         return self._make_message(email_template, reason='',
                                   process_type=process_type,
                                   direction=direction,
                                   warning_message=warning_message)
 
     def make_canceled_message(self):
-        email_template = self.email_template_set.email_template_with_name('delivery_canceled')
+        email_template = self.email_template_set.template_for_name('delivery_canceled')
         return self._make_message(email_template)
 
     def _make_message(self, email_template, accept_url=None, reason=None, process_type=None,
