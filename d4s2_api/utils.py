@@ -37,9 +37,9 @@ class Message(object):
 
 
 class MessageFactory(object):
-    def __init__(self, delivery_details, email_template_set):
+    def __init__(self, delivery_details):
         self.delivery_details = delivery_details
-        self.email_template_set = email_template_set
+        self.email_template_set = delivery_details.email_template_set
 
     def make_share_message(self):
         # This method is only applicable if the internal delivery is a share type

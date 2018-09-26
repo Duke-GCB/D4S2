@@ -229,6 +229,7 @@ class DeliveryDetails(object):
     def __init__(self, delivery_or_share, user):
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
+        self.email_template_set = delivery_or_share.email_template_set
         self.user = user
 
     def get_from_user(self):
@@ -435,7 +436,7 @@ class DDSDeliveryType:
         delivery_util.share_with_additional_users()
         delivery_util.give_sender_permission()
         warning_message = delivery_util.get_warning_message()
-        message_factory = DDSMessageFactory(delivery, user)
+        message_factory = DDSMessageFactory(delivery, user, delivery.email_template_set)
         message = message_factory.make_processed_message('accepted',
                                                          MessageDirection.ToSender,
                                                          warning_message=warning_message)
@@ -446,5 +447,6 @@ class DDSDeliveryType:
 
 class DDSMessageFactory(MessageFactory):
     def __init__(self, delivery, user):
-        delivery_details = DeliveryDetails(delivery, user)
-        super(DDSMessageFactory, self).__init__(delivery_details, delivery.email_template_set)
+        super(DDSMessageFactory, self).__init__(
+            DeliveryDetails(delivery, user)
+        )
