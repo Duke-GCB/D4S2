@@ -436,7 +436,7 @@ class DDSDeliveryType:
         delivery_util.share_with_additional_users()
         delivery_util.give_sender_permission()
         warning_message = delivery_util.get_warning_message()
-        message_factory = DDSMessageFactory(delivery, user, delivery.email_template_set)
+        message_factory = DDSMessageFactory(delivery, user)
         message = message_factory.make_processed_message('accepted',
                                                          MessageDirection.ToSender,
                                                          warning_message=warning_message)
