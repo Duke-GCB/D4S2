@@ -11,7 +11,9 @@ DEFAULT_EMAIL_TEMPLATE_SET_NAME = 'default'
 
 
 # TODO make email_template_set required once production databases have this field filled in for DeliveryBase and Share
-
+# jtt31@duke.edu
+# yoshi004@duke.edu
+# dfm4@duke.edu
 
 class DDSProjectTransferDetails(object):
     class Fields(object):
@@ -106,7 +108,7 @@ class DeliveryBase(models.Model):
     recipient_completion_email_text = models.TextField(blank=True)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
-    email_template_set = models.ForeignKey(EmailTemplateSet, null=True,
+    email_template_set = models.ForeignKey(EmailTemplateSet,
                                            help_text='Email template set to be used with this delivery')
 
     def is_new(self):
@@ -174,7 +176,6 @@ class DDSDelivery(DeliveryBase):
         )
 
 
-
 class DDSDeliveryError(models.Model):
     message = models.TextField()
     delivery = models.ForeignKey(DDSDelivery, on_delete=models.CASCADE, related_name='errors')
@@ -206,7 +207,7 @@ class Share(models.Model):
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
-    email_template_set = models.ForeignKey(EmailTemplateSet, null=True,
+    email_template_set = models.ForeignKey(EmailTemplateSet,
                                            help_text='Email template set to be used with this share')
 
     def email_template_name(self):
