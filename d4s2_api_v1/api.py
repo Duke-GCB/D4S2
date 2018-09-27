@@ -8,7 +8,8 @@ from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 EMAIL_TEMPLATES_NOT_SETUP_MSG = """Email templates need to be setup for your account.
 Please contact gcb-help@duke.edu."""
-
+CANNOT_PASS_EMAIL_TEMPLATE_SET = """You cannot create this item by passing email_template_set, 
+these are determined by user email template setup."""
 
 def build_accept_url(request, transfer_id, delivery_type):
     query_dict = {
@@ -22,8 +23,7 @@ def build_accept_url(request, transfer_id, delivery_type):
 
 def prevent_email_template_set_in_request(request):
     if request.data.get('email_template_set'):
-        raise ValidationError('You cannot create this item by passing email_template_set, '
-                              'these are determined by user email template setup.')
+        raise ValidationError(CANNOT_PASS_EMAIL_TEMPLATE_SET)
 
 
 def get_email_template_for_request(request):
