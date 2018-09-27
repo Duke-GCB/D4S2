@@ -205,7 +205,9 @@ class TestDeliveryDetails(TestCase):
     @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('switchboard.dds_util.DDSProject')
     def test_get_project_from_share(self, mock_dds_project, mock_dds_project_transfer):
-        share = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
+        share = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                     email_template_set=email_template_set)
         user = Mock()
         mock_project = Mock()
         mock_dds_project.fetch_one.return_value = mock_project

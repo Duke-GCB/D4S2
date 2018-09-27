@@ -115,6 +115,8 @@ class DukeDSIDMigrationTestCase(TestMigrations):
         # TestMigrations.tearDown() will not fail in
         Delivery = self.apps.get_model('d4s2_api', 'Delivery')
         Delivery.objects.all().delete()
+        Share = self.apps.get_model('d4s2_api', 'Share')
+        Share.objects.all().delete()
         super(DukeDSIDMigrationTestCase, self).tearDown()
 
 

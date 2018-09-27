@@ -254,29 +254,34 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
     def test_list_shares(self):
-        Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
-        Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                             email_template_set=self.email_template_set)
+        Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                             email_template_set=self.email_template_set)
         url = reverse('share-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
     def test_get_share(self):
-        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
         url = reverse('share-detail', args=(d.pk,))
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['project_id'], 'project1')
 
     def test_delete_share(self):
-        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
         url = reverse('share-detail', args=(d.pk,))
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Share.objects.count(), 0)
 
     def test_update_share(self):
-        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
         updated = {'project_id': 'project3', 'from_user_id': 'fromuser1', 'to_user_id': 'touser1'}
         url = reverse('share-detail', args=(d.pk,))
         response = self.client.put(url, data=updated, format='json')
@@ -331,7 +336,8 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(instance.send.called)
 
     def test_filter_shares(self):
-        Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2')
+        Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                             email_template_set=self.email_template_set)
         url = reverse('share-list')
         response=self.client.get(url, {'to_user_id': 'user2'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)

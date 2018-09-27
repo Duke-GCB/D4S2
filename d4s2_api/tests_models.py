@@ -178,7 +178,9 @@ class ShareTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(ShareTestCase, self).setUp()
-        Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                             email_template_set=self.email_template_set)
 
     def test_initial_state(self):
         share = Share.objects.first()
@@ -187,15 +189,19 @@ class ShareTestCase(TransferBaseTestCase):
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+            Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
 
     def test_allows_multiple_shares(self):
-        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user3')
+        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user3',
+                                 email_template_set=self.email_template_set)
         self.assertIsNotNone(d)
 
     def test_allows_multiple_shares_different_roles(self):
-        v = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.VIEW)
-        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.EDIT)
+        v = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.VIEW,
+                                 email_template_set=self.email_template_set)
+        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.EDIT,
+                                 email_template_set=self.email_template_set)
         self.assertIsNotNone(v)
         self.assertIsNotNone(d)
         self.assertNotEqual(v, d)
@@ -286,6 +292,7 @@ class EmailTemplateTestCase(TestCase):
         self.assertEqual(template1.body, template2.body)
         self.assertEqual(template1.template_type, template2.template_type)
         self.assertNotEqual(template1.template_set, template2.template_set)
+
 
 
 class S3EndpointTestCase(TestCase):
