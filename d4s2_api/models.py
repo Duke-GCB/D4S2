@@ -10,9 +10,6 @@ from simple_history.models import HistoricalRecords
 DEFAULT_EMAIL_TEMPLATE_SET_NAME = 'default'
 
 
-# TODO make email_template_set required once production databases have this field filled in for DeliveryBase and Share
-
-
 class DDSProjectTransferDetails(object):
     class Fields(object):
         """

@@ -125,29 +125,6 @@ class DDSUtilTestCase(TestCase):
 
 
 class TestDeliveryDetails(TestCase):
-
-    # @patch('switchboard.dds_util.EmailTemplate')
-    # def test_gets_share_template(self, MockEmailTemplate):
-    #     MockEmailTemplate.for_share = Mock(return_value=MagicMock(subject='share subject', body='share body'))
-    #     delivery = Mock()
-    #     user = Mock()
-    #     details = DeliveryDetails(delivery, user)
-    #     subject, body = details.get_share_template_text()
-    #     self.assertTrue(MockEmailTemplate.for_share.called_with(delivery))
-    #     self.assertEqual(subject, 'share subject')
-    #     self.assertEqual(body, 'share body')
-    #
-    # @patch('switchboard.dds_util.EmailTemplate')
-    # def test_gets_action_template(self, MockEmailTemplate):
-    #     MockEmailTemplate.for_user = Mock(return_value=MagicMock(subject='action subject', body='action body'))
-    #     delivery = Mock()
-    #     user = Mock()
-    #     details = DeliveryDetails(delivery, user)
-    #     subject, body = details.get_action_template_text('accepted')
-    #     self.assertEqual(subject, 'action subject')
-    #     self.assertEqual(body, 'action body')
-    #     self.assertTrue(MockEmailTemplate.for_operation.called_with(delivery, 'accepted'))
-
     @patch('switchboard.dds_util.DDSUtil')
     @patch('switchboard.dds_util.DDSUser')
     @patch('switchboard.dds_util.DDSProjectTransfer')

@@ -215,6 +215,11 @@ class ShareTestCase(TransferBaseTestCase):
         share = Share.objects.first()
         self.assertEqual(share.user_message, user_message)
 
+    def test_email_template_name(self):
+        share = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                     role=ShareRole.VIEW, email_template_set=self.email_template_set)
+        self.assertEqual(share.email_template_name(), 'share_project_viewer')
+
 
 class EmailTemplateTypeTestCase(TestCase):
 
@@ -293,6 +298,21 @@ class EmailTemplateTestCase(TestCase):
         self.assertEqual(template1.template_type, template2.template_type)
         self.assertNotEqual(template1.template_set, template2.template_set)
 
+    def test_template_for_name(self):
+        download_template = EmailTemplate.objects.create(template_set=self.template_set,
+                                                 owner=self.user,
+                                                 template_type=self.download_type,
+                                                 subject='Subject',
+                                                 body='email body 1')
+        view_template = EmailTemplate.objects.create(template_set=self.template_set,
+                                                 owner=self.user,
+                                                 template_type=self.view_type,
+                                                 subject='Subject',
+                                                 body='email body 1')
+        template_name = ShareRole.email_template_name(ShareRole.DOWNLOAD)
+        self.assertEqual(self.template_set.template_for_name(template_name), download_template)
+        template_name = ShareRole.email_template_name(ShareRole.VIEW)
+        self.assertEqual(self.template_set.template_for_name(template_name), view_template)
 
 
 class S3EndpointTestCase(TestCase):
@@ -531,3 +551,9 @@ class S3ObjectManifestTestCase(S3DeliveryBaseTestCase):
         manifests = S3ObjectManifest.objects.all()
         self.assertEqual(len(manifests), 1)
         self.assertEqual(manifests[0].content, [{'state': 'bad', 'value': 0}])
+
+
+class ShareRoleTestCase(TestCase):
+    def test_email_template_name(self):
+        self.assertEqual(ShareRole.email_template_name('somerole'), 'share_somerole')
+        self.assertEqual(ShareRole.email_template_name('file_downloader'), 'share_file_downloader')
