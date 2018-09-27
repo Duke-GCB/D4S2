@@ -11,6 +11,7 @@ Please contact gcb-help@duke.edu."""
 CANNOT_PASS_EMAIL_TEMPLATE_SET = """You cannot create this item by passing email_template_set, 
 these are determined by user email template setup."""
 
+
 def build_accept_url(request, transfer_id, delivery_type):
     query_dict = {
         'transfer_id': transfer_id,
