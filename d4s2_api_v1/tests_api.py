@@ -51,10 +51,11 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(DDSDelivery.objects.count(), 1)
-        self.assertEqual(DDSDelivery.objects.get().from_user_id, 'user1')
+        dds_delivery = DDSDelivery.objects.get()
+        self.assertEqual(dds_delivery.from_user_id, 'user1')
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
-        self.assertEqual(DDSDelivery.objects.get().email_template_set, self.email_template_set)
+        self.assertEqual(dds_delivery.email_template_set, self.email_template_set)
 
     @patch('d4s2_api_v1.api.DDSUtil')
     def test_create_delivery_fails_when_user_not_setup(self, mock_ddsutil):
