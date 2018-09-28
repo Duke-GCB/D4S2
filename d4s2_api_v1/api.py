@@ -10,6 +10,8 @@ EMAIL_TEMPLATES_NOT_SETUP_MSG = """Email templates need to be setup for your acc
 Please contact gcb-help@duke.edu."""
 CANNOT_PASS_EMAIL_TEMPLATE_SET = """You cannot create this item by passing email_template_set, 
 these are determined by user email template setup."""
+ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG = """Email templates need to be setup for this item.
+Please contact gcb-help@duke.edu."""
 
 
 def build_accept_url(request, transfer_id, delivery_type):
@@ -53,6 +55,11 @@ def populate_email_template_in_request(request):
     request.data['email_template_set'] = email_template_set.id
 
 
+def prevent_null_email_template_set(obj):
+    if not obj.email_template_set:
+        raise ValidationError(ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG)
+
+
 class AlreadyNotifiedException(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'Already notified'
@@ -87,6 +94,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         delivery = self.get_object()
+        prevent_null_email_template_set(delivery)
         if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
@@ -99,6 +107,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def cancel(self, request, pk=None):
         delivery = self.get_object()
+        prevent_null_email_template_set(delivery)
         if delivery.state != State.NEW and delivery.state != State.NOTIFIED:
              raise ValidationError('Only deliveries in new and notified state can be canceled.')
         dds_util = DDSUtil(request.user)
@@ -131,6 +140,7 @@ class ShareViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         share = self.get_object()
+        prevent_null_email_template_set(share)
         if share.is_notified() and not get_force_param(request):
             raise AlreadyNotifiedException()
         message_factory = DDSMessageFactory(share, request.user)

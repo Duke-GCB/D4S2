@@ -12,7 +12,8 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
-    get_email_template_for_request, populate_email_template_in_request, prevent_email_template_set_in_request
+    get_email_template_for_request, populate_email_template_in_request, prevent_email_template_set_in_request, \
+    prevent_null_email_template_set
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
 
@@ -269,6 +270,7 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         s3_delivery = self.get_object()
+        prevent_null_email_template_set(s3_delivery)
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
         accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')

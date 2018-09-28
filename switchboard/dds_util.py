@@ -232,6 +232,7 @@ class DeliveryDetails(object):
         self.email_template_set = delivery_or_share.email_template_set
         self.user = user
 
+
     def get_from_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
 

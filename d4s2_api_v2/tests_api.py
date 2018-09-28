@@ -3,7 +3,8 @@ from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase
 from d4s2_api_v1.tests_api import AuthenticatedResourceTestCase
-from d4s2_api_v1.api import EMAIL_TEMPLATES_NOT_SETUP_MSG, CANNOT_PASS_EMAIL_TEMPLATE_SET
+from d4s2_api_v1.api import EMAIL_TEMPLATES_NOT_SETUP_MSG, CANNOT_PASS_EMAIL_TEMPLATE_SET, \
+    ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG
 from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call
@@ -1055,6 +1056,14 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_send_delivery_operation.run.assert_called_with(delivery, 'https://someurl.com')
 
+    def test_send_delivery_with_null_template(self):
+        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                             email_template_set=None)
+        self.login_user1()
+        url = reverse('v2-s3delivery-list') + str(delivery.id) + '/send/'
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
 class DeliveryPreviewViewTestCase(APITestCase):
 

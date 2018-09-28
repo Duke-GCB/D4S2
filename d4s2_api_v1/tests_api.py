@@ -178,6 +178,19 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(instance.send.called)
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
+    def test_send_delivery_with_null_template(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
+        instance.send = Mock()
+        instance.email_text = 'email text'
+        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                       transfer_id='abcd', email_template_set=None)
+        self.assertTrue(h.is_new())
+        url = reverse('ddsdelivery-send', args=(h.pk,))
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG])
+
+    @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_delivery_fails(self, mock_message_factory):
         instance = mock_message_factory.return_value.make_delivery_message.return_value
         instance.send = Mock()
@@ -245,6 +258,16 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         make_canceled_message_func = mock_message_factory.return_value.make_canceled_message
         self.assertTrue(make_canceled_message_func.called)
         self.assertTrue(make_canceled_message_func.return_value.send.called)
+
+    @patch('d4s2_api_v1.api.DDSUtil')
+    def test_cancel_with_null_template(self, mock_ddsutil):
+        d = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                       email_template_set=None)
+        d.mark_accepted('', '')
+        url = reverse('ddsdelivery-cancel', args=(d.pk,))
+        response = self.client.post(url, data={'force': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
 
 class ShareViewTestCase(AuthenticatedResourceTestCase):
@@ -350,6 +373,15 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertTrue(d.is_notified())
         mock_message_factory.assert_called_with(d, self.user)
         self.assertTrue(instance.send.called)
+
+    def test_send_share_with_null_template(self):
+        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=None)
+        self.assertFalse(d.is_notified())
+        url = reverse('share-send', args=(d.pk,))
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share_fails(self, mock_message_factory):
