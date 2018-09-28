@@ -968,6 +968,7 @@ class S3DeliveryViewSetTestCase(APITestCase):
         s3_deliveries = S3Delivery.objects.all()
         self.assertEqual(len(s3_deliveries), 1)
         self.assertEqual(s3_deliveries[0].bucket, self.mouse1_bucket)
+        self.assertEqual(s3_deliveries[0].email_template_set, self.user1_email_template_set)
 
         data = {
             'bucket': self.mouse1_bucket.id,
