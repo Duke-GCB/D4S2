@@ -992,19 +992,6 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
-    def test_create_delivery_fails_when_user_passes_email_template_set(self):
-        self.login_user1()
-        url = reverse('v2-s3delivery-list')
-        data = {
-            'bucket': self.mouse1_bucket.id,
-            'from_user': self.s3_user1.id,
-            'to_user': self.s3_user2.id,
-            'email_template_set': 1
-        }
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, [CANNOT_PASS_EMAIL_TEMPLATE_SET])
-
     def test_create_delivery_with_mismatched_endpoints(self):
         self.login_user1()
         url = reverse('v2-s3delivery-list')
@@ -1031,17 +1018,6 @@ class S3DeliveryViewSetTestCase(APITestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_update_delivery_fails_when_users_pass_email_template_set(self):
-        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
-                                             email_template_set=self.user1_email_template_set)
-        self.login_user1()
-        url = reverse('v2-s3delivery-list') + str(delivery.id) + '/'
-        response = self.client.put(url, {
-            'email_template_set': 1
-        }, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, [CANNOT_PASS_EMAIL_TEMPLATE_SET])
 
     @patch('d4s2_api_v2.api.build_accept_url')
     @patch('d4s2_api_v2.api.SendDeliveryOperation')

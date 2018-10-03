@@ -12,8 +12,7 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
-    get_email_template_for_request, populate_email_template_in_request, prevent_email_template_set_in_request, \
-    prevent_null_email_template_set
+    ModelWithEmailTemplateSetMixin
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
 
@@ -249,7 +248,7 @@ class S3BucketViewSet(viewsets.ModelViewSet):
             raise WrappedS3Exception(e)
 
 
-class S3DeliveryViewSet(viewsets.ModelViewSet):
+class S3DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = S3DeliverySerializer
 
@@ -259,18 +258,10 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         """
         return S3Delivery.objects.filter(Q(from_user__user=self.request.user) | Q(to_user__user=self.request.user))
 
-    def create(self, request, *args, **kwargs):
-        populate_email_template_in_request(request)
-        return super(S3DeliveryViewSet, self).create(request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        prevent_email_template_set_in_request(request)
-        return super(S3DeliveryViewSet, self).update(request, args, kwargs)
-
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         s3_delivery = self.get_object()
-        prevent_null_email_template_set(s3_delivery)
+        self.prevent_null_email_template_set(s3_delivery)
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
         accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')
@@ -283,7 +274,7 @@ class DeliveryPreviewView(generics.CreateAPIView):
     serializer_class = DDSDeliveryPreviewSerializer
 
     def create(self, request, *args, **kwargs):
-        email_template_set = get_email_template_for_request(request)
+        email_template_set = ModelWithEmailTemplateSetMixin.get_email_template_for_request(request)
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

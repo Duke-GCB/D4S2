@@ -68,16 +68,6 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
     @patch('d4s2_api_v1.api.DDSUtil')
-    def test_create_delivery_fails_when_user_passes_email_template_set(self, mock_ddsutil):
-        setup_mock_ddsutil(mock_ddsutil)
-        url = reverse('ddsdelivery-list')
-        data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2',
-                'email_template_set': self.email_template_set.id}
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, [CANNOT_PASS_EMAIL_TEMPLATE_SET])
-
-    @patch('d4s2_api_v1.api.DDSUtil')
     def test_create_delivery_with_shared_ids(self, mock_ddsutil):
         setup_mock_ddsutil(mock_ddsutil)
         url = reverse('ddsdelivery-list')
@@ -127,18 +117,6 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         h = DDSDelivery.objects.get(pk=h.pk)
         self.assertEqual(h.project_id, 'project3')
-
-    @patch('d4s2_api_v1.api.DDSUtil')
-    def test_update_delivery_fails_when_user_passes_email_template_set(self, mock_ddsutil):
-        setup_mock_ddsutil(mock_ddsutil)
-        h = DDSDelivery.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                       transfer_id=self.transfer_id1, email_template_set=self.email_template_set)
-        updated = {'from_user_id': self.dds_id1, 'to_user_id': self.dds_id2, 'project_id': 'project3',
-                   'transfer_id': h.transfer_id, 'email_template_set': self.email_template_set.id}
-        url = reverse('ddsdelivery-detail', args=(h.pk,))
-        response = self.client.put(url, data=updated, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, [CANNOT_PASS_EMAIL_TEMPLATE_SET])
 
     def test_create_delivery_fails_with_transfer_id(self):
         url = reverse('ddsdelivery-list')
@@ -293,15 +271,6 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(Share.objects.get().role, 'share_role')
         self.assertEqual(Share.objects.get().email_template_set, self.email_template_set)
 
-    @patch('d4s2_api_v1.api.DDSUtil')
-    def test_create_share_fails_when_user_passes_email_template_set(self, mock_ddsutil):
-        url = reverse('share-list')
-        data = {'project_id':'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2', 'role': 'share_role',
-                'email_template_set': self.email_template_set.id}
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, [CANNOT_PASS_EMAIL_TEMPLATE_SET])
-
     def test_create_share_fails_when_user_not_setup(self):
         self.user_email_template_set.delete()
         url = reverse('share-list')
@@ -345,17 +314,6 @@ class ShareViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         d = Share.objects.get(pk=d.pk)
         self.assertEqual(d.project_id, 'project3')
-
-    @patch('d4s2_api_v1.api.DDSUtil')
-    def test_update_share_fails_when_user_passes_email_template_set(self, mock_ddsutil):
-        d = Share.objects.create(project_id='project2', from_user_id='user1', to_user_id='user2',
-                                 email_template_set=self.email_template_set)
-        updated = {'project_id': 'project3', 'from_user_id': 'fromuser1', 'to_user_id': 'touser1',
-                   'email_template_set': self.email_template_set.id}
-        url = reverse('share-detail', args=(d.pk,))
-        response = self.client.put(url, data=updated, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, [CANNOT_PASS_EMAIL_TEMPLATE_SET])
 
     @patch('d4s2_api_v1.api.DDSMessageFactory')
     def test_send_share(self, mock_message_factory):
@@ -444,36 +402,46 @@ class BuildAcceptUrlTestCase(APITestCase):
         self.assertEqual(accept_url, request.build_absolute_uri.return_value)
 
 
-class EmailTemplateFunctionsTestCase(AuthenticatedResourceTestCase):
+class ModelWithEmailTemplateSetMixinTestCase(AuthenticatedResourceTestCase):
     def setUp(self):
-        super(EmailTemplateFunctionsTestCase, self).setUp()
+        super(ModelWithEmailTemplateSetMixinTestCase, self).setUp()
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        self.user_email_template_set = UserEmailTemplateSet.objects.create(
+            user=self.user, email_template_set=self.email_template_set)
 
-    def test_prevent_email_template_set_in_request(self):
-        request_data = {}
-        prevent_email_template_set_in_request(Mock(data=request_data))
+    @patch('d4s2_api_v1.api.Response')
+    def test_create(self, mock_response):
+        mock_serializer = Mock()
+        mock_request = Mock(user=self.user, data={})
+        mixin = ModelWithEmailTemplateSetMixin()
+        mixin.get_serializer = Mock()
+        mixin.get_serializer.return_value = mock_serializer
+        mixin.get_success_headers = Mock()
+        response = mixin.create(request=mock_request)
 
-        request_data = {
-            "email_template_set": 1
-        }
-        with self.assertRaises(rest_framework.exceptions.ValidationError):
-            prevent_email_template_set_in_request(Mock(data=request_data))
+        self.assertEqual(response, mock_response.return_value)
+        mixin.get_serializer.assert_called_with(data=mock_request.data)
+        mock_serializer.is_valid.assert_called_with(raise_exception=True)
+        mock_serializer.save.assert_called_with(email_template_set=self.email_template_set)
+        mock_response.assert_called_with(
+            mock_serializer.data, status=status.HTTP_201_CREATED, headers=mixin.get_success_headers.return_value
+        )
 
     def test_get_email_template_for_request(self):
-        with self.assertRaises(rest_framework.exceptions.ValidationError):
-            get_email_template_for_request(Mock(user=self.user))
+        email_template_set = ModelWithEmailTemplateSetMixin.get_email_template_for_request(
+            request=Mock(user=self.user)
+        )
+        self.assertEqual(email_template_set, self.email_template_set)
 
-        email_template_set = EmailTemplateSet.objects.create(name='someset')
-        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=email_template_set)
+        self.user_email_template_set.delete()
+        with self.assertRaises(rest_framework.exceptions.ValidationError) as raised_exception:
+            ModelWithEmailTemplateSetMixin.get_email_template_for_request(
+                request=Mock(user=self.user)
+            )
+        self.assertEqual(raised_exception.exception.detail[0], EMAIL_TEMPLATES_NOT_SETUP_MSG)
 
-        self.assertEqual(get_email_template_for_request(Mock(user=self.user)),
-                         email_template_set)
-
-    def test_populate_email_template_in_request(self):
-        request = Mock(data={}, user=self.user)
-        with self.assertRaises(rest_framework.exceptions.ValidationError):
-            populate_email_template_in_request(request)
-
-        email_template_set = EmailTemplateSet.objects.create(name='someset')
-        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=email_template_set)
-        populate_email_template_in_request(request)
-        self.assertEqual(request.data['email_template_set'], email_template_set.id)
+    def test_prevent_null_email_template_set(self):
+        ModelWithEmailTemplateSetMixin.prevent_null_email_template_set(Mock(email_template_set='something'))
+        with self.assertRaises(rest_framework.exceptions.ValidationError) as raised_exception:
+            ModelWithEmailTemplateSetMixin.prevent_null_email_template_set(Mock(email_template_set=None))
+        self.assertEqual(raised_exception.exception.detail[0], ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG)

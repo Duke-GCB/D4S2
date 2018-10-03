@@ -70,7 +70,7 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
         resource_name = 'deliveries'
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',
                   'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set')
-        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text',)
+        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set')
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
@@ -83,3 +83,4 @@ class ShareSerializer(serializers.HyperlinkedModelSerializer):
         model = Share
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',
                   'email_template_set')
+        read_only_fields = ('email_template_set', )
