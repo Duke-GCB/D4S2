@@ -5,7 +5,8 @@ from django.test.testcases import TestCase
 from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, NOT_RECIPIENT_MSG
 from switchboard.dds_util import SHARE_IN_RESPONSE_TO_DELIVERY_MSG
 from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException
-from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole, EmailTemplateSet, UserEmailTemplateSet
+from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole, EmailTemplateSet, UserEmailTemplateSet, \
+    EmailTemplate, EmailTemplateType
 from switchboard.mocks_ddsutil import MockDDSUser
 from django.contrib.auth.models import User as django_user
 try:
@@ -66,7 +67,7 @@ class AuthenticatedTestCase(TestCase):
         self.user = django_user.objects.create_user(username, password=password)
         self.client.login(username=username, password=password)
         self.email_template_set = EmailTemplateSet.objects.create(name='someset')
-        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.email_template_set)
+        self.user_email_template_set = UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.email_template_set)
 
     def create_delivery(self):
         return DDSDelivery.objects.create(project_id='project1', from_user_id='fromuser1',
@@ -209,6 +210,63 @@ class ProcessTestCase(AuthenticatedTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('d4s2_api.utils.Message')
+    def test_receiving_user_can_accept_deliveries_without_email_template_set(self, mock_message, mock_dds_util):
+        mock_message.return_value.email_text = ''
+
+        # accepting/current user should have not email template setup
+        self.user_email_template_set.delete()
+
+        # a template set is specified when the delivery was created
+        sending_user = django_user.objects.create_user('sender', password='senderpass')
+        sender_email_template_set = EmailTemplateSet.objects.create(name='group1')
+        EmailTemplate.objects.create(template_set=sender_email_template_set,
+                                     owner=sending_user,
+                                     template_type=EmailTemplateType.objects.get(name='accepted'),
+                                     subject='Subject',
+                                     body='email body')
+        delivery = DDSDelivery.objects.create(
+            project_id='project1', from_user_id='fromuser1',
+            to_user_id='touser1', transfer_id='abc123',
+            email_template_set=sender_email_template_set)
+        transfer_id = delivery.transfer_id
+
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'transfer_id': transfer_id}, follow=True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        delivery.refresh_from_db()
+        self.assertEqual(delivery.state, State.ACCEPTED)
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('d4s2_api.utils.Message')
+    def test_delivery_emails_always_use_senders_email_template_set(self, mock_message, mock_dds_util):
+        mock_message.return_value.email_text = ''
+
+        # a template set is specified when the delivery was created
+        sending_user = django_user.objects.create_user('sender', password='senderpass')
+        sender_email_template_set = EmailTemplateSet.objects.create(name='group1')
+        sender_template = EmailTemplate.objects.create(template_set=sender_email_template_set,
+                                                       owner=sending_user,
+                                                       template_type=EmailTemplateType.objects.get(name='accepted'),
+                                                       subject='Subject',
+                                                       body='email body')
+        delivery = DDSDelivery.objects.create(
+            project_id='project1', from_user_id='fromuser1',
+            to_user_id='touser1', transfer_id='abc123',
+            email_template_set=sender_email_template_set)
+        transfer_id = delivery.transfer_id
+
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'transfer_id': transfer_id}, follow=True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # check that the sender template subject/body was used to render the email
+        args, kwargs = mock_message.call_args
+        from_email, to_email, subject, body, context = args
+        self.assertEqual(subject, sender_template.subject)
+        self.assertEqual(body, sender_template.body)
 
 class DeclineGetTestCase(AuthenticatedTestCase):
 
