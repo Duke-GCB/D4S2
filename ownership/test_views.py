@@ -211,8 +211,10 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('d4s2_api.utils.Message')
-    def test_receiving_user_can_accept_deliveries_without_email_template_set(self, mock_message, mock_dds_util):
+    def test_receiving_user_can_accept_deliveries_without_email_template_set(self, mock_message,
+                                                                             mock_dds_project_transfer, mock_dds_util):
         mock_message.return_value.email_text = ''
 
         # accepting/current user should have not email template setup
@@ -240,8 +242,10 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(delivery.state, State.ACCEPTED)
 
     @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('d4s2_api.utils.Message')
-    def test_delivery_emails_always_use_senders_email_template_set(self, mock_message, mock_dds_util):
+    def test_delivery_emails_always_use_senders_email_template_set(self, mock_message, mock_dds_project_transfer,
+                                                                   mock_dds_util):
         mock_message.return_value.email_text = ''
 
         # a template set is specified when the delivery was created
