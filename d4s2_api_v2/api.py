@@ -261,7 +261,7 @@ class S3DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         s3_delivery = self.get_object()
-        self.prevent_null_email_template_set(s3_delivery)
+        self.prevent_null_email_template_set()
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
         accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')
@@ -269,12 +269,12 @@ class S3DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
         return self.retrieve(request)
 
 
-class DeliveryPreviewView(generics.CreateAPIView):
+class DeliveryPreviewView(ModelWithEmailTemplateSetMixin, generics.CreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DDSDeliveryPreviewSerializer
 
     def create(self, request, *args, **kwargs):
-        email_template_set = ModelWithEmailTemplateSetMixin.get_email_template_for_request(request)
+        email_template_set = self.get_email_template_for_request()
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

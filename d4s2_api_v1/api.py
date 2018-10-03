@@ -34,12 +34,11 @@ class ModelWithEmailTemplateSetMixin(object):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(email_template_set=self.get_email_template_for_request(request))
+        serializer.save(email_template_set=self.get_email_template_for_request())
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    @staticmethod
-    def get_email_template_for_request(request):
+    def get_email_template_for_request(self):
         """
         Given a request lookup the email_template associated with the user of the request.
         If the user has not email template setup raises exception.
@@ -47,18 +46,16 @@ class ModelWithEmailTemplateSetMixin(object):
         :return: EmailTemplateSet
         """
         try:
-            user_email_template_set = UserEmailTemplateSet.objects.get(user=request.user)
+            user_email_template_set = UserEmailTemplateSet.objects.get(user=self.request.user)
             return user_email_template_set.email_template_set
         except UserEmailTemplateSet.DoesNotExist:
             raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
 
-    @staticmethod
-    def prevent_null_email_template_set(obj):
+    def prevent_null_email_template_set(self):
         """
-        Raises ValidationError with message if obj email_template_set is None
-        :param obj: model object
+        Raises ValidationError with message if self.get_object().email_template_set is None
         """
-        if not obj.email_template_set:
+        if not self.get_object().email_template_set:
             raise ValidationError(ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG)
 
 
@@ -86,7 +83,7 @@ class DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         delivery = self.get_object()
-        self.prevent_null_email_template_set(delivery)
+        self.prevent_null_email_template_set()
         if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
         accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
@@ -99,7 +96,7 @@ class DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def cancel(self, request, pk=None):
         delivery = self.get_object()
-        self.prevent_null_email_template_set(delivery)
+        self.prevent_null_email_template_set()
         if delivery.state != State.NEW and delivery.state != State.NOTIFIED:
              raise ValidationError('Only deliveries in new and notified state can be canceled.')
         dds_util = DDSUtil(request.user)
@@ -124,7 +121,7 @@ class ShareViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         share = self.get_object()
-        self.prevent_null_email_template_set(share)
+        self.prevent_null_email_template_set()
         if share.is_notified() and not get_force_param(request):
             raise AlreadyNotifiedException()
         message_factory = DDSMessageFactory(share, request.user)

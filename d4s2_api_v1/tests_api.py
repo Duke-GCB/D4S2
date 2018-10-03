@@ -417,6 +417,7 @@ class ModelWithEmailTemplateSetMixinTestCase(AuthenticatedResourceTestCase):
         mixin.get_serializer = Mock()
         mixin.get_serializer.return_value = mock_serializer
         mixin.get_success_headers = Mock()
+        mixin.request = mock_request
         response = mixin.create(request=mock_request)
 
         self.assertEqual(response, mock_response.return_value)
@@ -428,20 +429,22 @@ class ModelWithEmailTemplateSetMixinTestCase(AuthenticatedResourceTestCase):
         )
 
     def test_get_email_template_for_request(self):
-        email_template_set = ModelWithEmailTemplateSetMixin.get_email_template_for_request(
-            request=Mock(user=self.user)
-        )
+        mixin = ModelWithEmailTemplateSetMixin()
+        mixin.request = Mock(user=self.user)
+        email_template_set = mixin.get_email_template_for_request()
         self.assertEqual(email_template_set, self.email_template_set)
 
         self.user_email_template_set.delete()
         with self.assertRaises(rest_framework.exceptions.ValidationError) as raised_exception:
-            ModelWithEmailTemplateSetMixin.get_email_template_for_request(
-                request=Mock(user=self.user)
-            )
+            mixin.get_email_template_for_request()
         self.assertEqual(raised_exception.exception.detail[0], EMAIL_TEMPLATES_NOT_SETUP_MSG)
 
     def test_prevent_null_email_template_set(self):
-        ModelWithEmailTemplateSetMixin.prevent_null_email_template_set(Mock(email_template_set='something'))
+        mixin = ModelWithEmailTemplateSetMixin()
+        mixin.get_object = Mock()
+        mixin.get_object.return_value = Mock(email_template_set='something')
+        mixin.prevent_null_email_template_set()
+        mixin.get_object.return_value = Mock(email_template_set=None)
         with self.assertRaises(rest_framework.exceptions.ValidationError) as raised_exception:
-            ModelWithEmailTemplateSetMixin.prevent_null_email_template_set(Mock(email_template_set=None))
+            mixin.prevent_null_email_template_set()
         self.assertEqual(raised_exception.exception.detail[0], ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG)
