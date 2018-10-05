@@ -116,6 +116,9 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         dds_delivery = DDSDelivery.objects.get()
         self.assertEqual(dds_delivery.state, State.ACCEPTED)
 
+        # Recipient has no email templates
+        self.assertEqual(UserEmailTemplateSet.objects.filter(user=self.recipient_user).count(), 0)
+
         # we should have sent one email from the recipient to the sender with senders accepted content
         mock_message.assert_has_calls([
             call(self.recipient_email, self.sender_email, 'Sender Delivery Accepted Subject',
