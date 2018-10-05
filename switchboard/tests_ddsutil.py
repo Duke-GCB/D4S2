@@ -3,7 +3,8 @@ from mock import patch, Mock, MagicMock, call
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
     SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
     DDS_PERMISSIONS_ID_SEP, MessageDirection
-from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole
+from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole, EmailTemplateSet, \
+    UserEmailTemplateSet, EmailTemplate, EmailTemplateType
 from gcb_web_auth.models import DDSEndpoint
 
 
@@ -124,29 +125,6 @@ class DDSUtilTestCase(TestCase):
 
 
 class TestDeliveryDetails(TestCase):
-
-    @patch('switchboard.dds_util.EmailTemplate')
-    def test_gets_share_template(self, MockEmailTemplate):
-        MockEmailTemplate.for_share = Mock(return_value=MagicMock(subject='share subject', body='share body'))
-        delivery = Mock()
-        user = Mock()
-        details = DeliveryDetails(delivery, user)
-        subject, body = details.get_share_template_text()
-        self.assertTrue(MockEmailTemplate.for_share.called_with(delivery))
-        self.assertEqual(subject, 'share subject')
-        self.assertEqual(body, 'share body')
-
-    @patch('switchboard.dds_util.EmailTemplate')
-    def test_gets_action_template(self, MockEmailTemplate):
-        MockEmailTemplate.for_user = Mock(return_value=MagicMock(subject='action subject', body='action body'))
-        delivery = Mock()
-        user = Mock()
-        details = DeliveryDetails(delivery, user)
-        subject, body = details.get_action_template_text('accepted')
-        self.assertEqual(subject, 'action subject')
-        self.assertEqual(body, 'action body')
-        self.assertTrue(MockEmailTemplate.for_operation.called_with(delivery, 'accepted'))
-
     @patch('switchboard.dds_util.DDSUtil')
     @patch('switchboard.dds_util.DDSUser')
     @patch('switchboard.dds_util.DDSProjectTransfer')
@@ -204,7 +182,9 @@ class TestDeliveryDetails(TestCase):
     @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('switchboard.dds_util.DDSProject')
     def test_get_project_from_share(self, mock_dds_project, mock_dds_project_transfer):
-        share = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
+        share = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                     email_template_set=email_template_set)
         user = Mock()
         mock_project = Mock()
         mock_dds_project.fetch_one.return_value = mock_project
@@ -218,10 +198,12 @@ class TestDeliveryDetails(TestCase):
     @patch('switchboard.dds_util.DDSProjectTransfer')
     @patch('switchboard.dds_util.DDSProject')
     def test_get_project_from_delivery(self, mock_dds_project, mock_dds_project_transfer):
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
         delivery = DDSDelivery.objects.create(project_id='project1',
                                               from_user_id='user1',
                                               to_user_id='user2',
-                                              transfer_id='transfer1')
+                                              transfer_id='transfer1',
+                                              email_template_set=email_template_set)
         user = Mock()
         mock_transfer = Mock()
         mock_dds_project_transfer.fetch_one.return_value = mock_transfer
@@ -237,7 +219,17 @@ class TestDeliveryDetails(TestCase):
 class DeliveryUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='test_user')
-        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789')
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.email_template_set)
+        file_downloader_type = EmailTemplateType.objects.get(name='share_file_downloader')
+        EmailTemplate.objects.create(template_set=self.email_template_set,
+                                     template_type=file_downloader_type,
+                                     owner=self.user,
+                                     subject='sharesubject',
+                                     body='sharebody'
+                                     )
+        self.delivery = DDSDelivery.objects.create(from_user_id='abc123', to_user_id='def456', project_id='ghi789',
+                                                   email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(dds_id='jkl888', delivery=self.delivery)
         DDSDeliveryShareUser.objects.create(dds_id='mno999', delivery=self.delivery)
 
@@ -258,9 +250,7 @@ class DeliveryUtilTestCase(TestCase):
         mock_ddsutil.decline_project_transfer.assert_called_with(self.delivery.transfer_id, 'reason')
 
     @patch('switchboard.dds_util.DDSUtil')
-    @patch('switchboard.dds_util.DeliveryDetails')
-    def test_share_with_additional_users(self, mock_delivery_details, mock_ddsutil):
-        mock_delivery_details.return_value.get_share_template_text.return_value = 'subject', 'template body'
+    def test_share_with_additional_users(self, mock_ddsutil):
         delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
         delivery_util.share_with_additional_users()
 

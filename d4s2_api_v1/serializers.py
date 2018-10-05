@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from d4s2_api.models import DDSDelivery, Share, DDSDeliveryShareUser
+from d4s2_api.models import DDSDelivery, Share, DDSDeliveryShareUser, EmailTemplateSet
 SHARE_USERS_INVALID_MSG = "to_user cannot be part of share_to_users."
 
 
@@ -19,6 +19,7 @@ def validate_delivery_data(data):
 
 class DeliverySerializer(serializers.HyperlinkedModelSerializer):
     share_user_ids = serializers.ListField(child=serializers.CharField(), required=False)
+    email_template_set = serializers.PrimaryKeyRelatedField(queryset=EmailTemplateSet.objects.all(), required=False)
 
     def validate(self, data):
         return validate_delivery_data(data)
@@ -68,14 +69,18 @@ class DeliverySerializer(serializers.HyperlinkedModelSerializer):
         model = DDSDelivery
         resource_name = 'deliveries'
         fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'state', 'transfer_id', 'user_message',
-                  'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text')
-        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text',)
+                  'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set')
+        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set')
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):
+    email_template_set = serializers.PrimaryKeyRelatedField(queryset=EmailTemplateSet.objects.all(), required=False)
+
     def validate(self, data):
         return validate_delivery_data(data)
 
     class Meta:
         model = Share
-        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',)
+        fields = ('id', 'url', 'project_id', 'from_user_id', 'to_user_id', 'role', 'state', 'user_message',
+                  'email_template_set')
+        read_only_fields = ('email_template_set', )

@@ -39,35 +39,37 @@ class Message(object):
 class MessageFactory(object):
     def __init__(self, delivery_details):
         self.delivery_details = delivery_details
+        self.email_template_set = delivery_details.email_template_set
 
     def make_share_message(self):
-        templates = self.delivery_details.get_share_template_text()
-        return self._make_message(templates)
+        # This method is only applicable if the internal delivery is a share type
+        share = self.delivery_details.delivery
+        email_template = self.email_template_set.template_for_name(share.email_template_name())
+        return self._make_message(email_template)
 
     def make_delivery_message(self, accept_url):
-        templates = self.delivery_details.get_action_template_text('delivery')
-        return self._make_message(templates, accept_url=accept_url)
+        email_template = self.email_template_set.template_for_name('delivery')
+        return self._make_message(email_template, accept_url=accept_url)
 
     def make_processed_message(self, process_type, direction, warning_message=''):
-        templates = self.delivery_details.get_action_template_text(process_type)
-        return self._make_message(templates, reason='',
+        email_template = self.email_template_set.template_for_name(process_type)
+        return self._make_message(email_template, reason='',
                                   process_type=process_type,
                                   direction=direction,
                                   warning_message=warning_message)
 
     def make_canceled_message(self):
-        templates = self.delivery_details.get_action_template_text('delivery_canceled')
-        return self._make_message(templates)
+        email_template = self.email_template_set.template_for_name('delivery_canceled')
+        return self._make_message(email_template)
 
-    def _make_message(self, templates, accept_url=None, reason=None, process_type=None,
+    def _make_message(self, email_template, accept_url=None, reason=None, process_type=None,
                       direction=MessageDirection.ToRecipient, warning_message=''):
         try:
-            template_subject, template_body = templates
             sender = self.delivery_details.get_from_user()
             receiver = self.delivery_details.get_to_user()
             context = self.delivery_details.get_email_context(accept_url, process_type, reason, warning_message)
             # Delivery confirmation emails should go back to the delivery sender
             from_email, to_email = MessageDirection.email_addresses(sender, receiver, direction)
-            return Message(from_email, to_email, template_subject, template_body, context)
+            return Message(from_email, to_email, email_template.subject, email_template.body, context)
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information to build message: {}'.format(str(e)))

@@ -1,6 +1,6 @@
 from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share
+from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, UserEmailTemplateSet
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
 from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
@@ -229,7 +229,9 @@ class DeliveryDetails(object):
     def __init__(self, delivery_or_share, user):
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
+        self.email_template_set = delivery_or_share.email_template_set
         self.user = user
+
 
     def get_from_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
@@ -263,20 +265,6 @@ class DeliveryDetails(object):
 
     def get_user_message(self):
         return self.delivery.user_message
-
-    def get_share_template_text(self):
-        email_template = EmailTemplate.for_share(self.delivery, self.user)
-        if email_template:
-            return email_template.subject, email_template.body
-        else:
-            raise RuntimeError('No email template found')
-
-    def get_action_template_text(self, action_name):
-        email_template = EmailTemplate.for_user(self.user, action_name)
-        if email_template:
-            return email_template.subject, email_template.body
-        else:
-            raise RuntimeError('No email template found')
 
     @classmethod
     def from_transfer_id(self, transfer_id, user):
@@ -397,7 +385,8 @@ class DeliveryUtil(object):
                                      from_user_id=self.delivery.to_user_id,
                                      to_user_id=share_to_user.dds_id,
                                      role=self.share_role,
-                                     user_message=self.share_user_message)
+                                     user_message=self.share_user_message,
+                                     email_template_set=self.delivery.email_template_set)
         message_factory = DDSMessageFactory(share, self.user)
         message = message_factory.make_share_message()
         message.send()
@@ -438,8 +427,8 @@ class DDSDeliveryType:
     @staticmethod
     def make_delivery_util(*args):
         return DeliveryUtil(*args,
-                               share_role=ShareRole.DOWNLOAD,
-                               share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
+                            share_role=ShareRole.DOWNLOAD,
+                            share_user_message=SHARE_IN_RESPONSE_TO_DELIVERY_MSG)
 
     @staticmethod
     def transfer_delivery(delivery, user):

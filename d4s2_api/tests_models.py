@@ -20,10 +20,12 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(DeliveryTestCase, self).setUp()
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         DDSDelivery.objects.create(project_id='project1',
-                                from_user_id='user1',
-                                to_user_id='user2',
-                                transfer_id=self.transfer_id)
+                                   from_user_id='user1',
+                                   to_user_id='user2',
+                                   transfer_id=self.transfer_id,
+                                   email_template_set=self.email_template_set)
 
     def test_initial_state(self):
         delivery = DDSDelivery.objects.first()
@@ -42,9 +44,10 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_can_add_share_users(self):
         delivery = DDSDelivery.objects.create(project_id='projectA',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id='123-123')
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id='123-123',
+                                              email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
         share_users = delivery.share_users.all()
@@ -53,13 +56,15 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_user_can_be_shared_multiple_deliveries(self):
         delivery1 = DDSDelivery.objects.create(project_id='projectA',
-                                            from_user_id='user1',
-                                            to_user_id='user2',
-                                            transfer_id='123-123')
+                                               from_user_id='user1',
+                                               to_user_id='user2',
+                                               transfer_id='123-123',
+                                               email_template_set=self.email_template_set)
         delivery2 = DDSDelivery.objects.create(project_id='projectB',
-                                            from_user_id='user3',
-                                            to_user_id='user4',
-                                            transfer_id='456-789')
+                                               from_user_id='user3',
+                                               to_user_id='user4',
+                                               transfer_id='456-789',
+                                               email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery1, dds_id='user3')
         DDSDeliveryShareUser.objects.create(delivery=delivery2, dds_id='user3')
         self.assertEqual(DDSDeliveryShareUser.objects.count(), 2)
@@ -68,9 +73,10 @@ class DeliveryTestCase(TransferBaseTestCase):
 
     def test_user_cannot_be_shared_delivery_twice(self):
         delivery = DDSDelivery.objects.create(project_id='projectA',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id='123-123')
+                                              from_user_id='user1',
+                                              to_user_id='user2',
+                                              transfer_id='123-123',
+                                              email_template_set=self.email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         with self.assertRaises(IntegrityError):
             DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
@@ -172,7 +178,9 @@ class ShareTestCase(TransferBaseTestCase):
 
     def setUp(self):
         super(ShareTestCase, self).setUp()
-        Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                             email_template_set=self.email_template_set)
 
     def test_initial_state(self):
         share = Share.objects.first()
@@ -181,15 +189,19 @@ class ShareTestCase(TransferBaseTestCase):
 
     def test_prohibits_duplicates(self):
         with self.assertRaises(IntegrityError):
-            Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2')
+            Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                 email_template_set=self.email_template_set)
 
     def test_allows_multiple_shares(self):
-        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user3')
+        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user3',
+                                 email_template_set=self.email_template_set)
         self.assertIsNotNone(d)
 
     def test_allows_multiple_shares_different_roles(self):
-        v = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.VIEW)
-        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.EDIT)
+        v = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.VIEW,
+                                 email_template_set=self.email_template_set)
+        d = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2', role=ShareRole.EDIT,
+                                 email_template_set=self.email_template_set)
         self.assertIsNotNone(v)
         self.assertIsNotNone(d)
         self.assertNotEqual(v, d)
@@ -202,6 +214,11 @@ class ShareTestCase(TransferBaseTestCase):
         share.save()
         share = Share.objects.first()
         self.assertEqual(share.user_message, user_message)
+
+    def test_email_template_name(self):
+        share = Share.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
+                                     role=ShareRole.VIEW, email_template_set=self.email_template_set)
+        self.assertEqual(share.email_template_name(), 'share_project_viewer')
 
 
 class EmailTemplateTypeTestCase(TestCase):
@@ -222,11 +239,6 @@ class EmailTemplateTypeTestCase(TestCase):
         self.assertIsNotNone(EmailTemplateType.objects.get(name='accepted'))
         self.assertIsNotNone(EmailTemplateType.objects.get(name='declined'))
 
-    def test_from_share_role(self):
-        role = 'project_viewer'
-        e = EmailTemplateType.from_share_role(role)
-        self.assertEqual(e.name, 'share_project_viewer')
-
 
 class EmailTemplateTestCase(TestCase):
 
@@ -237,9 +249,9 @@ class EmailTemplateTestCase(TestCase):
         self.other_user = User.objects.create(username='other_user')
         UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.template_set)
         self.user_dds_id = 'user1'
-        self.default_type = EmailTemplateType.from_share_role(ShareRole.DEFAULT)
-        self.download_type = EmailTemplateType.from_share_role(ShareRole.DOWNLOAD)
-        self.view_type = EmailTemplateType.from_share_role(ShareRole.VIEW)
+        self.default_type = EmailTemplateType.objects.get(name=ShareRole.email_template_name(ShareRole.DEFAULT))
+        self.download_type = EmailTemplateType.objects.get(name=ShareRole.email_template_name(ShareRole.DOWNLOAD))
+        self.view_type = EmailTemplateType.objects.get(name=ShareRole.email_template_name(ShareRole.VIEW))
         self.transfer_id = 'abc-123'
 
     def test_create_email_template(self):
@@ -286,111 +298,21 @@ class EmailTemplateTestCase(TestCase):
         self.assertEqual(template1.template_type, template2.template_type)
         self.assertNotEqual(template1.template_set, template2.template_set)
 
-    def test_for_share(self):
-        # Create an email template
-        EmailTemplate.objects.create(template_set=self.template_set,
-                                     owner=self.user,
-                                     template_type=self.download_type,
-                                     subject='Subject',
-                                     body='email body')
-        share = Share.objects.create(project_id='project1',
-                                     from_user_id='user1',
-                                     to_user_id='user2',
-                                     role=ShareRole.DOWNLOAD)
-        t = EmailTemplate.for_share(share, self.user)
-        self.assertIsNotNone(t)
-        self.assertEqual(t.body, 'email body')
-
-    def test_for_operation(self):
-        # Create an email template
-        delivery = DDSDelivery.objects.create(project_id='project1',
-                                           from_user_id='user1',
-                                           to_user_id='user2',
-                                           transfer_id=self.transfer_id)
-        EmailTemplate.objects.create(template_set=self.template_set,
-                                     owner=self.user,
-                                     template_type=EmailTemplateType.objects.get(name='accepted'),
-                                     subject='Acceptance Email Subject',
-                                     body='Acceptance Email Body')
-        t = EmailTemplate.for_user(self.user, 'accepted')
-        self.assertIsNotNone(t)
-        self.assertEqual(t.subject, 'Acceptance Email Subject')
-
-    def test_no_templates_in_template_set(self):
-        share = Share.objects.create(project_id='project1',
-                                     from_user_id='user1',
-                                     to_user_id='user2',
-                                     role=ShareRole.DOWNLOAD)
-        with self.assertRaises(EmailTemplateException) as raised_exception:
-            EmailTemplate.for_share(share, self.other_user)
-        self.assertEqual(str(raised_exception.exception),
-                         'Setup Error: Unable to find email template for type share_file_downloader')
-
-    def test_no_template_set_for_user(self):
-        share = Share.objects.create(project_id='project1',
-                                     from_user_id='user2',
-                                     to_user_id='user1',
-                                     role=ShareRole.DOWNLOAD)
-        with self.assertRaises(EmailTemplateException) as raised_exception:
-            EmailTemplate.for_share(share, self.other_user)
-        self.assertEqual(str(raised_exception.exception),
-                         'Setup Error: Unable to find email template for type share_file_downloader')
-        """        share = Share.objects.create(project_id='project1',
-                                     from_user_id='user2',
-                                     to_user_id='user1',
-                                     role=ShareRole.DOWNLOAD)
-        default_email_template_set = EmailTemplateSet.objects.create(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
-        some_email_template = EmailTemplate.objects.create(template_set=default_email_template_set,
-                                                           owner=self.user,
-                                                           template_type=self.download_type,
-                                                           subject='Subject',
-                                                           body='email body')
-        email_template = EmailTemplate.for_share(share)
-        self.assertEqual(email_template.id, some_email_template.id)"""
-
-    def test_no_template_set_for_user_if_default_setup(self):
-        share = Share.objects.create(project_id='project1',
-                                     from_user_id='user2',
-                                     to_user_id='user1',
-                                     role=ShareRole.DOWNLOAD)
-        default_email_template_set = EmailTemplateSet.objects.create(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
-        some_email_template = EmailTemplate.objects.create(template_set=default_email_template_set,
-                                                           owner=self.user,
-                                                           template_type=self.download_type,
-                                                           subject='Subject',
-                                                           body='email body')
-        email_template = EmailTemplate.for_share(share, self.other_user)
-        self.assertEqual(email_template.id, some_email_template.id)
-
-    def test_user_not_found(self):
-        # dds_user2 is not bound to a django user, so we can't find templates
-        share = Share.objects.create(project_id='project1',
-                                     from_user_id='user2',
-                                     to_user_id='user1',
-                                     role=ShareRole.DOWNLOAD)
-        with self.assertRaises(EmailTemplateException) as raised_exception:
-            EmailTemplate.for_share(share, self.other_user)
-        self.assertEqual(str(raised_exception.exception),
-                         'Setup Error: Unable to find email template for type share_file_downloader')
-
-    def test_user_not_found_if_we_create_default(self):
-        share = Share.objects.create(project_id='project1',
-                                     from_user_id='user2',
-                                     to_user_id='user1',
-                                     role=ShareRole.DOWNLOAD)
-        default_email_template_set = EmailTemplateSet.objects.create(name=DEFAULT_EMAIL_TEMPLATE_SET_NAME)
-        some_email_template = EmailTemplate.objects.create(template_set=default_email_template_set,
-                                                           owner=self.user,
-                                                           template_type=self.download_type,
-                                                           subject='Subject',
-                                                           body='email body')
-        email_template = EmailTemplate.for_share(share, self.other_user)
-        self.assertEqual(email_template.id, some_email_template.id)
-
-    def test_user_is_setup(self):
-        self.assertFalse(UserEmailTemplateSet.user_is_setup(self.other_user))
-        UserEmailTemplateSet.objects.create(user=self.other_user, email_template_set=self.template_set)
-        self.assertTrue(UserEmailTemplateSet.user_is_setup(self.other_user))
+    def test_template_for_name(self):
+        download_template = EmailTemplate.objects.create(template_set=self.template_set,
+                                                 owner=self.user,
+                                                 template_type=self.download_type,
+                                                 subject='Subject',
+                                                 body='email body 1')
+        view_template = EmailTemplate.objects.create(template_set=self.template_set,
+                                                 owner=self.user,
+                                                 template_type=self.view_type,
+                                                 subject='Subject',
+                                                 body='email body 1')
+        template_name = ShareRole.email_template_name(ShareRole.DOWNLOAD)
+        self.assertEqual(self.template_set.template_for_name(template_name), download_template)
+        template_name = ShareRole.email_template_name(ShareRole.VIEW)
+        self.assertEqual(self.template_set.template_for_name(template_name), view_template)
 
 
 class S3EndpointTestCase(TestCase):
@@ -500,6 +422,7 @@ class S3BucketTestCase(TestCase):
 
 class S3DeliveryCredentialTestCase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.user1 = User.objects.create(username='user1')
         self.user2 = User.objects.create(username='user2')
         self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
@@ -513,30 +436,37 @@ class S3DeliveryCredentialTestCase(TestCase):
         self.s3_bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
 
     def test_create_and_read(self):
-        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
-        S3Delivery.objects.create(bucket=self.s3_bucket2, from_user=self.s3_user1, to_user=self.s3_user2)
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                  email_template_set=self.email_template_set)
+        S3Delivery.objects.create(bucket=self.s3_bucket2, from_user=self.s3_user1, to_user=self.s3_user2,
+                                  email_template_set=self.email_template_set)
         s3_deliveries = S3Delivery.objects.order_by('bucket__name')
         self.assertEqual([s3_delivery.bucket.name for s3_delivery in s3_deliveries],
                          ['mouse', 'mouse2'])
 
     def test_prevents_creating_same_delivery_twice(self):
-        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                  email_template_set=self.email_template_set)
         with self.assertRaises(IntegrityError):
-            S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+            S3Delivery.objects.create(bucket=self.s3_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                      email_template_set=self.email_template_set)
 
 
 class DDSDeliveryErrorTestCase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.delivery1 = DDSDelivery.objects.create(
             project_id='project1',
             from_user_id='user1',
             to_user_id='user2',
-            transfer_id='transfer1')
+            transfer_id='transfer1',
+            email_template_set=self.email_template_set)
         self.delivery2 = DDSDelivery.objects.create(
             project_id='project2',
             from_user_id='user2',
             to_user_id='user3',
-            transfer_id='transfer2')
+            transfer_id='transfer2',
+            email_template_set=self.email_template_set)
 
     def test_create_errors(self):
         DDSDeliveryError.objects.create(message='Something failed', delivery=self.delivery1)
@@ -560,8 +490,10 @@ class DDSDeliveryErrorTestCase(TestCase):
         self.assertEqual(deliveries[0].message, 'Error1')
         self.assertEqual(deliveries[1].message, 'Error2')
 
+
 class S3DeliveryBaseTestCase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.user1 = User.objects.create(username='user1')
         self.user2 = User.objects.create(username='user2')
         self.endpoint = S3Endpoint.objects.create(url='https://s3service.com/')
@@ -574,9 +506,11 @@ class S3DeliveryBaseTestCase(TestCase):
         self.s3_bucket = S3Bucket.objects.create(name='mouse', owner=self.s3_user1, endpoint=self.endpoint)
         self.s3_bucket2 = S3Bucket.objects.create(name='mouse2', owner=self.s3_user1, endpoint=self.endpoint)
         self.delivery1 = S3Delivery.objects.create(bucket=self.s3_bucket,
-                                                   from_user=self.s3_user1, to_user=self.s3_user2)
+                                                   from_user=self.s3_user1, to_user=self.s3_user2,
+                                                   email_template_set=self.email_template_set)
         self.delivery2 = S3Delivery.objects.create(bucket=self.s3_bucket2,
-                                                   from_user=self.s3_user1, to_user=self.s3_user2)
+                                                   from_user=self.s3_user1, to_user=self.s3_user2,
+                                                   email_template_set=self.email_template_set)
 
 
 class S3DeliveryErrorTestCase(S3DeliveryBaseTestCase):
@@ -617,3 +551,9 @@ class S3ObjectManifestTestCase(S3DeliveryBaseTestCase):
         manifests = S3ObjectManifest.objects.all()
         self.assertEqual(len(manifests), 1)
         self.assertEqual(manifests[0].content, [{'state': 'bad', 'value': 0}])
+
+
+class ShareRoleTestCase(TestCase):
+    def test_email_template_name(self):
+        self.assertEqual(ShareRole.email_template_name('somerole'), 'share_somerole')
+        self.assertEqual(ShareRole.email_template_name('file_downloader'), 'share_file_downloader')
