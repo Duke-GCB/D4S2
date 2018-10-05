@@ -450,8 +450,8 @@ class DDSDeliveryType:
         warning_message = delivery_util.get_warning_message()
         message_factory = DDSMessageFactory(delivery, user)
         sender_message = message_factory.make_processed_message('accepted',
-                                                         MessageDirection.ToSender,
-                                                         warning_message=warning_message)
+                                                                MessageDirection.ToSender,
+                                                                warning_message=warning_message)
         sender_message.send()
         recipient_message = message_factory.make_processed_message('accepted_recipient',
                                                                    MessageDirection.ToRecipient)

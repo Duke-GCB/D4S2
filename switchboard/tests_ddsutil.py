@@ -342,7 +342,7 @@ class DDSDeliveryTypeTestCase(TestCase):
         make_processed_message.assert_has_calls([
             call('accepted', MessageDirection.ToSender, warning_message=''),
             call().send(),
-            call('accepted_recipient', MessageDirection.ToRecipient, warning_message=''),
+            call('accepted_recipient', MessageDirection.ToRecipient),
             call().send(),
         ])
         make_processed_message.return_value.send.assert_called_with()
