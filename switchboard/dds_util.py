@@ -449,11 +449,14 @@ class DDSDeliveryType:
         delivery_util.give_sender_permission()
         warning_message = delivery_util.get_warning_message()
         message_factory = DDSMessageFactory(delivery, user)
-        message = message_factory.make_processed_message('accepted',
+        sender_message = message_factory.make_processed_message('accepted',
                                                          MessageDirection.ToSender,
                                                          warning_message=warning_message)
-        message.send()
-        delivery.mark_accepted(user.get_username(), message.email_text)
+        sender_message.send()
+        recipient_message = message_factory.make_processed_message('accepted_recipient',
+                                                                   MessageDirection.ToRecipient)
+        recipient_message.send()
+        delivery.mark_accepted(user.get_username(), sender_message.email_text, recipient_message.email_text)
         return warning_message
 
 
