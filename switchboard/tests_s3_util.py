@@ -1,6 +1,6 @@
 from django.test import TestCase
 from mock import patch, Mock, call
-from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State
+from d4s2_api.models import S3Bucket, S3User, S3UserTypes, S3Delivery, User, S3Endpoint, State, EmailTemplateSet
 from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S3BucketUtil, \
     S3NoSuchBucket, S3DeliveryType, S3TransferOperation, S3DeliveryError, SendDeliveryBackgroundFunctions, \
     SendDeliveryOperation, S3NotRecipientException, MessageDirection
@@ -8,6 +8,7 @@ from switchboard.s3_util import S3Resource, S3DeliveryUtil, S3DeliveryDetails, S
 
 class S3DeliveryTestBase(TestCase):
     def setUp(self):
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.user_agent = User.objects.create(username='agent',
                                               email='agent@agent.com',
                                               first_name='Agent',
@@ -39,7 +40,8 @@ class S3DeliveryTestBase(TestCase):
         self.s3_delivery = S3Delivery.objects.create(bucket=self.s3_bucket,
                                                      from_user=self.s3_from_user,
                                                      to_user=self.s3_to_user,
-                                                     user_message='user message')
+                                                     user_message='user message',
+                                                     email_template_set=self.email_template_set)
 
 
 class S3DeliveryUtilTestCase(S3DeliveryTestBase):
@@ -158,20 +160,6 @@ class S3DeliveryDetailsTestCase(S3DeliveryTestBase):
             'warning_message': 'oops'
         }
         self.assertEqual(context, expected_context)
-
-    @patch('switchboard.s3_util.EmailTemplate')
-    def test_get_action_template_text(self, mock_email_template):
-        mock_email_template.for_user.return_value = Mock(subject='email subject', body='email body')
-
-        s3_delivery_details = S3DeliveryDetails(self.s3_delivery, self.from_user)
-        subject, body = s3_delivery_details.get_action_template_text(action_name='accept')
-
-        self.assertEqual(subject, 'email subject')
-        self.assertEqual(body, 'email body')
-
-        mock_email_template.for_user.return_value = None
-        with self.assertRaises(RuntimeError):
-            s3_delivery_details.get_action_template_text(action_name='accept')
 
 
 class S3ResourceTestCase(TestCase):

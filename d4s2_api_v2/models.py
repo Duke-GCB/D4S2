@@ -11,3 +11,4 @@ class DDSDeliveryPreview(object):
         self.transfer_id = transfer_id
         self.user_message = user_message
         self.delivery_email_text = ''
+        self.email_template_set = None

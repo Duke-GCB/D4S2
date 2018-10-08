@@ -3,7 +3,8 @@ from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase
 from d4s2_api_v1.tests_api import AuthenticatedResourceTestCase
-from d4s2_api_v2.api import EMAIL_TEMPLATES_NOT_SETUP_MSG
+from d4s2_api_v1.api import EMAIL_TEMPLATES_NOT_SETUP_MSG, CANNOT_PASS_EMAIL_TEMPLATE_SET, \
+    ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG
 from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call
@@ -111,16 +112,17 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_users_with_recent(self, mock_dds_util):
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
         delivery = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
-                                              transfer_id='transfer1')
+                                              transfer_id='transfer1', email_template_set=email_template_set)
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user3')
         DDSDeliveryShareUser.objects.create(delivery=delivery, dds_id='user4')
 
         DDSDelivery.objects.create(project_id='project2', from_user_id='user5', to_user_id='user1',
-                                   transfer_id='transfer2')
+                                   transfer_id='transfer2', email_template_set=email_template_set)
 
         delivery3 = DDSDelivery.objects.create(project_id='project4', from_user_id='user1', to_user_id='user6',
-                                               transfer_id='transfer3')
+                                               transfer_id='transfer3', email_template_set=email_template_set)
         # share with self after delivery
         DDSDeliveryShareUser.objects.create(delivery=delivery3, dds_id='user1')
 
@@ -358,8 +360,9 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_transfers(self, mock_dds_util):
         mock_response = Mock()
+        email_template_set = EmailTemplateSet.objects.create(name='someset')
         delivery = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
-                                           transfer_id='transfer1')
+                                           transfer_id='transfer1', email_template_set=email_template_set)
         mock_response.json.return_value = {
             'results': [
                 {
@@ -739,6 +742,7 @@ class S3BucketViewSetTestCase(AuthenticatedResourceTestCase):
         self.endpoint = S3Endpoint.objects.create(url='http://s3.com')
         self.normal_user1 = self.user_login.become_normal_user()
         self.s3_user1 = S3User.objects.create(endpoint=self.endpoint, s3_id='abc', user=self.normal_user1)
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
 
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -784,7 +788,8 @@ class S3BucketViewSetTestCase(AuthenticatedResourceTestCase):
         bucket = S3Bucket.objects.create(name='mouse1', owner=self.s3_user1, endpoint=self.endpoint)
         other_normal_user = self.user_login.become_other_normal_user()
         s3_other_user = S3User.objects.create(endpoint=self.endpoint, s3_id='cde', user=other_normal_user)
-        S3Delivery.objects.create(bucket=bucket, from_user=self.s3_user1, to_user=s3_other_user)
+        S3Delivery.objects.create(bucket=bucket, from_user=self.s3_user1, to_user=s3_other_user,
+                                  email_template_set=self.email_template_set)
 
         url = reverse('v2-s3bucket-list')
         response = self.client.get(url, format='json')
@@ -893,6 +898,13 @@ class S3DeliveryViewSetTestCase(APITestCase):
                                                              owner=self.other_endpoint_s3_user,
                                                              endpoint=self.endpoint2)
 
+        self.user1_email_template_set = EmailTemplateSet.objects.create(name='user1set')
+        UserEmailTemplateSet.objects.create(user=self.normal_user1, email_template_set=self.user1_email_template_set)
+        self.user2_email_template_set = EmailTemplateSet.objects.create(name='user2set')
+        UserEmailTemplateSet.objects.create(user=self.normal_user2, email_template_set=self.user2_email_template_set)
+        self.user3_email_template_set = EmailTemplateSet.objects.create(name='user3set')
+        UserEmailTemplateSet.objects.create(user=self.normal_user3, email_template_set=self.user3_email_template_set)
+
     def login_user1(self):
         self.client.login(username='user1', password='user1')
 
@@ -908,7 +920,8 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_list_deliveries(self):
-        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                             email_template_set=self.user1_email_template_set)
         self.login_user1()
         url = reverse('v2-s3delivery-list')
         response = self.client.get(url, {}, format='json')
@@ -922,7 +935,8 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.assertEqual(delivery_response['state'], State.NEW)
 
     def test_list_deliveries_seen_by_to_from_users(self):
-        S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                  email_template_set=self.user1_email_template_set)
 
         self.login_user1()
         url = reverse('v2-s3delivery-list')
@@ -955,6 +969,7 @@ class S3DeliveryViewSetTestCase(APITestCase):
         s3_deliveries = S3Delivery.objects.all()
         self.assertEqual(len(s3_deliveries), 1)
         self.assertEqual(s3_deliveries[0].bucket, self.mouse1_bucket)
+        self.assertEqual(s3_deliveries[0].email_template_set, self.user1_email_template_set)
 
         data = {
             'bucket': self.mouse1_bucket.id,
@@ -963,6 +978,19 @@ class S3DeliveryViewSetTestCase(APITestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_delivery_fails_when_user_not_setup(self):
+        UserEmailTemplateSet.objects.get(user=self.normal_user1).delete()
+        self.login_user1()
+        url = reverse('v2-s3delivery-list')
+        data = {
+            'bucket': self.mouse1_bucket.id,
+            'from_user': self.s3_user1.id,
+            'to_user': self.s3_user2.id,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
     def test_create_delivery_with_mismatched_endpoints(self):
         self.login_user1()
@@ -996,22 +1024,31 @@ class S3DeliveryViewSetTestCase(APITestCase):
     def test_send_delivery(self, mock_send_delivery_operation,
                            mock_build_accept_url):
         mock_build_accept_url.return_value = 'https://someurl.com'
-        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2)
+        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                             email_template_set=self.user1_email_template_set)
         self.login_user1()
         url = reverse('v2-s3delivery-list') + str(delivery.id) + '/send/'
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_send_delivery_operation.run.assert_called_with(delivery, 'https://someurl.com')
 
+    def test_send_delivery_with_null_template(self):
+        delivery = S3Delivery.objects.create(bucket=self.mouse1_bucket, from_user=self.s3_user1, to_user=self.s3_user2,
+                                             email_template_set=None)
+        self.login_user1()
+        url = reverse('v2-s3delivery-list') + str(delivery.id) + '/send/'
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, [ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
 class DeliveryPreviewViewTestCase(APITestCase):
 
     def setUp(self):
-        self.user = user = django_user.objects.create_user(username='user', password='secret')
+        self.user = django_user.objects.create_user(username='user', password='secret')
         self.client.login(username='user', password='secret')
-        email_template_set = EmailTemplateSet.objects.create(name='someset')
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
         self.user_email_template_set = UserEmailTemplateSet.objects.create(
-            user=self.user, email_template_set=email_template_set)
+            user=self.user, email_template_set=self.email_template_set)
 
     def test_cannot_get_list(self):
         url = reverse('v2-delivery_previews')
@@ -1040,6 +1077,9 @@ class DeliveryPreviewViewTestCase(APITestCase):
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['delivery_email_text'], 'Generated Email Text')
+        args, kwargs = mock_message_factory.call_args
+        delivery_preview = args[0]
+        self.assertEqual(delivery_preview.email_template_set, self.email_template_set)
 
         # When previewing an email, send() should not be called
         instance.send.assert_not_called()

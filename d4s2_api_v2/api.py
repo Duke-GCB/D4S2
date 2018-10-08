@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions, status, generics
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
@@ -10,11 +10,12 @@ from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
-from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, UserEmailTemplateSet
+from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
-    EMAIL_TEMPLATES_NOT_SETUP_MSG
+    ModelWithEmailTemplateSetMixin
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
+
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -247,7 +248,7 @@ class S3BucketViewSet(viewsets.ModelViewSet):
             raise WrappedS3Exception(e)
 
 
-class S3DeliveryViewSet(viewsets.ModelViewSet):
+class S3DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = S3DeliverySerializer
 
@@ -260,6 +261,7 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def send(self, request, pk=None):
         s3_delivery = self.get_object()
+        self.prevent_null_email_template_set()
         if not s3_delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='S3 Delivery already in progress')
         accept_url = build_accept_url(request, s3_delivery.transfer_id, 's3')
@@ -267,24 +269,23 @@ class S3DeliveryViewSet(viewsets.ModelViewSet):
         return self.retrieve(request)
 
 
-class DeliveryPreviewView(generics.CreateAPIView):
+class DeliveryPreviewView(ModelWithEmailTemplateSetMixin, generics.CreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DDSDeliveryPreviewSerializer
 
     def create(self, request, *args, **kwargs):
-        if not UserEmailTemplateSet.user_is_setup(request.user):
-            raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
+        email_template_set = self.get_email_template_for_request()
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         delivery_preview = DDSDeliveryPreview(**serializer.validated_data)
-        accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
+        delivery_preview.email_template_set = email_template_set
 
+        accept_url = build_accept_url(request, delivery_preview.transfer_id, 'dds')
         message_factory = DDSMessageFactory(delivery_preview, self.request.user)
         message = message_factory.make_delivery_message(accept_url)
         delivery_preview.delivery_email_text = message.email_text
-
         serializer = self.get_serializer(instance=delivery_preview)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

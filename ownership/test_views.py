@@ -5,7 +5,8 @@ from django.test.testcases import TestCase
 from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, NOT_RECIPIENT_MSG
 from switchboard.dds_util import SHARE_IN_RESPONSE_TO_DELIVERY_MSG
 from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException
-from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole
+from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole, EmailTemplateSet, UserEmailTemplateSet, \
+    EmailTemplate, EmailTemplateType
 from switchboard.mocks_ddsutil import MockDDSUser
 from django.contrib.auth.models import User as django_user
 try:
@@ -20,16 +21,6 @@ def url_with_transfer_id(name, transfer_id=None):
     if transfer_id:
         url = "{}?transfer_id={}".format(url, transfer_id)
     return url
-
-
-def create_delivery():
-    return DDSDelivery.objects.create(project_id='project1', from_user_id='fromuser1',
-                                      to_user_id='touser1', transfer_id='abc123')
-
-
-def create_delivery_get_transfer_id():
-    delivery = create_delivery()
-    return str(delivery.transfer_id)
 
 
 def setup_mock_delivery_details(MockDeliveryDetails):
@@ -68,12 +59,24 @@ def setup_mock_delivery_type(mock_get_delivery_type):
     mock_delivery_type.mock_processed_message = mock_delivery_type.make_processed_message.return_value
     return mock_delivery_type
 
+
 class AuthenticatedTestCase(TestCase):
     def setUp(self):
         username = 'ownership_user'
         password = 'secret'
-        django_user.objects.create_user(username, password=password)
+        self.user = django_user.objects.create_user(username, password=password)
         self.client.login(username=username, password=password)
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset')
+        self.user_email_template_set = UserEmailTemplateSet.objects.create(user=self.user, email_template_set=self.email_template_set)
+
+    def create_delivery(self):
+        return DDSDelivery.objects.create(project_id='project1', from_user_id='fromuser1',
+                                          to_user_id='touser1', transfer_id='abc123',
+                                          email_template_set=self.email_template_set)
+
+    def create_delivery_get_transfer_id(self):
+        delivery = self.create_delivery()
+        return str(delivery.transfer_id)
 
 
 class AcceptTestCase(AuthenticatedTestCase):
@@ -94,7 +97,7 @@ class AcceptTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_normal_with_valid_transfer_id(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = url_with_transfer_id('ownership-prompt', transfer_id)
@@ -106,7 +109,7 @@ class AcceptTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_normal_with_not_recipient_exception(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         url = url_with_transfer_id('ownership-prompt', transfer_id)
         mock_get_delivery_type.return_value.make_delivery_details.side_effect = S3NotRecipientException()
         response = self.client.get(url)
@@ -136,7 +139,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertIn('login', response['Location'])
 
     def test_error_when_no_transfer_id(self):
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         url = url_with_transfer_id('ownership-process')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -147,7 +150,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
         mock_delivery_type.transfer_delivery.return_value = 'Failed to share with Joe, Tom'
         mock_delivery_type.mock_processed_message.email_text = 'email text'
-        delivery = create_delivery()
+        delivery = self.create_delivery()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         transfer_id = delivery.transfer_id
         url = reverse('ownership-process')
@@ -159,7 +162,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertTrue(mock_delivery_type.transfer_delivery.called)
 
     def test_with_bad_transfer_id(self):
-        transfer_id = create_delivery_get_transfer_id() + "a"
+        transfer_id = self.create_delivery_get_transfer_id() + "a"
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -168,7 +171,7 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_accept_with_already_declined(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        delivery = create_delivery()
+        delivery = self.create_delivery()
         delivery.mark_declined('user', 'Done', 'email text')
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         transfer_id = delivery.transfer_id
@@ -181,7 +184,7 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_accept_with_already_accepted(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        delivery = create_delivery()
+        delivery = self.create_delivery()
         delivery.mark_accepted('user', 'email text')
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         url = reverse('ownership-process')
@@ -193,7 +196,7 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_normal_with_decline(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = reverse('ownership-process')
@@ -207,6 +210,67 @@ class ProcessTestCase(AuthenticatedTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
+    @patch('d4s2_api.utils.Message')
+    def test_receiving_user_can_accept_deliveries_without_email_template_set(self, mock_message,
+                                                                             mock_dds_project_transfer, mock_dds_util):
+        mock_message.return_value.email_text = ''
+
+        # accepting/current user should have not email template setup
+        self.user_email_template_set.delete()
+
+        # a template set is specified when the delivery was created
+        sending_user = django_user.objects.create_user('sender', password='senderpass')
+        sender_email_template_set = EmailTemplateSet.objects.create(name='group1')
+        EmailTemplate.objects.create(template_set=sender_email_template_set,
+                                     owner=sending_user,
+                                     template_type=EmailTemplateType.objects.get(name='accepted'),
+                                     subject='Subject',
+                                     body='email body')
+        delivery = DDSDelivery.objects.create(
+            project_id='project1', from_user_id='fromuser1',
+            to_user_id='touser1', transfer_id='abc123',
+            email_template_set=sender_email_template_set)
+        transfer_id = delivery.transfer_id
+
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'transfer_id': transfer_id}, follow=True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        delivery.refresh_from_db()
+        self.assertEqual(delivery.state, State.ACCEPTED)
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
+    @patch('d4s2_api.utils.Message')
+    def test_delivery_emails_always_use_senders_email_template_set(self, mock_message, mock_dds_project_transfer,
+                                                                   mock_dds_util):
+        mock_message.return_value.email_text = ''
+
+        # a template set is specified when the delivery was created
+        sending_user = django_user.objects.create_user('sender', password='senderpass')
+        sender_email_template_set = EmailTemplateSet.objects.create(name='group1')
+        sender_template = EmailTemplate.objects.create(template_set=sender_email_template_set,
+                                                       owner=sending_user,
+                                                       template_type=EmailTemplateType.objects.get(name='accepted'),
+                                                       subject='Subject',
+                                                       body='email body')
+        delivery = DDSDelivery.objects.create(
+            project_id='project1', from_user_id='fromuser1',
+            to_user_id='touser1', transfer_id='abc123',
+            email_template_set=sender_email_template_set)
+        transfer_id = delivery.transfer_id
+
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'transfer_id': transfer_id}, follow=True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # check that the sender template subject/body was used to render the email
+        args, kwargs = mock_message.call_args
+        from_email, to_email, subject, body, context = args
+        self.assertEqual(subject, sender_template.subject)
+        self.assertEqual(body, sender_template.body)
 
 class DeclineGetTestCase(AuthenticatedTestCase):
 
@@ -220,7 +284,7 @@ class DeclineGetTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_get_with_already_accepted(self,mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        delivery = create_delivery()
+        delivery = self.create_delivery()
         delivery.mark_accepted('user', 'email text')
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         url = reverse('ownership-decline')
@@ -231,7 +295,7 @@ class DeclineGetTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_get_with_already_declined(self,mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        delivery = create_delivery()
+        delivery = self.create_delivery()
         delivery.mark_declined('user', 'Done', 'email text')
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         url = reverse('ownership-decline')
@@ -252,7 +316,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_cancel_decline(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         url = reverse('ownership-decline')
         response = self.client.post(url, {'transfer_id': transfer_id, 'cancel': 'cancel'})
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
@@ -264,7 +328,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
     def test_confirm_decline(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
         mock_delivery_type.mock_processed_message.email_text = 'email text'
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = reverse('ownership-decline')
@@ -278,7 +342,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_decline_with_blank(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = reverse('ownership-decline')
@@ -290,7 +354,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_decline_with_already_declined(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        delivery = create_delivery()
+        delivery = self.create_delivery()
         delivery.mark_declined('user', 'Done', 'email text')
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         transfer_id = delivery.transfer_id
@@ -303,7 +367,7 @@ class DeclinePostTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_decline_with_already_accepted(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        delivery = create_delivery()
+        delivery = self.create_delivery()
         delivery.mark_accepted('user','email type')
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         transfer_id = delivery.transfer_id
@@ -319,7 +383,7 @@ class AcceptedPageTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_renders_accepted_page_with_project_url(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = reverse('ownership-accepted')
@@ -343,7 +407,7 @@ class DeclinedPageTestCase(AuthenticatedTestCase):
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_renders_declined_page_with_project_url(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
-        transfer_id = create_delivery_get_transfer_id()
+        transfer_id = self.create_delivery_get_transfer_id()
         mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
             transfer_id=transfer_id)
         url = reverse('ownership-declined')
