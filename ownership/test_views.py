@@ -13,7 +13,7 @@ try:
     from urllib.parse import urlencode
 except ImportError:
     from urllib import urlencode
-from mock import patch, Mock, call
+from mock import patch, Mock, call, ANY
 
 
 def url_with_transfer_id(name, transfer_id=None):
@@ -226,8 +226,13 @@ class ProcessTestCase(AuthenticatedTestCase):
         EmailTemplate.objects.create(template_set=sender_email_template_set,
                                      owner=sending_user,
                                      template_type=EmailTemplateType.objects.get(name='accepted'),
-                                     subject='Subject',
-                                     body='email body')
+                                     subject='Subject1',
+                                     body='email body1')
+        EmailTemplate.objects.create(template_set=sender_email_template_set,
+                                     owner=sending_user,
+                                     template_type=EmailTemplateType.objects.get(name='accepted_recipient'),
+                                     subject='Subject2',
+                                     body='email body2')
         delivery = DDSDelivery.objects.create(
             project_id='project1', from_user_id='fromuser1',
             to_user_id='touser1', transfer_id='abc123',
@@ -251,11 +256,17 @@ class ProcessTestCase(AuthenticatedTestCase):
         # a template set is specified when the delivery was created
         sending_user = django_user.objects.create_user('sender', password='senderpass')
         sender_email_template_set = EmailTemplateSet.objects.create(name='group1')
-        sender_template = EmailTemplate.objects.create(template_set=sender_email_template_set,
-                                                       owner=sending_user,
-                                                       template_type=EmailTemplateType.objects.get(name='accepted'),
-                                                       subject='Subject',
-                                                       body='email body')
+        sender_template1 = EmailTemplate.objects.create(template_set=sender_email_template_set,
+                                                        owner=sending_user,
+                                                        template_type=EmailTemplateType.objects.get(name='accepted'),
+                                                        subject='Subject1',
+                                                        body='email body2')
+        sender_template2 = EmailTemplate.objects.create(template_set=sender_email_template_set,
+                                                        owner=sending_user,
+                                                        template_type=EmailTemplateType.objects.get(
+                                                            name='accepted_recipient'),
+                                                        subject='Subject2',
+                                                        body='email body2')
         delivery = DDSDelivery.objects.create(
             project_id='project1', from_user_id='fromuser1',
             to_user_id='touser1', transfer_id='abc123',
@@ -267,10 +278,15 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # check that the sender template subject/body was used to render the email
-        args, kwargs = mock_message.call_args
-        from_email, to_email, subject, body, context = args
-        self.assertEqual(subject, sender_template.subject)
-        self.assertEqual(body, sender_template.body)
+        mock_message.assert_has_calls([
+            call(ANY, ANY, sender_template1.subject, sender_template1.body, ANY),
+            call().send(),
+            call(ANY, ANY, sender_template2.subject, sender_template2.body, ANY),
+            call().send(),
+        ])
+        #from_email, to_email, subject, body, context = args
+        #self.assertEqual(subject, sender_template1.subject)
+        #self.assertEqual(body, sender_template1.body)
 
 class DeclineGetTestCase(AuthenticatedTestCase):
 

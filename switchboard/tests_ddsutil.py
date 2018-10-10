@@ -317,6 +317,10 @@ class DDSDeliveryTypeTestCase(TestCase):
         share_users.all.return_value = [Mock(dds_id='shareuser1'), Mock(dds_id='shareuser2')]
         mock_delivery = Mock(share_users=share_users)
         mock_user = Mock()
+        mock_dds_message_factory.return_value.make_processed_message.side_effect = [
+            Mock(email_text='first_email_content'),
+            Mock(email_text='second_email_content')
+        ]
 
         warning_message = self.delivery_type.transfer_delivery(mock_delivery, mock_user)
 
@@ -329,11 +333,15 @@ class DDSDeliveryTypeTestCase(TestCase):
         ])
 
         make_processed_message = mock_dds_message_factory.return_value.make_processed_message
-        make_processed_message.assert_called_with('accepted', MessageDirection.ToSender, warning_message='')
-        make_processed_message.return_value.send.assert_called_with()
+        make_processed_message.assert_has_calls([
+            call('accepted', MessageDirection.ToSender, warning_message=''),
+            call('accepted_recipient', MessageDirection.ToRecipient),
+        ])
         mock_delivery.mark_accepted.assert_called_with(
             mock_user.get_username.return_value,
-            make_processed_message.return_value.email_text)
+            'first_email_content',
+            'second_email_content'
+        )
 
 
 class DDSProjectTestCase(TestCase):

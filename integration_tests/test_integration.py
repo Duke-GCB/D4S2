@@ -41,6 +41,13 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
             template_type=EmailTemplateType.objects.get(name='accepted'),
             subject='Sender Delivery Accepted Subject',
             body='Sender Delivery Accepted Body')
+        self.accepted_sender_template = EmailTemplate.objects.create(
+            template_set=self.sender_email_template_set,
+            owner=self.sender_user,
+            template_type=EmailTemplateType.objects.get(name='accepted_recipient'),
+            subject='Sender Delivery Accepted To Recipient Subject',
+            body='Sender Delivery Accepted To Recipient Body')
+
         DDSUserCredential.objects.create(endpoint=dds_endpoint, user=self.sender_user, token='123', dds_id='456')
 
         self.recipient_username = 'api_user_recipient'
@@ -123,5 +130,8 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         mock_message.assert_has_calls([
             call(self.recipient_email, self.sender_email, 'Sender Delivery Accepted Subject',
                  'Sender Delivery Accepted Body', ANY),
+            call().send(),
+            call(self.sender_email, self.recipient_email, 'Sender Delivery Accepted To Recipient Subject',
+                 'Sender Delivery Accepted To Recipient Body', ANY),
             call().send()
         ])
