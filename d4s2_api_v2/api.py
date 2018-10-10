@@ -5,11 +5,11 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions
-from switchboard.dds_util import DDSUtil, DDSMessageFactory
+from switchboard.dds_util import DDSUtil, DDSMessageFactory, DDSAuthProvider, DDSAffiliate
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
-    DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer
+    DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer, DDSAuthProviderSerializer, DDSAffiliateSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
     ModelWithEmailTemplateSetMixin
@@ -77,6 +77,8 @@ class DDSUsersViewSet(DDSViewSet):
 
     def get_queryset(self):
         full_name_contains = self.request.query_params.get('full_name_contains', None)
+        email = self.request.query_params.get('email', None)
+        username = self.request.query_params.get('username', None)
         recent = self.request.query_params.get('recent', None)
 
         dds_util = DDSUtil(self.request.user)
@@ -86,7 +88,7 @@ class DDSUsersViewSet(DDSViewSet):
                 raise BadRequestException(msg)
             return self._get_recent_delivery_users(dds_util)
         else:
-            return self._ds_operation(DDSUser.fetch_list, dds_util, full_name_contains)
+            return self._ds_operation(DDSUser.fetch_list, dds_util, full_name_contains, email, username)
 
     def _get_recent_delivery_users(self, dds_util):
         """
@@ -289,3 +291,24 @@ class DeliveryPreviewView(ModelWithEmailTemplateSetMixin, generics.CreateAPIView
         serializer = self.get_serializer(instance=delivery_preview)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class DDSAuthProviderViewSet(DDSViewSet):
+    serializer_class = DDSAuthProviderSerializer
+
+    def get_queryset(self):
+        dds_util = DDSUtil(self.request.user)
+        return self._ds_operation(DDSAuthProvider.fetch_list, dds_util)
+
+    def get_object(self):
+        provider_id = self.kwargs.get('pk')
+        dds_util = DDSUtil(self.request.user)
+        return self._ds_operation(DDSAuthProvider.fetch_one, dds_util, provider_id)
+
+    @detail_route(methods=['get'], serializer_class=DDSAffiliateSerializer)
+    def affiliates(self, request, pk=None):
+        dds_util = DDSUtil(request.user)
+        full_name_contains = request.query_params.get('full_name_contains')
+        dds_affiliates = self._ds_operation(DDSAffiliate.fetch_list, dds_util, pk, full_name_contains)
+        serializer = DDSAffiliateSerializer(dds_affiliates, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

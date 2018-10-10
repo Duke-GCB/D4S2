@@ -84,7 +84,7 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-        mock_dds_util.return_value.get_users.assert_called_with("smith")
+        mock_dds_util.return_value.get_users.assert_called_with("smith", None, None)
 
         user = response.data[0]
         self.assertEqual(user['id'], 'user1')

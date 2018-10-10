@@ -149,3 +149,32 @@ class DDSDeliveryPreviewSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'delivery-preview'
+
+
+class DDSAuthProviderSerializer(serializers.Serializer):
+    """
+    Serializer for DukeDS auth provider affiliates API
+    """
+    id = serializers.UUIDField()
+    service_id = serializers.UUIDField()
+    name = serializers.CharField()
+    is_deprecated = serializers.BooleanField()
+    is_default = serializers.BooleanField()
+    login_initiation_url = serializers.CharField()
+
+    class Meta:
+        resource_name = 'duke-ds-auth-provider'
+
+
+class DDSAffiliateSerializer(serializers.Serializer):
+    """
+    Serializer for DukeDS auth provider affiliates API
+    """
+    uid = serializers.CharField()
+    full_name = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()
+
+    class Meta:
+        resource_name = 'duke-ds-affiliates'
