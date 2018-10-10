@@ -9,7 +9,8 @@ from switchboard.dds_util import DDSUtil, DDSMessageFactory, DDSAuthProvider, DD
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
-    DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer, DDSAuthProviderSerializer, DDSAffiliateSerializer
+    DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer, DDSAuthProviderSerializer, DDSAffiliateSerializer, \
+    AddUserSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
     ModelWithEmailTemplateSetMixin
@@ -311,4 +312,12 @@ class DDSAuthProviderViewSet(DDSViewSet):
         full_name_contains = request.query_params.get('full_name_contains')
         dds_affiliates = self._ds_operation(DDSAffiliate.fetch_list, dds_util, pk, full_name_contains)
         serializer = DDSAffiliateSerializer(dds_affiliates, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @detail_route(methods=['POST'], serializer_class=AddUserSerializer)
+    def add_user(self, request, pk=None):
+        username = request.data.get('username')
+        dds_util = DDSUtil(request.user)
+        dds_user = self._ds_operation(DDSUser.add_user, dds_util, pk, username)
+        serializer = DDSUserSerializer(instance=dds_user)
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -112,6 +112,9 @@ class DDSUtil(object):
     def get_auth_provider_affiliates(self, auth_provider_id, full_name_contains):
         return self.remote_store.data_service.get_auth_provider_affiliates(auth_provider_id, full_name_contains).json()
 
+    def auth_provider_add_user(self, auth_provider_id, username):
+        return self.remote_store.data_service.auth_provider_add_user(auth_provider_id, username).json()
+
 
 class DDSBase(object):
     @classmethod
@@ -140,6 +143,11 @@ class DDSUser(DDSBase):
     @staticmethod
     def fetch_one(dds_util, dds_user_id):
         response = dds_util.get_user(dds_user_id).json()
+        return DDSUser(response)
+
+    @staticmethod
+    def add_user(dds_util, auth_provider_id, username):
+        response = dds_util.auth_provider_add_user(auth_provider_id, username)
         return DDSUser(response)
 
 

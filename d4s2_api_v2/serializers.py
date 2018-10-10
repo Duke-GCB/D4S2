@@ -178,3 +178,6 @@ class DDSAffiliateSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'duke-ds-affiliates'
+
+class AddUserSerializer(serializers.Serializer):
+    username = serializers.CharField()
