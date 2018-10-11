@@ -146,9 +146,13 @@ class DDSUser(DDSBase):
         return DDSUser(response)
 
     @staticmethod
-    def add_user(dds_util, auth_provider_id, username):
-        response = dds_util.auth_provider_add_user(auth_provider_id, username)
-        return DDSUser(response)
+    def get_or_register_user(dds_util, auth_provider_id, username):
+        users = dds_util.get_users(username=username)
+        if users:
+            return users[0]
+        else:
+            response = dds_util.auth_provider_add_user(auth_provider_id, username)
+            return DDSUser(response)
 
 
 class DDSProject(DDSBase):
@@ -246,7 +250,6 @@ class DeliveryDetails(object):
         self.ddsutil = DDSUtil(user)
         self.email_template_set = delivery_or_share.email_template_set
         self.user = user
-
 
     def get_from_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
@@ -486,8 +489,8 @@ class DDSAuthProvider(DDSBase):
         return DDSAuthProvider.from_list(response['results'])
 
     @staticmethod
-    def fetch_one(dds_util, dds_user_id):
-        response = dds_util.get_auth_provider(dds_user_id)
+    def fetch_one(dds_util, dds_provider_id):
+        response = dds_util.get_auth_provider(dds_provider_id)
         return DDSAuthProvider(response)
 
 

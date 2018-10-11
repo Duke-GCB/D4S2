@@ -314,10 +314,10 @@ class DDSAuthProviderViewSet(DDSViewSet):
         serializer = DDSAffiliateSerializer(dds_affiliates, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @detail_route(methods=['POST'], serializer_class=AddUserSerializer)
-    def add_user(self, request, pk=None):
-        username = request.data.get('username')
+    @detail_route(methods=['POST'], serializer_class=DDSUserSerializer, url_path='get-or-register-user')
+    def get_or_register_user(self, request, pk=None):
+        username = request.data['username']
         dds_util = DDSUtil(request.user)
-        dds_user = self._ds_operation(DDSUser.add_user, dds_util, pk, username)
+        dds_user = self._ds_operation(DDSUser.get_or_register_user, dds_util, pk, username)
         serializer = DDSUserSerializer(instance=dds_user)
         return Response(serializer.data, status=status.HTTP_200_OK)

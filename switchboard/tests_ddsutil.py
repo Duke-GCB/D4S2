@@ -2,7 +2,7 @@ from django.test import TestCase
 from mock import patch, Mock, MagicMock, call
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
     SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
-    DDS_PERMISSIONS_ID_SEP, MessageDirection
+    DDS_PERMISSIONS_ID_SEP, MessageDirection, DDSUser, DDSAuthProvider, DDSAffiliate
 from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole, EmailTemplateSet, \
     UserEmailTemplateSet, EmailTemplate, EmailTemplateType
 from gcb_web_auth.models import DDSEndpoint
@@ -122,6 +122,66 @@ class DDSUtilTestCase(TestCase):
         mock_remote_store = Mock()
         dds_util._remote_store = mock_remote_store
         dds_util.cancel_project_transfer(transfer_id='123')
+
+    def test_get_users_no_filter(self):
+        mock_user = Mock(name='joe')
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_users.return_value = [mock_user]
+        dds_util._remote_store = mock_remote_store
+        users = dds_util.get_users()
+        self.assertEqual(users, [mock_user])
+        mock_remote_store.data_service.get_users.assert_called_with(None, None, None)
+
+    def test_get_users_with_filters(self):
+        mock_user = Mock(name='joe')
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_users.return_value = [mock_user]
+        dds_util._remote_store = mock_remote_store
+        users = dds_util.get_users(full_name_contains='Joe', email='joe@joe.com', username='joe')
+        self.assertEqual(users, [mock_user])
+        mock_remote_store.data_service.get_users.assert_called_with('Joe', 'joe@joe.com', 'joe')
+
+    def test_get_auth_providers(self):
+        mock_provider = Mock(name='provider1')
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_auth_providers.return_value.json.return_value = [mock_provider]
+        dds_util._remote_store = mock_remote_store
+        providers = dds_util.get_auth_providers()
+        self.assertEqual(providers, [mock_provider])
+        mock_remote_store.data_service.get_auth_providers.assert_called_with()
+
+    def test_get_auth_provider(self):
+        mock_provider = Mock(name='provider1')
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_auth_provider.return_value.json.return_value = mock_provider
+        dds_util._remote_store = mock_remote_store
+        provider = dds_util.get_auth_provider('provider1')
+        self.assertEqual(provider, mock_provider)
+        mock_remote_store.data_service.get_auth_provider.assert_called_with('provider1')
+
+    def test_get_auth_provider_affiliates(self):
+        mock_affiliate = Mock(id='affiliate1')
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.get_auth_provider_affiliates.return_value.json.return_value = [mock_affiliate]
+        dds_util._remote_store = mock_remote_store
+        affiliates = dds_util.get_auth_provider_affiliates(auth_provider_id='provider1', full_name_contains='Joe')
+        self.assertEqual(affiliates, [mock_affiliate])
+        mock_remote_store.data_service.get_auth_provider_affiliates.assert_called_with('provider1', 'Joe')
+
+    def test_auth_provider_add_user(self):
+        mock_dds_user = Mock()
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        mock_remote_store.data_service.auth_provider_add_user.return_value.json.return_value = mock_dds_user
+        dds_util._remote_store = mock_remote_store
+        dds_user = dds_util.auth_provider_add_user(auth_provider_id='provider1', username='user1')
+        self.assertEqual(dds_user, mock_dds_user)
+        mock_remote_store.data_service.auth_provider_add_user.assert_called_with('provider1', 'user1')
 
 
 class TestDeliveryDetails(TestCase):
@@ -451,3 +511,106 @@ class DDSProjectPermissionsTestCase(TestCase):
         self.assertEqual(permissions.project, 'project1')
         self.assertEqual(permissions.user, 'user1')
         self.assertEqual(permissions.auth_role, 'file_downloader')
+
+
+class DDSUserTestCase(TestCase):
+    def test_get_or_register_user_when_user_exists(self):
+        mock_user = Mock()
+        mock_dds_util = Mock()
+        mock_dds_util.get_users.return_value = [mock_user]
+        dds_user = DDSUser.get_or_register_user(mock_dds_util, auth_provider_id='provider1', username='joe1')
+        self.assertEqual(dds_user, mock_user)
+        mock_dds_util.get_users.assert_called_with(username='joe1')
+        mock_dds_util.auth_provider_add_user.assert_not_called()
+
+    def test_get_or_register_user_when_user_not_found(self):
+        mock_dds_util = Mock()
+        mock_dds_util.get_users.return_value = []
+        mock_dds_util.auth_provider_add_user.return_value = {
+            'id': 'joe1',
+            'username': 'joe1',
+            'full_name': '',
+            'first_name': '',
+            'last_name': '',
+            'email': ''
+        }
+        dds_user = DDSUser.get_or_register_user(mock_dds_util, auth_provider_id='provider1', username='joe1')
+        self.assertEqual(dds_user.username, 'joe1')
+        mock_dds_util.get_users.assert_called_with(username='joe1')
+        mock_dds_util.auth_provider_add_user.assert_called_with('provider1', 'joe1')
+
+
+class DDSAuthProviderTestCase(TestCase):
+    def setUp(self):
+        self.provider_dict = {
+            'id': '123',
+            'service_id': '456',
+            'name': 'primary',
+            'is_deprecated': False,
+            'is_default': True,
+            'login_initiation_url': 'someurl'
+        }
+        self.mock_dds_util = Mock()
+
+    def test_constructor(self):
+        provider = DDSAuthProvider(self.provider_dict)
+        self.assertEqual(provider.id, '123')
+        self.assertEqual(provider.service_id, '456')
+        self.assertEqual(provider.name, 'primary')
+        self.assertEqual(provider.is_deprecated, False)
+        self.assertEqual(provider.is_default, True)
+        self.assertEqual(provider.login_initiation_url, 'someurl')
+
+    def test_fetch_list(self):
+        self.mock_dds_util.get_auth_providers.return_value = {'results': [self.provider_dict]}
+        providers = DDSAuthProvider.fetch_list(self.mock_dds_util)
+        self.assertEqual(len(providers), 1)
+        self.assertEqual(providers[0].id, '123')
+
+    def test_fetch_one(self):
+        self.mock_dds_util.get_auth_provider.return_value = self.provider_dict
+        provider = DDSAuthProvider.fetch_one(self.mock_dds_util, dds_provider_id='123')
+        self.assertEqual(provider.id, '123')
+        self.mock_dds_util.get_auth_provider.assert_called_with('123')
+
+    @staticmethod
+    def fetch_list(dds_util):
+        response = dds_util.get_auth_providers()
+        return DDSAuthProvider.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_user_id):
+        response = dds_util.get_auth_provider(dds_user_id)
+        return DDSAuthProvider(response)
+
+
+class DDSAffiliateTestCase(TestCase):
+    def setUp(self):
+        self.dds_affiliate_dict = {
+            'uid': 'joe123',
+            'full_name': 'Joe Smith',
+            'first_name': 'Joe',
+            'last_name': 'Smith',
+            'email': 'joe@joe.com',
+        }
+        self.mock_dds_util = Mock()
+
+    def test_constructor(self):
+        affiliate = DDSAffiliate(self.dds_affiliate_dict)
+        self.assertEqual(affiliate.uid, 'joe123')
+        self.assertEqual(affiliate.full_name, 'Joe Smith')
+        self.assertEqual(affiliate.first_name, 'Joe')
+        self.assertEqual(affiliate.last_name, 'Smith')
+        self.assertEqual(affiliate.email, 'joe@joe.com')
+
+    def test_fetch_list(self):
+        self.mock_dds_util.get_auth_provider_affiliates.return_value = {
+            'results': [
+                self.dds_affiliate_dict
+            ]
+        }
+        affiliates = DDSAffiliate.fetch_list(self.mock_dds_util, 'provider1', 'Joe')
+        self.assertEqual(len(affiliates), 1)
+        self.assertEqual(affiliates[0].uid, 'joe123')
+        self.assertEqual(affiliates[0].full_name, 'Joe Smith')
+        self.mock_dds_util.get_auth_provider_affiliates.assert_called_with('provider1', 'Joe')
