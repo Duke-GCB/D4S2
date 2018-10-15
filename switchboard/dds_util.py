@@ -13,6 +13,7 @@ DDS_SERVICE_NAME = 'Duke Data Service'
 PROJECT_ADMIN_ID = 'project_admin'
 DDS_PERMISSIONS_ID_SEP = '_'
 
+
 class DDSUtil(object):
     def __init__(self, user):
         if not user:
@@ -81,11 +82,8 @@ class DDSUtil(object):
     def share_project_with_user(self, project_id, dds_user_id, auth_role):
         return self.remote_store.data_service.set_user_project_permission(project_id, dds_user_id, auth_role)
 
-    def get_users(self, full_name_contains=None):
-        if full_name_contains:
-            return self.remote_store.data_service.get_users_by_full_name(full_name_contains)
-        else:
-            return self.remote_store.data_service.get_all_users()
+    def get_users(self, full_name_contains=None, email=None, username=None):
+        return self.remote_store.data_service.get_users(full_name_contains, email, username)
 
     def get_user(self, user_id):
         return self.remote_store.data_service.get_user_by_id(user_id)
@@ -104,6 +102,18 @@ class DDSUtil(object):
 
     def get_project_permissions(self, project_id):
         return self.remote_store.data_service.get_project_permissions(project_id).json()
+
+    def get_auth_providers(self):
+        return self.remote_store.data_service.get_auth_providers().json()
+
+    def get_auth_provider(self, auth_provider_id):
+        return self.remote_store.data_service.get_auth_provider(auth_provider_id).json()
+
+    def get_auth_provider_affiliates(self, auth_provider_id, full_name_contains):
+        return self.remote_store.data_service.get_auth_provider_affiliates(auth_provider_id, full_name_contains).json()
+
+    def auth_provider_add_user(self, auth_provider_id, username):
+        return self.remote_store.data_service.auth_provider_add_user(auth_provider_id, username).json()
 
 
 class DDSBase(object):
@@ -126,14 +136,23 @@ class DDSUser(DDSBase):
         self.email = user_dict.get('email')
 
     @staticmethod
-    def fetch_list(dds_util, full_name_contains):
-        response = dds_util.get_users(full_name_contains).json()
+    def fetch_list(dds_util, full_name_contains, email, username):
+        response = dds_util.get_users(full_name_contains, email, username).json()
         return DDSUser.from_list(response['results'])
 
     @staticmethod
     def fetch_one(dds_util, dds_user_id):
         response = dds_util.get_user(dds_user_id).json()
         return DDSUser(response)
+
+    @staticmethod
+    def get_or_register_user(dds_util, auth_provider_id, username):
+        users = dds_util.get_users(username=username)
+        if users:
+            return users[0]
+        else:
+            response = dds_util.auth_provider_add_user(auth_provider_id, username)
+            return DDSUser(response)
 
 
 class DDSProject(DDSBase):
@@ -231,7 +250,6 @@ class DeliveryDetails(object):
         self.ddsutil = DDSUtil(user)
         self.email_template_set = delivery_or_share.email_template_set
         self.user = user
-
 
     def get_from_user(self):
         return DDSUser.fetch_one(self.ddsutil, self.delivery.from_user_id)
@@ -454,3 +472,48 @@ class DDSMessageFactory(MessageFactory):
         super(DDSMessageFactory, self).__init__(
             DeliveryDetails(delivery, user)
         )
+
+
+class DDSAuthProvider(DDSBase):
+    """
+    A simple object to represent a DDSProject
+    """
+    def __init__(self, provider_dict):
+        self.id = provider_dict.get('id')
+        self.service_id = provider_dict.get('service_id')
+        self.name = provider_dict.get('name')
+        self.is_deprecated = provider_dict.get('is_deprecated')
+        self.is_default = provider_dict.get('is_default')
+        self.login_initiation_url = provider_dict.get('login_initiation_url')
+
+    @staticmethod
+    def fetch_list(dds_util):
+        response = dds_util.get_auth_providers()
+        return DDSAuthProvider.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_provider_id):
+        response = dds_util.get_auth_provider(dds_provider_id)
+        return DDSAuthProvider(response)
+
+
+class DDSAffiliate(DDSBase):
+    """
+    A simple object to represent a DDSProject
+    """
+    def __init__(self, project_dict):
+        self.uid = project_dict.get('uid')
+        self.full_name = project_dict.get('full_name')
+        self.first_name = project_dict.get('first_name')
+        self.last_name = project_dict.get('last_name')
+        self.email = project_dict.get('email')
+
+    @staticmethod
+    def fetch_list(dds_util, auth_provider_id, full_name_contains):
+        """
+        Fetch list of DDSAffiliates based on auth_provider_id and full_name_contains
+        :param dds_util: DDSUtil
+        :return: [DDSAffiliate]
+        """
+        response = dds_util.get_auth_provider_affiliates(auth_provider_id, full_name_contains)
+        return DDSAffiliate.from_list(response['results'])

@@ -9,6 +9,7 @@ from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket
+from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -84,7 +85,7 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-        mock_dds_util.return_value.get_users.assert_called_with("smith")
+        mock_dds_util.return_value.get_users.assert_called_with("smith", None, None)
 
         user = response.data[0]
         self.assertEqual(user['id'], 'user1')
@@ -1041,6 +1042,7 @@ class S3DeliveryViewSetTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, [ITEM_EMAIL_TEMPLATES_NOT_SETUP_MSG])
 
+
 class DeliveryPreviewViewTestCase(APITestCase):
 
     def setUp(self):
@@ -1138,3 +1140,100 @@ class DeliveryPreviewViewTestCase(APITestCase):
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, [EMAIL_TEMPLATES_NOT_SETUP_MSG])
+
+
+class DDSAuthProviderViewSetTestCase(AuthenticatedResourceTestCase):
+    def setUp(self):
+        self.user = django_user.objects.create_user(username='user', password='secret')
+        self.client.login(username='user', password='secret')
+        self.provider_dict = {
+            'id': '123',
+            'service_id': '456',
+            'name': 'primary',
+            'is_deprecated': False,
+            'is_default': True,
+            'login_initiation_url': 'someurl'
+        }
+        self.dds_affiliate_dict = {
+            'uid': 'joe123',
+            'full_name': 'Joe Smith',
+            'first_name': 'Joe',
+            'last_name': 'Smith',
+            'email': 'joe@joe.com',
+        }
+        self.dds_user_dict = {
+            'id': '999',
+            'username': 'joe456',
+            'full_name': '',
+            'first_name': '',
+            'last_name': '',
+            'email': '',
+        }
+
+    def test_fails_unauthenticated(self):
+        self.client.logout()
+        url = reverse('v2-dukedsauthprovider-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertUnauthorized(response)
+
+    def test_post_not_permitted(self):
+        url = reverse('v2-dukedsauthprovider-list')
+        data = {}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_put_not_permitted(self):
+        url = reverse('v2-dukedsauthprovider-list')
+        data = {}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSAuthProvider')
+    def test_get_provider(self, mock_dds_auth_provider, mock_dds_util):
+        mock_dds_auth_provider.fetch_list.return_value = [DDSAuthProvider(self.provider_dict)]
+        url = reverse('v2-dukedsauthprovider-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        provider = response.data[0]
+        self.assertEqual(provider['id'], '123')
+        self.assertEqual(provider['is_deprecated'], False)
+        self.assertEqual(provider['is_default'], True)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSAuthProvider')
+    def test_get_provider(self, mock_dds_auth_provider, mock_dds_util):
+        mock_dds_auth_provider.fetch_one.return_value = DDSAuthProvider(self.provider_dict)
+        url = reverse('v2-dukedsauthprovider-list') + '123/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        provider = response.data
+        self.assertEqual(provider['id'], '123')
+        self.assertEqual(provider['is_deprecated'], False)
+        self.assertEqual(provider['is_default'], True)
+        mock_dds_auth_provider.fetch_one.assert_called_with(mock_dds_util.return_value, '123')
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSAffiliate')
+    def test_get_affiliates(self, mock_dds_affiliate, mock_dds_util):
+        mock_dds_affiliate.fetch_list.return_value = [DDSAffiliate(self.dds_affiliate_dict)]
+        url = reverse('v2-dukedsauthprovider-list') + '123/affiliates/?full_name_contains=Joe'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        provider = response.data[0]
+        self.assertEqual(provider['uid'], 'joe123')
+        mock_dds_affiliate.fetch_list.assert_called_with(mock_dds_util.return_value, '123', 'Joe')
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSUser')
+    def test_get_or_register_user(self, mock_dds_user, mock_dds_util):
+        mock_dds_user.get_or_register_user.return_value = DDSUser(self.dds_user_dict)
+        url = reverse('v2-dukedsauthprovider-list') + '123/get-or-register-user/'
+        response = self.client.post(url, data={'username': 'joe456'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], '999')
