@@ -26,6 +26,3 @@ jobs:
           command: |
             source venv/bin/activate
             DJANGO_SETTINGS_MODULE=d4s2.settings_test python manage.py test
-      - store_artifacts:
-          path: test-reports/
-          destination: tr1
