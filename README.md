@@ -3,6 +3,7 @@ D4S2: Data Delivery Service
 
 Web service to facilitate notification and transfer of projects in Duke Data Service and S3 Object Stores.
 
+[![CircleCI](https://circleci.com/gh/Duke-GCB/D4S2.svg?style=svg)](https://circleci.com/gh/Duke-GCB/D4S2)
 
 Installation - Local Development
 ================================
