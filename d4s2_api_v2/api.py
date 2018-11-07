@@ -310,6 +310,8 @@ class DDSAuthProviderViewSet(DDSViewSet):
     def affiliates(self, request, pk=None):
         dds_util = DDSUtil(request.user)
         full_name_contains = request.query_params.get('full_name_contains')
+        email = self.request.query_params.get('email', None)
+        username = self.request.query_params.get('username', None)
         dds_affiliates = self._ds_operation(DDSAffiliate.fetch_list, dds_util, pk, full_name_contains)
         serializer = DDSAffiliateSerializer(dds_affiliates, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

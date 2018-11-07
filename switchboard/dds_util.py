@@ -109,8 +109,8 @@ class DDSUtil(object):
     def get_auth_provider(self, auth_provider_id):
         return self.remote_store.data_service.get_auth_provider(auth_provider_id).json()
 
-    def get_auth_provider_affiliates(self, auth_provider_id, full_name_contains):
-        return self.remote_store.data_service.get_auth_provider_affiliates(auth_provider_id, full_name_contains).json()
+    def get_auth_provider_affiliates(self, auth_provider_id, full_name_contains, email, username):
+        return self.remote_store.data_service.get_auth_provider_affiliates(auth_provider_id, full_name_contains, email, username).json()
 
     def auth_provider_add_user(self, auth_provider_id, username):
         return self.remote_store.data_service.auth_provider_add_user(auth_provider_id, username).json()
@@ -509,11 +509,11 @@ class DDSAffiliate(DDSBase):
         self.email = project_dict.get('email')
 
     @staticmethod
-    def fetch_list(dds_util, auth_provider_id, full_name_contains):
+    def fetch_list(dds_util, auth_provider_id, full_name_contains, email, username):
         """
         Fetch list of DDSAffiliates based on auth_provider_id and full_name_contains
         :param dds_util: DDSUtil
         :return: [DDSAffiliate]
         """
-        response = dds_util.get_auth_provider_affiliates(auth_provider_id, full_name_contains)
+        response = dds_util.get_auth_provider_affiliates(auth_provider_id, full_name_contains, email, username)
         return DDSAffiliate.from_list(response['results'])
