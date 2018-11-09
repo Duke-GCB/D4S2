@@ -88,24 +88,4 @@ Deployment
 
 We use Docker and Ansible to deploy this application, as described in the [d4s2-webapp](https://github.com/Duke-GCB/gcb-ansible-roles/tree/master/d4s2_webapp) role.
 
-The [.gitlab-ci.yml](.gitlab-ci.yml) file also defines a GitLab CI/CD pipeline for automatically deploying the application by pushing a deployment branch to GitLab. The deployment runs on a VM dedicated to GitLab runner, which is managed by Ansible.
-
-The pipeline is configured to deploy the `deploy-dev` branch to a development server, and `deploy-prod` to a production server. To deploy a feature branch to the development server:
-
-1. Ensure the d4s2 repo on GitLab is configured as a remote
-
-        $ git remote add gitlab git@gitlab.dhe.duke.edu:gcb-informatics/d4s2.git
-
-2. Merge your changes into the `deploy-dev` branch
-
-        $ git checkout deploy-dev
-        $ git merge feature-branch
-
-3. Push your branch to GitLab, which kicks off a pipeline, running the build, test, and deploy scripts in [.gitlab-ci.yml](.gitlab-ci.yml).
-
-        $ git push gitlab deploy-dev
-
-3. Monitor the [pipeline](https://gitlab.dhe.duke.edu/gcb-informatics/d4s2/pipelines) from GitLab if desired.
-4. View deployment history from [environments](https://gitlab.dhe.duke.edu/gcb-informatics/d4s2/environments).
-
-Deployments can be rolled back or re-deployed. While the `deploy-dev` branch is designed for development usage, only changes approved into `master` should be pushed to `deploy-prod`.
+Docker images are built on-demand as described by the [datadelivery.yml](https://github.com/Duke-GCB/gcb-ansible/blob/master/datadelivery.yml) playbook
