@@ -1154,21 +1154,6 @@ class DDSAuthProviderViewSetTestCase(AuthenticatedResourceTestCase):
             'is_default': True,
             'login_initiation_url': 'someurl'
         }
-        self.dds_affiliate_dict = {
-            'uid': 'joe123',
-            'full_name': 'Joe Smith',
-            'first_name': 'Joe',
-            'last_name': 'Smith',
-            'email': 'joe@joe.com',
-        }
-        self.dds_user_dict = {
-            'id': '999',
-            'username': 'joe456',
-            'full_name': '',
-            'first_name': '',
-            'last_name': '',
-            'email': '',
-        }
 
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -1216,24 +1201,95 @@ class DDSAuthProviderViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(provider['is_default'], True)
         mock_dds_auth_provider.fetch_one.assert_called_with(mock_dds_util.return_value, '123')
 
+class DDSAuthProviderAffiliatesViewSetTestCase(AuthenticatedResourceTestCase):
+
+    def setUp(self):
+        self.user = django_user.objects.create_user(username='user', password='secret')
+        self.client.login(username='user', password='secret')
+        self.dds_affiliate_dict = {
+            'uid': 'joe123',
+            'full_name': 'Joe Smith',
+            'first_name': 'Joe',
+            'last_name': 'Smith',
+            'email': 'joe@joe.com',
+        }
+        self.dds_user_dict = {
+            'id': '999',
+            'username': 'joe456',
+            'full_name': '',
+            'first_name': '',
+            'last_name': '',
+            'email': '',
+        }
+
     @patch('d4s2_api_v2.api.DDSUtil')
     @patch('d4s2_api_v2.api.DDSAffiliate')
-    def test_get_affiliates(self, mock_dds_affiliate, mock_dds_util):
+    def test_get_affiliates_uses_default_provider_id(self, mock_dds_affiliate, mock_dds_util):
         mock_dds_affiliate.fetch_list.return_value = [DDSAffiliate(self.dds_affiliate_dict)]
-        url = reverse('v2-dukedsauthprovider-list') + '123/affiliates/?full_name_contains=Joe'
+        mock_dds_util.get_openid_auth_provider_id.return_value = '456'
+        url = reverse('v2-dukedsauthprovideraffiliates-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        mock_dds_affiliate.fetch_list.assert_called_with(mock_dds_util.return_value, '456', None, None, None)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSAffiliate')
+    def test_get_affiliates_by_full_name(self, mock_dds_affiliate, mock_dds_util):
+        mock_dds_affiliate.fetch_list.return_value = [DDSAffiliate(self.dds_affiliate_dict)]
+        url = reverse('v2-dukedsauthprovideraffiliates-list') + '?auth_provider_id=123&full_name_contains=Joe'
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
         provider = response.data[0]
         self.assertEqual(provider['uid'], 'joe123')
-        mock_dds_affiliate.fetch_list.assert_called_with(mock_dds_util.return_value, '123', 'Joe')
+        mock_dds_affiliate.fetch_list.assert_called_with(mock_dds_util.return_value, '123', 'Joe', None, None)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSAffiliate')
+    def test_get_affiliates_by_email(self, mock_dds_affiliate, mock_dds_util):
+        mock_dds_affiliate.fetch_list.return_value = [DDSAffiliate(self.dds_affiliate_dict)]
+        url = reverse('v2-dukedsauthprovideraffiliates-list') + '?auth_provider_id=123&email=joe@joe.com'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        provider = response.data[0]
+        self.assertEqual(provider['uid'], 'joe123')
+        mock_dds_affiliate.fetch_list.assert_called_with(mock_dds_util.return_value, '123', None, 'joe@joe.com', None)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSAffiliate')
+    def test_get_affiliates_by_username(self, mock_dds_affiliate, mock_dds_util):
+        mock_dds_affiliate.fetch_list.return_value = [DDSAffiliate(self.dds_affiliate_dict)]
+        url = reverse('v2-dukedsauthprovideraffiliates-list') + '?auth_provider_id=123&username=joe'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        provider = response.data[0]
+        self.assertEqual(provider['uid'], 'joe123')
+        mock_dds_affiliate.fetch_list.assert_called_with(mock_dds_util.return_value, '123', None, None, 'joe')
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSAffiliate')
+    def test_get_single_affiliate_by_username(self, mock_dds_affiliate, mock_dds_util):
+        mock_dds_affiliate.fetch_one.return_value = DDSAffiliate(self.dds_affiliate_dict)
+        mock_dds_util.get_openid_auth_provider_id.return_value = '456'
+        url = reverse('v2-dukedsauthprovideraffiliates-list') + 'joe/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        affiliate = response.data
+        self.assertEqual(affiliate['uid'], 'joe123')
+        mock_dds_affiliate.fetch_one.assert_called_with(mock_dds_util.return_value, '456', 'joe')
 
     @patch('d4s2_api_v2.api.DDSUtil')
     @patch('d4s2_api_v2.api.DDSUser')
     def test_get_or_register_user(self, mock_dds_user, mock_dds_util):
         mock_dds_user.get_or_register_user.return_value = DDSUser(self.dds_user_dict)
-        url = reverse('v2-dukedsauthprovider-list') + '123/get-or-register-user/'
-        response = self.client.post(url, data={'username': 'joe456'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_dds_util.get_openid_auth_provider_id.return_value = '456'
+        url = reverse('v2-dukedsauthprovideraffiliates-list') + 'joe/get-or-register-user/'
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['id'], '999')
+        mock_dds_user.get_or_register_user.assert_called_with(mock_dds_util.return_value, '456', 'joe')

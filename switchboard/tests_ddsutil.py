@@ -13,7 +13,11 @@ class DDSUtilTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create(username='ddsutil_user')
         self.user_id = 'abcd-1234-efgh-8876'
-        DDSEndpoint.objects.create(api_root='https://api.example.com', portal_root='https://portal.example.com', openid_provider_id='openid-123')
+        DDSEndpoint.objects.create(api_root='https://api.example.com',
+                                   portal_root='https://portal.example.com',
+                                   openid_provider_id='openid-123',
+                                   openid_provider_service_id='service-456',
+                                   is_default=True)
 
         patcher = patch('switchboard.dds_util.get_dds_token')
         mock_get_dds_token = patcher.start()

@@ -2,8 +2,8 @@ from django.conf import settings
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, UserEmailTemplateSet
 from gcb_web_auth.backends.dukeds import make_auth_config
-from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials
-from gcb_web_auth.models import DDSEndpoint, DDSUserCredential
+from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials, get_default_dds_endpoint
+from gcb_web_auth.models import DDSUserCredential
 from ddsc.core.ddsapi import DataServiceError
 from d4s2_api.utils import MessageFactory, MessageDirection
 
@@ -47,8 +47,9 @@ class DDSUtil(object):
         project = self.get_remote_project(project_id)
         return self.remote_store.fetch_remote_project(project.name, must_exist=True)
 
+
     def get_project_url(self, project_id):
-        endpoint = DDSEndpoint.objects.first()
+        endpoint = get_default_dds_endpoint()
         return '{}/#/project/{}'.format(endpoint.portal_root, project_id)
 
     def add_user(self, user_id, project_id, auth_role):
@@ -112,8 +113,21 @@ class DDSUtil(object):
     def get_auth_provider_affiliates(self, auth_provider_id, full_name_contains, email, username):
         return self.remote_store.data_service.get_auth_provider_affiliates(auth_provider_id, full_name_contains, email, username).json()
 
+    def get_auth_provider_affiliate(self, auth_provider_id, username):
+        return self.remote_store.data_service.get_auth_provider_affiliate(auth_provider_id, username).json()
+
     def auth_provider_add_user(self, auth_provider_id, username):
         return self.remote_store.data_service.auth_provider_add_user(auth_provider_id, username).json()
+
+    @staticmethod
+    def get_openid_auth_provider_id():
+        """
+        Returns the locally-known (gcb_web_auth.DDSEndpoint) provider ID for the OpenID provider
+        Affiliate lookups need a provider ID and we'll pretty much always use the same one
+        :return:
+        """
+        endpoint = get_default_dds_endpoint()
+        return endpoint.openid_provider_id
 
 
 class DDSBase(object):
@@ -124,7 +138,7 @@ class DDSBase(object):
 
 class DDSUser(DDSBase):
     """
-    A simple object to represent a DDSProject
+    A simple object to represent a DDSUser
     """
 
     def __init__(self, user_dict):
@@ -476,7 +490,7 @@ class DDSMessageFactory(MessageFactory):
 
 class DDSAuthProvider(DDSBase):
     """
-    A simple object to represent a DDSProject
+    A simple object to represent a DDSAuthProvider
     """
     def __init__(self, provider_dict):
         self.id = provider_dict.get('id')
@@ -499,7 +513,7 @@ class DDSAuthProvider(DDSBase):
 
 class DDSAffiliate(DDSBase):
     """
-    A simple object to represent a DDSProject
+    A simple object to represent a DDSAffiliate
     """
     def __init__(self, project_dict):
         self.uid = project_dict.get('uid')
@@ -511,9 +525,25 @@ class DDSAffiliate(DDSBase):
     @staticmethod
     def fetch_list(dds_util, auth_provider_id, full_name_contains, email, username):
         """
-        Fetch list of DDSAffiliates based on auth_provider_id and full_name_contains
+        Fetch list of DDSAffiliates for an auth_provider, filtered by name, email, or username
         :param dds_util: DDSUtil
+        :param auth_provider_id: ID of a DDS Auth provider
+        :param full_name_contains: Search string for user's full name or None
+        :param email: Email address to search or None
+        :param username: username to search or None
         :return: [DDSAffiliate]
         """
         response = dds_util.get_auth_provider_affiliates(auth_provider_id, full_name_contains, email, username)
         return DDSAffiliate.from_list(response['results'])
+
+    @staticmethod
+    def fetch_one(dds_util, auth_provider_id, uid):
+        """
+        Fetch a single DDSAffiliate for an auth provider by unique username (uid)
+        :param dds_util: DDSUtil
+        :param auth_provider_id: ID of a DDS Auth provider
+        :param uid: Unique username for which to fetch affiliate
+        :return:
+        """
+        response = dds_util.get_auth_provider_affiliate(auth_provider_id, uid)
+        return DDSAffiliate(response)
