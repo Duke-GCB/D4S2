@@ -173,9 +173,9 @@ class DDSUtilTestCase(TestCase):
         mock_remote_store = Mock()
         mock_remote_store.data_service.get_auth_provider_affiliates.return_value.json.return_value = [mock_affiliate]
         dds_util._remote_store = mock_remote_store
-        affiliates = dds_util.get_auth_provider_affiliates(auth_provider_id='provider1', full_name_contains='Joe')
+        affiliates = dds_util.get_auth_provider_affiliates('provider1', full_name_contains='Joe')
         self.assertEqual(affiliates, [mock_affiliate])
-        mock_remote_store.data_service.get_auth_provider_affiliates.assert_called_with('provider1', 'Joe')
+        mock_remote_store.data_service.get_auth_provider_affiliates.assert_called_with('provider1', 'Joe', None, None)
 
     def test_auth_provider_add_user(self):
         mock_dds_user = Mock()
@@ -621,8 +621,8 @@ class DDSAffiliateTestCase(TestCase):
                 self.dds_affiliate_dict
             ]
         }
-        affiliates = DDSAffiliate.fetch_list(self.mock_dds_util, 'provider1', 'Joe')
+        affiliates = DDSAffiliate.fetch_list(self.mock_dds_util, 'provider1', 'Joe', None, None)
         self.assertEqual(len(affiliates), 1)
         self.assertEqual(affiliates[0].uid, 'joe123')
         self.assertEqual(affiliates[0].full_name, 'Joe Smith')
-        self.mock_dds_util.get_auth_provider_affiliates.assert_called_with('provider1', 'Joe')
+        self.mock_dds_util.get_auth_provider_affiliates.assert_called_with('provider1', 'Joe', None, None)

@@ -110,7 +110,7 @@ class DDSUtil(object):
     def get_auth_provider(self, auth_provider_id):
         return self.remote_store.data_service.get_auth_provider(auth_provider_id).json()
 
-    def get_auth_provider_affiliates(self, auth_provider_id, full_name_contains, email, username):
+    def get_auth_provider_affiliates(self, auth_provider_id, full_name_contains=None, email=None, username=None):
         return self.remote_store.data_service.get_auth_provider_affiliates(auth_provider_id, full_name_contains, email, username).json()
 
     def get_auth_provider_affiliate(self, auth_provider_id, username):
