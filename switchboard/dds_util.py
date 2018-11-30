@@ -161,9 +161,9 @@ class DDSUser(DDSBase):
 
     @staticmethod
     def get_or_register_user(dds_util, auth_provider_id, username):
-        users = dds_util.get_users(username=username)
-        if users:
-            return users[0]
+        response = dds_util.get_users(username=username).json()
+        if response['results']:
+            return DDSUser(response['results'][0])
         else:
             response = dds_util.auth_provider_add_user(auth_provider_id, username)
             return DDSUser(response)
