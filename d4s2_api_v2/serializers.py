@@ -177,7 +177,7 @@ class DDSAffiliateSerializer(serializers.Serializer):
     email = serializers.CharField()
 
     class Meta:
-        resource_name = 'duke-ds-affiliates'
+        resource_name = 'duke-ds-auth-provider-affiliates'
 
 class AddUserSerializer(serializers.Serializer):
     username = serializers.CharField()

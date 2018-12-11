@@ -17,7 +17,6 @@ from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_acc
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
 
-
 class DataServiceUnavailable(APIException):
     status_code = 503
     default_detail = 'Data Service temporarily unavailable, try again later.'
@@ -295,6 +294,11 @@ class DeliveryPreviewView(ModelWithEmailTemplateSetMixin, generics.CreateAPIView
 
 
 class DDSAuthProviderViewSet(DDSViewSet):
+    """
+    This ViewSet proxies search and listing of Auth Providers though Duke DS
+    The pk/id for these endpoints shall be the UUID of the auth provider as registered in DukeDS
+
+    """
     serializer_class = DDSAuthProviderSerializer
 
     def get_queryset(self):
@@ -306,18 +310,39 @@ class DDSAuthProviderViewSet(DDSViewSet):
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSAuthProvider.fetch_one, dds_util, provider_id)
 
-    @detail_route(methods=['get'], serializer_class=DDSAffiliateSerializer)
-    def affiliates(self, request, pk=None):
-        dds_util = DDSUtil(request.user)
-        full_name_contains = request.query_params.get('full_name_contains')
-        dds_affiliates = self._ds_operation(DDSAffiliate.fetch_list, dds_util, pk, full_name_contains)
-        serializer = DDSAffiliateSerializer(dds_affiliates, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class DDSAuthProviderAffiliatesViewSet(DDSViewSet):
+    """
+    This ViewSet proxies search and listing of Auth Provider Affiliates (user accounts) through Duke DS
+    Fetching affiliates requires an auth provider ID, which we will typically use the openid auth provider
+    known to gcb_web_auth
+    """
+
+    serializer_class = DDSAffiliateSerializer
+
+    def _get_auth_provider_id(self):
+        default_auth_provider_id = DDSUtil.get_openid_auth_provider_id()
+        auth_provider_id = self.request.query_params.get('auth_provider_id', default_auth_provider_id)
+        return auth_provider_id
+
+    def get_queryset(self):
+        dds_util = DDSUtil(self.request.user)
+        auth_provider_id = self._get_auth_provider_id()
+        full_name_contains = self.request.query_params.get('full_name_contains')
+        email = self.request.query_params.get('email', None)
+        username = self.request.query_params.get('username', None)
+        return self._ds_operation(DDSAffiliate.fetch_list, dds_util, auth_provider_id, full_name_contains, email, username)
+
+    def get_object(self):
+        dds_util = DDSUtil(self.request.user)
+        auth_provider_id = self._get_auth_provider_id()
+        uid = self.kwargs.get('pk')
+        return self._ds_operation(DDSAffiliate.fetch_one, dds_util, auth_provider_id, uid)
 
     @detail_route(methods=['POST'], serializer_class=DDSUserSerializer, url_path='get-or-register-user')
-    def get_or_register_user(self, request, pk=None):
-        username = request.data['username']
-        dds_util = DDSUtil(request.user)
-        dds_user = self._ds_operation(DDSUser.get_or_register_user, dds_util, pk, username)
-        serializer = DDSUserSerializer(instance=dds_user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_or_register_user(self, request, pk):
+        dds_util = DDSUtil(self.request.user)
+        auth_provider_id = self._get_auth_provider_id()
+        dds_user = self._ds_operation(DDSUser.get_or_register_user, dds_util, auth_provider_id, pk)
+        serializer = DDSUserSerializer(dds_user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

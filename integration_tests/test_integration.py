@@ -18,7 +18,9 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
             name='name', agent_key='somekey',
             api_root='https://api.dataservice.duke.edu/api/v1',
             portal_root='https://dataservice.duke.edu',
-            openid_provider_id='123')
+            openid_provider_id='123',
+            openid_provider_service_id='456',
+            is_default=True)
 
         self.sender_username = 'api_user_sender'
         self.sender_email = 'sender@d4s2.com'
