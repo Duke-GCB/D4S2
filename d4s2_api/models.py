@@ -103,7 +103,7 @@ class DeliveryBase(models.Model):
     recipient_completion_email_text = models.TextField(blank=True)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
-    email_template_set = models.ForeignKey(EmailTemplateSet, null=True,
+    email_template_set = models.ForeignKey(EmailTemplateSet, null=True, on_delete=models.CASCADE,
                                            help_text='Email template set to be used with this delivery')
 
     def is_new(self):
@@ -180,7 +180,7 @@ class DDSDeliveryError(models.Model):
 
 class DDSDeliveryShareUser(models.Model):
     dds_id = models.CharField(max_length=36)
-    delivery = models.ForeignKey(DDSDelivery, related_name='share_users')
+    delivery = models.ForeignKey(DDSDelivery, related_name='share_users', on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('dds_id', 'delivery')
@@ -203,7 +203,7 @@ class Share(models.Model):
     role = models.TextField(null=False, blank=False, default=ShareRole.DEFAULT)
     user_message = models.TextField(null=True, blank=True,
                                     help_text='Custom message to include about this item when sending notifications')
-    email_template_set = models.ForeignKey(EmailTemplateSet, null=True,
+    email_template_set = models.ForeignKey(EmailTemplateSet, null=True, on_delete=models.CASCADE,
                                            help_text='Email template set to be used with this share')
 
     def email_template_name(self):
@@ -245,9 +245,9 @@ class EmailTemplate(models.Model):
     Represents a base email message that can be sent
     """
     history = HistoricalRecords()
-    template_set = models.ForeignKey(EmailTemplateSet)
-    owner = models.ForeignKey(User)
-    template_type = models.ForeignKey(EmailTemplateType)
+    template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    template_type = models.ForeignKey(EmailTemplateType, on_delete=models.CASCADE)
     body = models.TextField(null=False, blank=False)
     subject = models.TextField(null=False, blank=False)
 
@@ -311,7 +311,7 @@ class S3UserTypes(object):
 
 
 class S3User(models.Model):
-    endpoint = models.ForeignKey(S3Endpoint)
+    endpoint = models.ForeignKey(S3Endpoint, on_delete=models.CASCADE)
     s3_id = models.CharField(max_length=255, help_text='S3 user ID (aws_access_key_id)')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.IntegerField(choices=S3UserTypes.CHOICES, default=S3UserTypes.NORMAL)
@@ -332,7 +332,7 @@ class S3User(models.Model):
 
 
 class S3UserCredential(models.Model):
-    s3_user = models.OneToOneField(S3User, related_name='credential')
+    s3_user = models.OneToOneField(S3User, on_delete=models.CASCADE, related_name='credential')
     aws_secret_access_key = models.CharField(max_length=255, help_text='S3 user ID (aws_access_key_id)')
 
     def __str__(self):
@@ -345,7 +345,7 @@ class S3Bucket(models.Model):
     This is duplicated to allow us to show bucket names to users receiving deliveries.
     """
     name = models.CharField(max_length=255, help_text='Name of S3 bucket')
-    owner = models.ForeignKey(S3User, related_name='owned_buckets')
+    owner = models.ForeignKey(S3User, related_name='owned_buckets', on_delete=models.CASCADE)
     endpoint = models.ForeignKey(S3Endpoint, on_delete=models.CASCADE, null=False)
 
     def __str__(self):
@@ -367,9 +367,9 @@ class S3Delivery(DeliveryBase):
     to a new bucket owned by the recipient.
     """
     history = HistoricalRecords()
-    bucket = models.ForeignKey(S3Bucket, related_name='deliveries')
-    from_user = models.ForeignKey(S3User, related_name='sent_deliveries')
-    to_user = models.ForeignKey(S3User, related_name='received_deliveries')
+    bucket = models.ForeignKey(S3Bucket, related_name='deliveries', on_delete=models.CASCADE)
+    from_user = models.ForeignKey(S3User, related_name='sent_deliveries', on_delete=models.CASCADE)
+    to_user = models.ForeignKey(S3User, related_name='received_deliveries', on_delete=models.CASCADE)
     transfer_id = models.UUIDField(default=uuid.uuid4)
     manifest = models.OneToOneField(S3ObjectManifest, on_delete=models.CASCADE, null=True)
 

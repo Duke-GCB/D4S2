@@ -21,7 +21,7 @@ class TestMigrations(TransactionTestCase):
 
     migrate_from = None
     migrate_to = None
-    django_application = None
+    django_application = 'd4s2_api'
 
     def setUp(self):
         assert self.migrate_from and self.migrate_to, \
