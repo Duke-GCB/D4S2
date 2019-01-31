@@ -7,6 +7,7 @@ from switchboard.dds_util import SHARE_IN_RESPONSE_TO_DELIVERY_MSG
 from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException
 from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole, EmailTemplateSet, UserEmailTemplateSet, \
     EmailTemplate, EmailTemplateType
+from d4s2_api.utils import MessageDirection
 from switchboard.mocks_ddsutil import MockDDSUser
 from django.contrib.auth.models import User as django_user
 try:
@@ -345,14 +346,17 @@ class DeclinePostTestCase(AuthenticatedTestCase):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
         mock_delivery_type.mock_processed_message.email_text = 'email text'
         transfer_id = self.create_delivery_get_transfer_id()
-        mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = DDSDelivery.objects.get(
-            transfer_id=transfer_id)
+        delivery = DDSDelivery.objects.get(transfer_id=transfer_id)
+        mock_delivery_type.mock_delivery_details.from_transfer_id.return_value.get_delivery.return_value = delivery
         url = reverse('ownership-decline')
         response = self.client.post(url, {'transfer_id': transfer_id, 'decline_reason':'Wrong person.'}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('has been declined', str(response.content))
         self.assertTrue(mock_delivery_type.mock_delivery_util.decline_delivery.called)
         self.assertTrue(mock_delivery_type.make_processed_message.called)
+        mock_delivery_type.make_processed_message.assert_called_with(
+            delivery, ANY, 'declined', MessageDirection.ToSender, 'Reason: Wrong person.'
+        )
         self.assertTrue(mock_delivery_type.mock_processed_message.send.called)
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
