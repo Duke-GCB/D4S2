@@ -480,6 +480,11 @@ class DDSDeliveryType:
         delivery.mark_accepted(user.get_username(), sender_message.email_text, recipient_message.email_text)
         return warning_message
 
+    @staticmethod
+    def make_processed_message(delivery, user, process_type, direction, warning_message=''):
+        message_factory = DDSMessageFactory(delivery, user)
+        return message_factory.make_processed_message(process_type, direction, warning_message=warning_message)
+
 
 class DDSMessageFactory(MessageFactory):
     def __init__(self, delivery, user):
