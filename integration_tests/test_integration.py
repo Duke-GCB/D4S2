@@ -49,6 +49,12 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
             template_type=EmailTemplateType.objects.get(name='accepted_recipient'),
             subject='Sender Delivery Accepted To Recipient Subject',
             body='Sender Delivery Accepted To Recipient Body')
+        self.declined_sender_template = EmailTemplate.objects.create(
+            template_set=self.sender_email_template_set,
+            owner=self.sender_user,
+            template_type=EmailTemplateType.objects.get(name='declined'),
+            subject='Sender Delivery Declined',
+            body='Sender Delivery Declined Body')
 
         DDSUserCredential.objects.create(endpoint=dds_endpoint, user=self.sender_user, token='123', dds_id='456')
 
@@ -136,4 +142,66 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
             call(self.sender_email, self.recipient_email, 'Sender Delivery Accepted To Recipient Subject',
                  'Sender Delivery Accepted To Recipient Body', ANY),
             call().send()
+        ])
+
+    @patch('d4s2_api_v1.api.DDSUtil')
+    @patch('switchboard.dds_util.DDSUser')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
+    @patch('switchboard.dds_util.RemoteStore')
+    @patch('d4s2_api.utils.Message')
+    def test_declined_delivery_uses_senders_email_template_set(self, mock_message, mock_remote_store,
+                                                               mock_project_transfer, mock_dds_user, mock_dds_util):
+        mock_dds_util.return_value.create_project_transfer.return_value = {'id': 'transfer_1'}
+        mock_dds_user.fetch_one = self.dds_user_fetch_one
+        mock_message.return_value = Mock(email_text='')
+
+        self.login_as_sender()
+
+        # sender creates a delivery
+        url = reverse('ddsdelivery-list')
+        data = {
+            'project_id': 'project-1',
+            'from_user_id': self.sender_dds_id,
+            'to_user_id': self.recipient_dds_id
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(DDSDelivery.objects.count(), 1)
+        dds_delivery = DDSDelivery.objects.get()
+        self.assertEqual(dds_delivery.state, State.NEW)
+
+        # sender sends the delivery
+        url = reverse('ddsdelivery-send', args=(dds_delivery.pk,))
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(DDSDelivery.objects.count(), 1)
+        dds_delivery = DDSDelivery.objects.get()
+        self.assertEqual(dds_delivery.state, State.NOTIFIED)
+
+        # we should have sent one email from the sender to the recipient with sender delivery content
+        mock_message.assert_has_calls([
+            call(self.sender_email, self.recipient_email, 'Sender Delivery Subject', 'Sender Delivery Body', ANY),
+            call().send()
+        ])
+        mock_message.reset_mock()
+
+        self.client.logout()
+        self.login_as_recipient()
+
+        # Recipient declines the delivery/ownership
+        url = reverse('ownership-decline')
+        response = self.client.post(url, {'transfer_id': 'transfer_1', 'decline_reason': 'Wrong person'})
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        dds_delivery = DDSDelivery.objects.get()
+        self.assertEqual(dds_delivery.state, State.DECLINED)
+
+        # Recipient has no email templates
+        self.assertEqual(UserEmailTemplateSet.objects.filter(user=self.recipient_user).count(), 0)
+
+        # we should have sent one email from the recipient to the sender with recipient declined content
+        mock_message.assert_has_calls([
+            call(self.recipient_email, self.sender_email, 'Sender Delivery Declined',
+                 'Sender Delivery Declined Body', ANY),
+            call().send(),
         ])

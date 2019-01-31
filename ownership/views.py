@@ -9,6 +9,7 @@ except ImportError:
 from d4s2_api.models import State
 from switchboard.s3_util import S3Exception, S3DeliveryType, S3NotRecipientException
 from switchboard.dds_util import DDSDeliveryType
+from d4s2_api.utils import MessageDirection
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
 TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
@@ -200,7 +201,9 @@ class DeclineView(DeliveryViewBase):
         try:
             delivery_util = self.delivery_type.make_delivery_util(delivery, request.user)
             delivery_util.decline_delivery(reason)
-            message = self.delivery_type.make_processed_message(delivery, request.user, 'declined', 'Reason: {}'.format(reason))
+            message = self.delivery_type.make_processed_message(delivery, request.user, 'declined',
+                                                                MessageDirection.ToSender,
+                                                                'Reason: {}'.format(reason))
             message.send()
             delivery.mark_declined(request.user.get_username(), reason, message.email_text)
         except Exception as e:

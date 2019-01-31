@@ -407,6 +407,19 @@ class DDSDeliveryTypeTestCase(TestCase):
             'second_email_content'
         )
 
+    @patch('switchboard.dds_util.DDSMessageFactory')
+    def test_make_processed_message(self, mock_dds_message_factory):
+        mock_delivery = Mock()
+        mock_user = Mock()
+        message = DDSDeliveryType.make_processed_message(mock_delivery, mock_user, process_type='declined',
+                                                         direction=MessageDirection.ToSender,
+                                                         warning_message='Did not want')
+        self.assertEqual(message, mock_dds_message_factory.return_value.make_processed_message.return_value)
+        mock_dds_message_factory.assert_called_with(mock_delivery, mock_user)
+        mock_dds_message_factory.return_value.make_processed_message.assert_called_with(
+            'declined', MessageDirection.ToSender, warning_message='Did not want'
+        )
+
 
 class DDSProjectTestCase(TestCase):
     def test_constructor(self):
