@@ -14,6 +14,7 @@ class MessageDirection(object):
 
 
 class Message(object):
+
     def __init__(self, from_email, to_email, template_subject, template_body, context):
         """
         :param from_email: str: email address of sender
