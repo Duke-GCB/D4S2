@@ -1,14 +1,14 @@
 from django.core.mail import EmailMessage
 from django.template import Template, Context
 from django.utils.safestring import mark_safe
+from django.conf import settings
 
 
-def generate_message(sender_email, rcpt_email, template_subject, template_body, context):
+def generate_message(reply_to_email, rcpt_email, cc_email, template_subject, template_body, context):
     # Mark the fields in context as safe, since we're not outputting HTML
     for k in context:
         context[k] = mark_safe(context[k])
     subject = Template(template_subject).render(Context(context))
     body = Template(template_body).render(Context(context))
-    return EmailMessage(subject, body, sender_email, [rcpt_email])
-
-
+    from_email = settings.EMAIL_FROM_ADDRESS
+    return EmailMessage(subject, body, from_email, [rcpt_email], cc=[cc_email], reply_to=reply_to_email)
