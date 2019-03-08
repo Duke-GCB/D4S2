@@ -11,4 +11,5 @@ def generate_message(reply_to_email, rcpt_email, cc_email, template_subject, tem
     subject = Template(template_subject).render(Context(context))
     body = Template(template_body).render(Context(context))
     from_email = settings.EMAIL_FROM_ADDRESS
-    return EmailMessage(subject, body, from_email, [rcpt_email], cc=[cc_email], reply_to=reply_to_email)
+    cc_email_list = [cc_email] if cc_email else []
+    return EmailMessage(subject, body, from_email, [rcpt_email], cc=cc_email_list, reply_to=[reply_to_email])
