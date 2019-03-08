@@ -8,19 +8,17 @@ class MessageDirectionTestCase(TestCase):
     def setUp(self):
         self.sender_email = 'sender@email.com'
         self.receiver_email = 'receiver@email.com'
-        self.sender = Mock(email=self.sender_email)
-        self.receiver = Mock(email=self.receiver_email)
 
     def test_default_order(self):
-        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver)
+        ordered_addresses = MessageDirection.email_addresses(self.sender_email, self.receiver_email)
         self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
 
     def test_orders_forward(self):
-        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ToRecipient)
+        ordered_addresses = MessageDirection.email_addresses(self.sender_email, self.receiver_email, MessageDirection.ToRecipient)
         self.assertEqual(ordered_addresses, (self.sender_email, self.receiver_email))
 
     def test_orders_reverse(self):
-        ordered_addresses = MessageDirection.email_addresses(self.sender, self.receiver, MessageDirection.ToSender)
+        ordered_addresses = MessageDirection.email_addresses(self.sender_email, self.receiver_email, MessageDirection.ToSender)
         self.assertEqual(ordered_addresses, (self.receiver_email, self.sender_email))
 
 

@@ -6,7 +6,7 @@ class MessageDirection(object):
     ToSender = 1
 
     @staticmethod
-    def email_addresses(sender, receiver, direction=ToRecipient):
+    def email_addresses(sender_email, receiver_email, direction=ToRecipient):
         """
         Return a tuple of (reply_to_email, rcpt_email), from a delivery sender/receiver
         :param sender: user object of the delivery creator with an .email property to extract
@@ -15,9 +15,9 @@ class MessageDirection(object):
         :return: tuple of (reply_to_email, rcpt_email)
         """
         if direction == MessageDirection.ToRecipient:
-            return sender.email, receiver.email
+            return sender_email, receiver_email
         else:
-            return receiver.email, sender.email
+            return receiver_email, sender_email
 
 
 class Message(object):
@@ -46,6 +46,7 @@ class Message(object):
 
 
 class MessageFactory(object):
+
     def __init__(self, delivery_details):
         self.delivery_details = delivery_details
         self.email_template_set = delivery_details.email_template_set
@@ -71,14 +72,33 @@ class MessageFactory(object):
         email_template = self.email_template_set.template_for_name('delivery_canceled')
         return self._make_message(email_template)
 
+    def get_reply_to_address(self, sender):
+        if self.email_template_set.reply_address:
+            return self.email_template_set.reply_address
+        else:
+            return sender.email
+
+    def get_cc_address(self):
+        if self.email_template_set.cc_address:
+            return self.email_template_set.cc_address
+        else:
+            return None
+
     def _make_message(self, email_template, accept_url=None, reason=None, process_type=None,
                       direction=MessageDirection.ToRecipient, warning_message=''):
         try:
-            sender = self.delivery_details.get_from_user()
-            receiver = self.delivery_details.get_to_user()
+            delivery_from_user = self.delivery_details.get_from_user()
+            delivery_to_user = self.delivery_details.get_to_user()
             context = self.delivery_details.get_email_context(accept_url, process_type, reason, warning_message)
-            # Delivery confirmation emails should go back to the delivery sender
-            from_email, to_email = MessageDirection.email_addresses(sender, receiver, direction)
-            return Message(from_email, to_email, email_template.subject, email_template.body, context)
+
+            # Get the email addresses to use for the creator and recipient of the delivery
+            delivery_from_user_email = self.get_reply_to_address(delivery_from_user)
+            delivery_cc_email = self.get_cc_address()
+            delivery_to_user_email = delivery_to_user.email
+
+            # Based on the type of message (delivery, confirmation), determine the direction of the addresses
+            reply_to_email, rcpt_email = MessageDirection.email_addresses(delivery_from_user_email, delivery_to_user_email, direction)
+            return Message(reply_to_email, rcpt_email, email_template.subject, email_template.body, context, delivery_cc_email)
+
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information to build message: {}'.format(str(e)))
