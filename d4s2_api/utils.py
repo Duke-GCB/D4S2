@@ -7,6 +7,13 @@ class MessageDirection(object):
 
     @staticmethod
     def email_addresses(sender, receiver, direction=ToRecipient):
+        """
+        Return a tuple of (reply_to_email, rcpt_email), from a delivery sender/receiver
+        :param sender: user object of the delivery creator with an .email property to extract
+        :param receiver: user object of the delivery recipient with an .email property to extract
+        :param direction: One of the enumerated values above
+        :return: tuple of (reply_to_email, rcpt_email)
+        """
         if direction == MessageDirection.ToRecipient:
             return sender.email, receiver.email
         else:
@@ -15,15 +22,16 @@ class MessageDirection(object):
 
 class Message(object):
 
-    def __init__(self, from_email, to_email, template_subject, template_body, context):
+    def __init__(self, reply_to_email, rcpt_email, template_subject, template_body, context, cc_email=None):
         """
-        :param from_email: str: email address of sender
-        :param to_email: str: email address of recipient
+        :param reply_to_email: str: email address to use for reply-to
+        :param rcpt_email: str: email address of recipient
         :param template_subject: str: subject of email
         :param template_body: str: template: django template
         :param context: dict: properties to be filled in on
+        :param cc_email: str: email address to cc (may be None)
         """
-        self._message = generate_message(from_email, to_email, template_subject, template_body, context)
+        self._message = generate_message(reply_to_email, rcpt_email, cc_email, template_subject, template_body, context)
 
     @property
     def email_text(self):

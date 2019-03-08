@@ -1,4 +1,4 @@
-from mock import patch, Mock, MagicMock
+from mock import patch, Mock, MagicMock, call
 from django.test import TestCase
 from d4s2_api.utils import MessageDirection, Message, MessageFactory
 
@@ -25,22 +25,24 @@ class MessageDirectionTestCase(TestCase):
 
 
 class MessageTestCase(TestCase):
+
     def test_email_text(self):
-        message = Message(from_email='bob@bob.com', to_email='joe@joe.com', template_subject='Hello',
-                          template_body='Details for you {{value}}', context={'value':"123"})
-        self.assertIn('From: bob@bob.com', message.email_text)
+        message = Message(reply_to_email='bob@bob.com', rcpt_email='joe@joe.com', template_subject='Hello',
+                          template_body='Details for you {{value}}', context={'value':"123"}, cc_email='cc@cc.com')
+        self.assertIn('Reply-To: bob@bob.com', message.email_text)
         self.assertIn('To: joe@joe.com', message.email_text)
+        self.assertIn('Cc: cc@cc.com', message.email_text)
         self.assertIn('Subject: Hello', message.email_text)
         self.assertIn('Details for you 123', message.email_text)
 
-    @patch('d4s2_api.utils.generate_message')
+    @patch('d4s2_api.utils.generate_message', autospec=True)
     def test_send(self, mock_generate_message):
-        message = Message(from_email='bob@bob.com', to_email='joe@joe.com', template_subject='Hello',
+        message = Message(reply_to_email='bob@bob.com', rcpt_email='joe@joe.com', template_subject='Hello',
                           template_body='Details for you {{value}}', context={'value':"123"})
         message.send()
         self.assertTrue(mock_generate_message.return_value.send.called)
-        mock_generate_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'Hello',
-                                                 'Details for you {{value}}', {'value': '123'})
+        self.assertEqual(mock_generate_message.call_args, call('bob@bob.com', 'joe@joe.com', None, 'Hello',
+                                                               'Details for you {{value}}', {'value': '123'}))
 
 
 class MessageFactoryTestCase(TestCase):
