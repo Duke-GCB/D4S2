@@ -1,6 +1,7 @@
-from mock import patch, Mock, MagicMock, call
+from mock import patch, Mock, MagicMock, call, create_autospec
 from django.test import TestCase
 from d4s2_api.utils import MessageDirection, Message, MessageFactory
+from switchboard.dds_util import DeliveryDetails
 
 
 class MessageDirectionTestCase(TestCase):
@@ -44,51 +45,89 @@ class MessageTestCase(TestCase):
 
 
 class MessageFactoryTestCase(TestCase):
+
     def setUp(self):
-        self.delivery_details = MagicMock()
+        self.delivery_details = create_autospec(DeliveryDetails)
         self.email_template_set = Mock()
         self.delivery_details.email_template_set = self.email_template_set
         self.email_template_set.template_for_name.return_value = Mock(subject='subject', body='body')
+        self.email_template_set.reply_address = None
+        self.email_template_set.cc_address = None
         self.delivery_details.get_from_user.return_value = Mock(email='bob@bob.com')
         self.delivery_details.get_to_user.return_value = Mock(email='joe@joe.com')
         self.delivery_details.get_email_context.return_value = {}
+        self.delivery_details.delivery = Mock()
 
-    @patch('d4s2_api.utils.Message')
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_share_message(self, mock_message):
         factory = MessageFactory(self.delivery_details)
         factory.make_share_message()
-        mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
-        self.email_template_set.template_for_name.assert_called_with(
-            self.delivery_details.delivery.email_template_name.return_value
-        )
+        self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
+        self.assert_template_for_name_call(self.delivery_details.delivery.email_template_name.return_value)
 
-    @patch('d4s2_api.utils.Message')
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_delivery_message(self, mock_message):
         factory = MessageFactory(self.delivery_details)
         factory.make_delivery_message(accept_url='accept url')
-        mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
-        self.email_template_set.template_for_name.assert_called_with('delivery')
+        self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
+        self.assert_template_for_name_call('delivery')
 
-    @patch('d4s2_api.utils.Message')
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_processed_message_to_sender(self, mock_message):
         factory = MessageFactory(self.delivery_details)
         factory.make_processed_message('accepted', MessageDirection.ToSender, warning_message='warning details')
-        mock_message.assert_called_with('joe@joe.com', 'bob@bob.com', 'subject', 'body', {})
-        self.delivery_details.get_email_context.assert_called_with(None, 'accepted', '', 'warning details')
-        self.email_template_set.template_for_name.assert_called_with('accepted')
+        self.assertEqual(mock_message.call_args,
+                         call('joe@joe.com', 'bob@bob.com', 'subject', 'body', {}, None))
+        self.assertEqual(self.delivery_details.get_email_context.call_args,
+                         call(None, 'accepted', '', 'warning details'))
+        self.assert_template_for_name_call('accepted')
 
-    @patch('d4s2_api.utils.Message')
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_processed_message_to_recipient(self, mock_message):
         factory = MessageFactory(self.delivery_details)
         factory.make_processed_message('accepted_recipient', MessageDirection.ToRecipient,
                                        warning_message='warning details')
-        mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
-        self.delivery_details.get_email_context.assert_called_with(None, 'accepted_recipient', '', 'warning details')
-        self.email_template_set.template_for_name.assert_called_with('accepted_recipient')
+        self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
+        self.assertEqual(self.delivery_details.get_email_context.call_args,
+                         call(None, 'accepted_recipient', '', 'warning details'))
+        self.assert_template_for_name_call('accepted_recipient')
 
-    @patch('d4s2_api.utils.Message')
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_canceled_message(self, mock_message):
         factory = MessageFactory(self.delivery_details)
         factory.make_canceled_message()
-        mock_message.assert_called_with('bob@bob.com', 'joe@joe.com', 'subject', 'body', {})
-        self.email_template_set.template_for_name.assert_called_with('delivery_canceled')
+        self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
+        self.assert_template_for_name_call('delivery_canceled')
+
+    def assert_template_for_name_call(self, arg):
+        self.assertEqual(self.email_template_set.template_for_name.call_args, call(arg))
+
+    def test_get_reply_to_address_uses_template_set(self):
+        delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.email_template_set = Mock(reply_address='reply@email.com')
+        factory = MessageFactory(delivery_details)
+        sender = Mock(email='sender@email.com')
+        reply_to_address = factory.get_reply_to_address(sender)
+        self.assertEqual(reply_to_address, 'reply@email.com')
+
+    def test_get_reply_to_address_falls_back_to_sender(self):
+        delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.email_template_set = Mock(reply_address=None)
+        factory = MessageFactory(delivery_details)
+        sender = Mock(email='sender@email.com')
+        reply_to_address = factory.get_reply_to_address(sender)
+        self.assertEqual(reply_to_address, 'sender@email.com')
+
+    def test_get_cc_address_uses_template_set(self):
+        delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.email_template_set = Mock(cc_address='cc@email.com')
+        factory = MessageFactory(delivery_details)
+        cc_address = factory.get_cc_address()
+        self.assertEqual(cc_address, 'cc@email.com')
+
+    def test_get_cc_address_falls_back_to_none(self):
+        delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.email_template_set = Mock(cc_address=None)
+        factory = MessageFactory(delivery_details)
+        cc_address = factory.get_cc_address()
+        self.assertIsNone(cc_address)
