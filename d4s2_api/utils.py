@@ -9,8 +9,8 @@ class MessageDirection(object):
     def email_addresses(sender_email, receiver_email, direction=ToRecipient):
         """
         Return a tuple of (reply_to_email, rcpt_email), from a delivery sender/receiver
-        :param sender: user object of the delivery creator with an .email property to extract
-        :param receiver: user object of the delivery recipient with an .email property to extract
+        :param sender: email address string of the delivery sender
+        :param receiver: email address string of the delivery recipient
         :param direction: One of the enumerated values above
         :return: tuple of (reply_to_email, rcpt_email)
         """
