@@ -279,15 +279,13 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # check that the sender template subject/body was used to render the email
-        mock_message.assert_has_calls([
-            call(ANY, ANY, sender_template1.subject, sender_template1.body, ANY),
+        self.assertEqual(mock_message.mock_calls, [
+            call(ANY, ANY, sender_template1.subject, sender_template1.body, ANY, None),
             call().send(),
-            call(ANY, ANY, sender_template2.subject, sender_template2.body, ANY),
+            call(ANY, ANY, sender_template2.subject, sender_template2.body, ANY, None),
             call().send(),
         ])
-        #from_email, to_email, subject, body, context = args
-        #self.assertEqual(subject, sender_template1.subject)
-        #self.assertEqual(body, sender_template1.body)
+
 
 class DeclineGetTestCase(AuthenticatedTestCase):
 
