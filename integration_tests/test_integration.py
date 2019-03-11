@@ -9,6 +9,7 @@ from gcb_web_auth.tests_dukeds_auth import ResponseStatusCodeTestCase
 
 
 class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
+
     def setUp(self):
         """
         Setup two user sender and receiver. Sender has delivery and accepted email templates. Both users
@@ -79,15 +80,17 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
             return Mock(full_name='Recipient', email=self.recipient_user.email)
         raise ValueError("Invalid user id:" + user_id)
 
-    @patch('d4s2_api_v1.api.DDSUtil')
-    @patch('switchboard.dds_util.DDSUser')
-    @patch('switchboard.dds_util.DDSProjectTransfer')
-    @patch('switchboard.dds_util.RemoteStore')
-    @patch('d4s2_api.utils.Message')
+    @patch('d4s2_api_v1.api.DDSUtil', autospec=True)
+    @patch('switchboard.dds_util.DDSUser', autospec=True)
+    @patch('switchboard.dds_util.DDSProjectTransfer', autospec=True)
+    @patch('switchboard.dds_util.RemoteStore', autospec=True)
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_accepted_delivery_uses_senders_email_template_set(self, mock_message, mock_remote_store,
                                                                mock_project_transfer, mock_dds_user, mock_dds_util):
         mock_dds_util.return_value.create_project_transfer.return_value = {'id': 'transfer_1'}
+        mock_project_transfer.fetch_one.return_value.project_dict.get.return_value = 'Project ABC'
         mock_dds_user.fetch_one = self.dds_user_fetch_one
+        mock_remote_store.return_value.data_service = Mock()
         mock_message.return_value = Mock(email_text='')
 
         self.login_as_sender()
@@ -115,9 +118,9 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.assertEqual(dds_delivery.state, State.NOTIFIED)
 
         # we should have sent one email from the sender to the recipient with sender delivery content
-        mock_message.assert_has_calls([
-            call(self.sender_email, self.recipient_email, 'Sender Delivery Subject', 'Sender Delivery Body', ANY),
-            call().send()
+        self.assertEqual(mock_message.mock_calls, [
+            call(self.sender_email, self.recipient_email, 'Sender Delivery Subject', 'Sender Delivery Body', ANY, None),
+            call().send(),
         ])
         mock_message.reset_mock()
 
@@ -135,25 +138,27 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.assertEqual(UserEmailTemplateSet.objects.filter(user=self.recipient_user).count(), 0)
 
         # we should have sent one email from the recipient to the sender with senders accepted content
-        mock_message.assert_has_calls([
+        self.assertEqual(mock_message.mock_calls, [
             call(self.recipient_email, self.sender_email, 'Sender Delivery Accepted Subject',
-                 'Sender Delivery Accepted Body', ANY),
+                 'Sender Delivery Accepted Body', ANY, None),
             call().send(),
             call(self.sender_email, self.recipient_email, 'Sender Delivery Accepted To Recipient Subject',
-                 'Sender Delivery Accepted To Recipient Body', ANY),
+                 'Sender Delivery Accepted To Recipient Body', ANY, None),
             call().send()
         ])
 
-    @patch('d4s2_api_v1.api.DDSUtil')
-    @patch('switchboard.dds_util.DDSUser')
-    @patch('switchboard.dds_util.DDSProjectTransfer')
-    @patch('switchboard.dds_util.RemoteStore')
-    @patch('d4s2_api.utils.Message')
+    @patch('d4s2_api_v1.api.DDSUtil', autospec=True)
+    @patch('switchboard.dds_util.DDSUser', autospec=True)
+    @patch('switchboard.dds_util.DDSProjectTransfer', autospec=True)
+    @patch('switchboard.dds_util.RemoteStore', autospec=True)
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_declined_delivery_uses_senders_email_template_set(self, mock_message, mock_remote_store,
                                                                mock_project_transfer, mock_dds_user, mock_dds_util):
         mock_dds_util.return_value.create_project_transfer.return_value = {'id': 'transfer_1'}
+        mock_project_transfer.fetch_one.return_value.project_dict.get.return_value = 'Project ABC'
         mock_dds_user.fetch_one = self.dds_user_fetch_one
         mock_message.return_value = Mock(email_text='')
+        mock_remote_store.return_value.data_service = Mock()
 
         self.login_as_sender()
 
@@ -180,8 +185,8 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.assertEqual(dds_delivery.state, State.NOTIFIED)
 
         # we should have sent one email from the sender to the recipient with sender delivery content
-        mock_message.assert_has_calls([
-            call(self.sender_email, self.recipient_email, 'Sender Delivery Subject', 'Sender Delivery Body', ANY),
+        self.assertEqual(mock_message.mock_calls, [
+            call(self.sender_email, self.recipient_email, 'Sender Delivery Subject', 'Sender Delivery Body', ANY, None),
             call().send()
         ])
         mock_message.reset_mock()
@@ -200,8 +205,8 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.assertEqual(UserEmailTemplateSet.objects.filter(user=self.recipient_user).count(), 0)
 
         # we should have sent one email from the recipient to the sender with recipient declined content
-        mock_message.assert_has_calls([
+        self.assertEqual(mock_message.mock_calls, [
             call(self.recipient_email, self.sender_email, 'Sender Delivery Declined',
-                 'Sender Delivery Declined Body', ANY),
+                 'Sender Delivery Declined Body', ANY, None),
             call().send(),
         ])
