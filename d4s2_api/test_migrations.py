@@ -225,3 +225,23 @@ class EmailTemplateServiceNameTest(TestMigrations):
         template = EmailTemplate.objects.first()
         self.assertEqual(template.body, 'Your data in {{ service_name }} is ready at {{ accept_url }}.\\r\\nPlease visit {{ service_name }}.')
         self.assertEqual(template.subject, 'Data from {{ service_name }} sent by {{ sender_name }}')
+
+
+class EmailTemplateSetReplyCCAddressesTest(TestMigrations):
+
+    migrate_from = '0035_auto_20181226_1613'
+    migrate_to = '0037_auto_20190306_2008'
+
+    def setUpBeforeMigration(self, apps):
+        EmailTemplateSet = apps.get_model('d4s2_api', 'EmailTemplateSet')
+        EmailTemplateSet.objects.create(name='template_set1')
+
+    def test_defaults_cc_address_blank(self):
+        EmailTemplateSet = self.apps.get_model('d4s2_api', 'EmailTemplateSet')
+        template_set = EmailTemplateSet.objects.first()
+        self.assertEqual(template_set.cc_address, '')
+
+    def test_defaults_reply_address_blank(self):
+        EmailTemplateSet = self.apps.get_model('d4s2_api', 'EmailTemplateSet')
+        template_set = EmailTemplateSet.objects.first()
+        self.assertEqual(template_set.reply_address, '')
