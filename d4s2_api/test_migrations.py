@@ -173,7 +173,7 @@ class EmailTemplateGroupMigrationTestCase(TestMigrations):
         The group field should migrated to the template_set.
         Testing migration 0016_email_group_to_set.
         """
-        EmailTemplate = apps.get_model('d4s2_api', 'EmailTemplate')
+        EmailTemplate = self.apps.get_model('d4s2_api', 'EmailTemplate')
         email_templates = EmailTemplate.objects.all()
         self.assertEqual(len(email_templates), 3)
         template_info = [(email_template.subject, email_template.template_set.name)
@@ -185,7 +185,7 @@ class EmailTemplateGroupMigrationTestCase(TestMigrations):
         }, set(template_info))
 
     def test_user_email_template_sets_migrated(self):
-        UserEmailTemplateSet = apps.get_model('d4s2_api', 'UserEmailTemplateSet')
+        UserEmailTemplateSet = self.apps.get_model('d4s2_api', 'UserEmailTemplateSet')
         user_email_template_sets = UserEmailTemplateSet.objects.all()
         user_email_template_sets_info = [
             (user_email_template_set.user.username, user_email_template_set.email_template_set.name)
@@ -221,7 +221,27 @@ class EmailTemplateServiceNameTest(TestMigrations):
         )
 
     def test_name_replaced(self):
-        EmailTemplate = apps.get_model('d4s2_api', 'EmailTemplate')
+        EmailTemplate = self.apps.get_model('d4s2_api', 'EmailTemplate')
         template = EmailTemplate.objects.first()
         self.assertEqual(template.body, 'Your data in {{ service_name }} is ready at {{ accept_url }}.\\r\\nPlease visit {{ service_name }}.')
         self.assertEqual(template.subject, 'Data from {{ service_name }} sent by {{ sender_name }}')
+
+
+class EmailTemplateSetReplyCCAddressesTest(TestMigrations):
+
+    migrate_from = '0035_auto_20181226_1613'
+    migrate_to = '0037_auto_20190306_2008'
+
+    def setUpBeforeMigration(self, apps):
+        EmailTemplateSet = apps.get_model('d4s2_api', 'EmailTemplateSet')
+        EmailTemplateSet.objects.create(name='template_set1')
+
+    def test_defaults_cc_address_blank(self):
+        EmailTemplateSet = self.apps.get_model('d4s2_api', 'EmailTemplateSet')
+        template_set = EmailTemplateSet.objects.first()
+        self.assertEqual(template_set.cc_address, '')
+
+    def test_defaults_reply_address_blank(self):
+        EmailTemplateSet = self.apps.get_model('d4s2_api', 'EmailTemplateSet')
+        template_set = EmailTemplateSet.objects.first()
+        self.assertEqual(template_set.reply_address, '')

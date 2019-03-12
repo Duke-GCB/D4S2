@@ -315,6 +315,42 @@ class EmailTemplateTestCase(TestCase):
         self.assertEqual(self.template_set.template_for_name(template_name), view_template)
 
 
+class EmailTemplateSetTestCase(TestCase):
+
+    def setUp(self):
+        self.template_name = 'Test Template'
+
+    def test_defaults_blank_reply_cc_addresses(self):
+        template_set = EmailTemplateSet.objects.create(name=self.template_name)
+        self.assertIsNotNone(template_set)
+        self.assertEqual(template_set.reply_address, '')
+        self.assertEqual(template_set.cc_address, '')
+
+    def test_raises_invalid_reply_address(self):
+        template_set = EmailTemplateSet.objects.create(name=self.template_name,
+                                                       reply_address='not-an-email-address')
+        with self.assertRaisesMessage(ValidationError, "{'reply_address': ['Enter a valid email address.']}"):
+            template_set.clean_fields()
+
+    def test_valid_reply_address(self):
+        template_set = EmailTemplateSet.objects.create(name=self.template_name,
+                                                       reply_address='reply@domain.com')
+        template_set.clean_fields()
+        self.assertEqual(template_set.reply_address, 'reply@domain.com')
+
+    def test_raises_invalid_cc_address(self):
+        template_set = EmailTemplateSet.objects.create(name=self.template_name,
+                                                       cc_address='not-an-email-address')
+        with self.assertRaisesMessage(ValidationError, "{'cc_address': ['Enter a valid email address.']}"):
+            template_set.clean_fields()
+
+    def test_valid_cc_address(self):
+        template_set = EmailTemplateSet.objects.create(name=self.template_name,
+                                                       cc_address='cc@domain.com')
+        template_set.clean_fields()
+        self.assertEqual(template_set.cc_address, 'cc@domain.com')
+
+
 class S3EndpointTestCase(TestCase):
     def test_create_and_read(self):
         s3_url = 'https://s3service.com/'

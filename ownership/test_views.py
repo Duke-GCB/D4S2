@@ -211,9 +211,9 @@ class ProcessTestCase(AuthenticatedTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    @patch('switchboard.dds_util.DDSUtil')
-    @patch('switchboard.dds_util.DDSProjectTransfer')
-    @patch('d4s2_api.utils.Message')
+    @patch('switchboard.dds_util.DDSUtil', autospec=True)
+    @patch('switchboard.dds_util.DDSProjectTransfer', autospec=True)
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_receiving_user_can_accept_deliveries_without_email_template_set(self, mock_message,
                                                                              mock_dds_project_transfer, mock_dds_util):
         mock_message.return_value.email_text = ''
@@ -247,9 +247,9 @@ class ProcessTestCase(AuthenticatedTestCase):
         delivery.refresh_from_db()
         self.assertEqual(delivery.state, State.ACCEPTED)
 
-    @patch('switchboard.dds_util.DDSUtil')
-    @patch('switchboard.dds_util.DDSProjectTransfer')
-    @patch('d4s2_api.utils.Message')
+    @patch('switchboard.dds_util.DDSUtil', autospec=True)
+    @patch('switchboard.dds_util.DDSProjectTransfer', autospec=True)
+    @patch('d4s2_api.utils.Message', autospec=True)
     def test_delivery_emails_always_use_senders_email_template_set(self, mock_message, mock_dds_project_transfer,
                                                                    mock_dds_util):
         mock_message.return_value.email_text = ''
@@ -279,15 +279,13 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # check that the sender template subject/body was used to render the email
-        mock_message.assert_has_calls([
-            call(ANY, ANY, sender_template1.subject, sender_template1.body, ANY),
+        self.assertEqual(mock_message.mock_calls, [
+            call(ANY, ANY, sender_template1.subject, sender_template1.body, ANY, None),
             call().send(),
-            call(ANY, ANY, sender_template2.subject, sender_template2.body, ANY),
+            call(ANY, ANY, sender_template2.subject, sender_template2.body, ANY, None),
             call().send(),
         ])
-        #from_email, to_email, subject, body, context = args
-        #self.assertEqual(subject, sender_template1.subject)
-        #self.assertEqual(body, sender_template1.body)
+
 
 class DeclineGetTestCase(AuthenticatedTestCase):
 

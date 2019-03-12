@@ -82,6 +82,8 @@ class EmailTemplateSet(models.Model):
     Set of email templates with unique template types.
     """
     name = models.CharField(max_length=64, null=False, blank=False, unique=True)
+    cc_address = models.EmailField(blank=True, help_text='Optional address to CC when using this template set')
+    reply_address = models.EmailField(blank=True, help_text='Optional address to set as reply-to when using this template set (replacing the sending user\'s email address')
 
     def __str__(self):
         return self.name
