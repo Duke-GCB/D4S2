@@ -53,7 +53,7 @@ class DDSZipBuilderTestCase(TestCase):
         self.assertEqual(dds_paths, mock_path_to_files.return_value.paths)
 
     def test_get_url(self):
-        mock_file_download = create_autospec(FileDownload, host='http://example.org', url='/path/file.ext')
+        mock_file_download = create_autospec(FileDownload, host='http://example.org', url='/path/file.ext', http_verb='GET')
         mock_get_file_download = self.mock_client.dds_connection.get_file_download
         mock_get_file_download.return_value = mock_file_download
         builder = DDSZipBuilder(self.project_id, self.mock_client)

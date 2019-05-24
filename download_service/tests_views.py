@@ -2,7 +2,7 @@ from django.core.urlresolvers import reverse
 from django.test.testcases import TestCase
 from unittest.mock import patch, call
 from django.contrib.auth.models import User
-from download_service.zipbuilder import NotFoundException
+from download_service.zipbuilder import NotFoundException, NotSupportedException
 
 
 @patch('download_service.views.make_client')
@@ -45,3 +45,8 @@ class DDSProjectZipTestCase(TestCase):
         mock_zip_builder.return_value.get_filename.side_effect = NotFoundException('not found')
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 404)
+
+    def test_error_if_unsupported_verb(self, mock_zip_builder, mock_make_client):
+        mock_zip_builder.return_value.get_filename.side_effect = NotSupportedException('not supported')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 500)

@@ -4,9 +4,17 @@ from ddsc.core.ddsapi import DataServiceError
 import requests
 
 
-class NotFoundException(BaseException):
+class ZipBuilderException(BaseException):
     def __init__(self, message):
         self.message = message
+
+
+class NotFoundException(ZipBuilderException):
+    pass
+
+
+class NotSupportedException(ZipBuilderException):
+    pass
 
 
 class DDSZipBuilder(object):
@@ -74,7 +82,10 @@ class DDSZipBuilder(object):
         # This is a time-sensitive call, so we should only do it right before fetch
         try:
             file_download = self.client.dds_connection.get_file_download(dds_file.id)
-            return '{}{}'.format(file_download.host, file_download.url)
+            if file_download.http_verb == 'GET':
+                return '{}{}'.format(file_download.host, file_download.url)
+            else:
+                raise NotSupportedException('This file requires an unsupported download method: {}'.format(file_download.http_verb))
         except DataServiceError as e:
             if e.status_code == 404:
                 raise NotFoundException('File with id {} not found'.format(dds_file.id))
