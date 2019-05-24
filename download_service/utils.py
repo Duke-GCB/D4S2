@@ -12,5 +12,5 @@ def make_client(user):
         # May raise an OAuthConfigurationException
         dds_token = get_dds_token(user)
         config = make_auth_config(dds_token.key)
-    client = Client(config=config)  # This assumes it can authenticate
+    client = Client(config=config)
     return client
