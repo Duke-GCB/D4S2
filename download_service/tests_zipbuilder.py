@@ -127,6 +127,52 @@ class DDSZipBuilderTestCase(TestCase):
         # it should return the zip file
         self.assertEqual(streaming_zipfile, mock_zipfile.return_value)
 
-    def test_call_order(self):
-        pass
+    @patch('download_service.zipbuilder.requests.get')
+    @patch('download_service.zipbuilder.DDSZipBuilder.get_url')
+    @patch('download_service.zipbuilder.DDSZipBuilder.get_dds_paths')
+    def test_call_order(self, mock_get_dds_paths, mock_get_url, mock_requests_get):
+        """
+        Test the correct call order when streaming the zip file.
+        Example uses a 2 file project
+        """
 
+        manager = Mock()
+        manager.attach_mock(mock_get_url, 'get_url')
+        manager.attach_mock(mock_requests_get, 'requests_get')
+        manager.attach_mock(mock_requests_get.return_value.raw.stream, 'response_stream')
+        manager.attach_mock(mock_get_dds_paths, 'get_dds_paths')
+
+        mock_dds_files = OrderedDict({
+            'file1.txt': create_autospec(File, current_version={'upload': {'size': 100}}),
+            'file2.txt': create_autospec(File, current_version={'upload': {'size': 200}})
+        })
+        mock_get_dds_paths.return_value = mock_dds_files
+        mock_requests_get.return_value.raw.stream.return_value = []
+
+        builder = DDSZipBuilder(self.project_id, self.mock_client)
+        streaming_zipfile = builder.build_streaming_zipfile()
+        # Before iterating the only call that should be made is getting the paths
+        self.assertEqual(manager.mock_calls, [call.get_dds_paths(), ])
+        for _ in streaming_zipfile:
+            pass
+
+        # After iterating, call order should be
+        #
+        # 1. get_dds_paths - Get project paths
+        # 2. get_url - Get download URL for file 1
+        # 3. requests_get - Begin retrieval of data for file 1
+        # 4. response_stream - Get response stream generator for file 1
+        # 2. get_url - Get download URL for file 2
+        # 3. requests_get - Begin retrieval of data for file 2
+        # 4. response_stream - Get response stream generator for file 2
+
+        expected_calls = [
+            call.get_dds_paths(),
+            call.get_url(mock_dds_files['file1.txt']),
+            call.requests_get(mock_get_url.return_value, stream=True),
+            call.response_stream(),
+            call.get_url(mock_dds_files['file2.txt']),
+            call.requests_get(mock_get_url.return_value, stream=True),
+            call.response_stream(),
+        ]
+        self.assertEqual(manager.mock_calls, expected_calls)
