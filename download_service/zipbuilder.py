@@ -1,6 +1,12 @@
 from zipstream import ZipFile
 from ddsc.sdk.client import PathToFiles
+from ddsc.core.ddsapi import DataServiceError
 import requests
+
+
+class NotFoundException(BaseException):
+    def __init__(self, message):
+        self.message = message
 
 
 class DDSZipBuilder(object):
@@ -23,8 +29,14 @@ class DDSZipBuilder(object):
         Uses the client to look up the project name from DukeDS
         :return: str: project name
         """
-        project = self.client.get_project_by_id(self.project_id)
-        return project.name
+        try:
+            project = self.client.get_project_by_id(self.project_id)
+            return project.name
+        except DataServiceError as e:
+            if e.status_code == 404:
+                raise NotFoundException('Project {} not found'.format(self.project_id))
+            else:
+                raise
 
     def get_filename(self):
         """
@@ -39,11 +51,17 @@ class DDSZipBuilder(object):
         Builds a mapping of file paths (strings) in the dds project to ddsc.sdk.client.File objects
         :return: OrderedDict where keys are relative paths in the project and values are ddsc.sdk.client.File objects
         """
-        children = self.client.dds_connection.get_project_children(self.project_id)
-        ptf = PathToFiles()
-        for child in children:
-            ptf.add_paths_for_children_of_node(child)
-        return ptf.paths  # OrderedDict of path -> File
+        try:
+            children = self.client.dds_connection.get_project_children(self.project_id)
+            ptf = PathToFiles()
+            for child in children:
+                ptf.add_paths_for_children_of_node(child)
+            return ptf.paths  # OrderedDict of path -> File
+        except DataServiceError as e:
+            if e.status_code == 404:
+                raise NotFoundException('Project {} not found'.format(self.project_id))
+            else:
+                raise
 
     def get_url(self, dds_file):
         """
@@ -54,8 +72,14 @@ class DDSZipBuilder(object):
         :return: The URL string to GET.
         """
         # This is a time-sensitive call, so we should only do it right before fetch
-        file_download = self.client.dds_connection.get_file_download(dds_file.id)
-        return '{}{}'.format(file_download.host, file_download.url)
+        try:
+            file_download = self.client.dds_connection.get_file_download(dds_file.id)
+            return '{}{}'.format(file_download.host, file_download.url)
+        except DataServiceError as e:
+            if e.status_code == 404:
+                raise NotFoundException('File with id {} not found'.format(dds_file.id))
+            else:
+                raise
 
     def fetch(self, dds_file):
         """
