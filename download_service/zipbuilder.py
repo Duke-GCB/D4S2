@@ -76,7 +76,7 @@ class DDSZipBuilder(object):
         for chunk in response.raw.stream():
             yield chunk
 
-    def make_streaming_zipfile(self):
+    def build_streaming_zipfile(self):
         """
         Make a generator that, when consumed, fetches DDS file contents on demand using zipstream.ZipFile's
         write_iter method.
@@ -92,16 +92,4 @@ class DDSZipBuilder(object):
             zipfile.write_iter(filename, self.fetch(dds_file), buffer_size=file_size)
         return zipfile
 
-    def build(self):
-        """
-        Makes a generator that iterates over the zipfile?
-        Not sure we need this additional layer actually
-        :return:
-        """
-        def generate():
-            generator = self.make_streaming_zipfile()
-            for chunk in generator:
-                yield chunk
-
-        return generate()
 

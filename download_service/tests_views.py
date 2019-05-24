@@ -19,9 +19,9 @@ class DDSProjectZipTestCase(SimpleTestCase):
         self.assertEqual(mock_zip_builder.call_args, call(self.project_id, mock_make_client.return_value))
 
     def test_response_content(self, mock_zip_builder, mock_make_client):
-        mock_zip_builder.return_value.build.return_value = 'built zip content'
+        mock_zip_builder.return_value.build_streaming_zipfile.return_value = 'streaming zip content'
         response = self.client.get(self.url)
-        self.assertContains(response, 'built zip content')
+        self.assertContains(response, 'streaming zip content')
 
     def test_response_headers(self, mock_zip_builder, mock_make_client):
         mock_zip_builder.return_value.get_filename.return_value = 'ABC123.zip'
