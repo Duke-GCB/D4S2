@@ -3,6 +3,7 @@ from download_service.zipbuilder import DDSZipBuilder
 from ddsc.sdk.client import Client, File, FileDownload, Project, DDSConnection
 from requests import Response
 from unittest.mock import Mock, patch, create_autospec, PropertyMock, call
+from collections import OrderedDict
 
 
 class DDSZipBuilderTestCase(TestCase):
@@ -98,8 +99,33 @@ class DDSZipBuilderTestCase(TestCase):
         # Also requests.get should have been called
         self.assertTrue(mock_requests_get.called)
 
-    def build_streaming_zipfile(self):
-        pass
+    @patch('download_service.zipbuilder.ZipFile')
+    @patch('download_service.zipbuilder.DDSZipBuilder.get_dds_paths')
+    @patch('download_service.zipbuilder.DDSZipBuilder.fetch')
+    def test_build_streaming_zipfile(self, mock_fetch, mock_get_dds_paths, mock_zipfile):
+        mock_dds_files = OrderedDict({
+            'file1.txt': create_autospec(File, current_version={'upload': {'size': 100}}),
+            'file2.txt': create_autospec(File, current_version={'upload': {'size': 200}})
+        })
+        mock_get_dds_paths.return_value = mock_dds_files
+        builder = DDSZipBuilder(self.project_id, self.mock_client)
+        streaming_zipfile = builder.build_streaming_zipfile()
+        # it should call mock_get_dds_paths
+        self.assertTrue(mock_get_dds_paths.called)
+        # It should init a zipfile with allowZip64=true
+        self.assertEqual(mock_zipfile.call_args, call(allowZip64=True))
+        # it should call write_iter with filename, fetch results, and buffer size
+        self.assertEqual(mock_zipfile.return_value.write_iter.mock_calls, [
+            call('file1.txt', mock_fetch.return_value, buffer_size=100),
+            call('file2.txt', mock_fetch.return_value, buffer_size=200),
+        ])
+        # It should call fetch for each dds file, in order
+        self.assertEqual(mock_fetch.mock_calls, [
+            call(mock_dds_files['file1.txt']),
+            call(mock_dds_files['file2.txt'])
+        ])
+        # it should return the zip file
+        self.assertEqual(streaming_zipfile, mock_zipfile.return_value)
 
     def test_call_order(self):
         pass
