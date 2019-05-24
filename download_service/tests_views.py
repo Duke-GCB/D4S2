@@ -1,17 +1,28 @@
 from django.core.urlresolvers import reverse
-from django.test.testcases import SimpleTestCase
+from django.test.testcases import TestCase
 from unittest.mock import patch, call
+from django.contrib.auth.models import User
 
 
 @patch('download_service.views.make_client')
 @patch('download_service.views.DDSZipBuilder')
-class DDSProjectZipTestCase(SimpleTestCase):
+class DDSProjectZipTestCase(TestCase):
     def setUp(self):
         self.project_id = 'abc-123'
         self.url = reverse('download-dds-project-zip', kwargs={'project_id': self.project_id})
+        username = 'download_user'
+        password = 'secret'
+        self.user = User.objects.create_user(username, password=password)
+        self.client.login(username=username, password=password)
 
     def test_built_url(self, mock_zip_builder, mock_make_client):
+        self.client.logout()
         self.assertEqual(self.url, '/download/dds-projects/abc-123.zip')
+
+    def test_redirects_for_login(self, mock_zip_builder, mock_make_client):
+        self.client.logout()
+        response = self.client.get(self.url)
+        self.assertRedirects(response, reverse('login') + '?next=/download/dds-projects/abc-123.zip')
 
     def test_download_project_builds(self, mock_zip_builder, mock_make_client):
         response = self.client.get(self.url)

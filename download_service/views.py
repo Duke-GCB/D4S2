@@ -1,15 +1,12 @@
 from django.http import StreamingHttpResponse
 from download_service.zipbuilder import DDSZipBuilder
-from ddsc.sdk.client import Client
+from django.contrib.auth.decorators import login_required
+from download_service.utils import make_client
 
 
-def make_client():
-    client = Client()  # This assumes it can authenticate
-    return client
-
-
+@login_required
 def dds_project_zip(request, project_id):
-    client = make_client()
+    client = make_client(request.user)
     builder = DDSZipBuilder(project_id, client)
     # this should trigger an exception if project not found
     filename = builder.get_filename()
