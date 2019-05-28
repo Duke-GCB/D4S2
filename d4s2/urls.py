@@ -7,6 +7,7 @@ from rest_framework.authtoken import views as authtoken_views
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^ownership/', include('ownership.urls')),
+    url(r'^download/', include('download_service.urls')),
     url(r'^auth/', include('gcb_web_auth.urls')),
     url(r'^api/v1/', include('d4s2_api_v1.urls')),
     url(r'^api/v2/', include('d4s2_api_v2.urls')),
