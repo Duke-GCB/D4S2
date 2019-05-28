@@ -124,5 +124,3 @@ class DDSZipBuilder(object):
             file_size = dds_file.current_version['upload']['size']
             zipfile.write_iter(filename, self.fetch(dds_file), buffer_size=file_size)
         return zipfile
-
-
