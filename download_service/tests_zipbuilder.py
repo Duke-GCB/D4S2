@@ -40,17 +40,14 @@ class DDSZipBuilderTestCase(TestCase):
 
     @patch('download_service.zipbuilder.PathToFiles')
     def test_get_dds_paths(self, mock_path_to_files):
-        mock_children = [Mock(), Mock()]
-        self.mock_client.dds_connection.get_project_children.return_value = mock_children
+        mock_project = DDSZipBuilderTestCase.mock_project_with_name('project-xyz')
+        self.mock_client.get_project_by_id.return_value = mock_project
         builder = DDSZipBuilder(self.project_id, self.mock_client)
         dds_paths = builder.get_dds_paths()
-        # get_project_children should be called with the project id
-        self.assertEqual(self.mock_client.dds_connection.get_project_children.call_args, call(self.project_id))
-        # PathToFiles().add_paths_for_children_of_node should be called with each child
-        self.assertEqual(mock_path_to_files.return_value.add_paths_for_children_of_node.mock_calls, [
-            call(mock_children[0]),
-            call(mock_children[1])
-        ])
+        # get_project_by_id should be called with the project id
+        self.assertEqual(self.mock_client.get_project_by_id.call_args, call(self.project_id))
+        # PathToFiles().add_paths_for_children_of_node should be called with the project
+        self.assertEqual(mock_path_to_files.return_value.add_paths_for_children_of_node.call_args, call(mock_project))
         self.assertEqual(dds_paths, mock_path_to_files.return_value.paths)
 
     def test_get_url(self):
@@ -206,12 +203,12 @@ class DDSZipBuilderExceptionsTestCase(TestCase):
             self.builder.get_project_name()
 
     def test_get_dds_paths_catches_dataservice_404_raises_not_found(self):
-        self.mock_client.dds_connection.get_project_children.side_effect = MockDataServiceError(404)
+        self.mock_client.get_project_by_id.side_effect = MockDataServiceError(404)
         with self.assertRaisesMessage(NotFoundException, "Project abc not found"):
             self.builder.get_dds_paths()
 
     def test_get_dds_paths_raises_other_dataservice_errors(self):
-        self.mock_client.dds_connection.get_project_children.side_effect = MockDataServiceError(500)
+        self.mock_client.get_project_by_id.side_effect = MockDataServiceError(500)
         with self.assertRaises(DataServiceError):
             self.builder.get_dds_paths()
 
