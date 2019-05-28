@@ -32,6 +32,13 @@ class DDSZipBuilder(object):
         self.project_id = project_id
         self.client = client
 
+    @staticmethod
+    def _handle_dataservice_error(e, message):
+        if e.status_code == 404:
+            raise NotFoundException(message)
+        else:
+            raise
+
     def get_project_name(self):
         """
         Uses the client to look up the project name from DukeDS
@@ -41,10 +48,7 @@ class DDSZipBuilder(object):
             project = self.client.get_project_by_id(self.project_id)
             return project.name
         except DataServiceError as e:
-            if e.status_code == 404:
-                raise NotFoundException('Project {} not found'.format(self.project_id))
-            else:
-                raise
+            DDSZipBuilder._handle_dataservice_error(e, 'Project {} not found'.format(self.project_id))
 
     def get_filename(self):
         """
@@ -66,10 +70,7 @@ class DDSZipBuilder(object):
                 ptf.add_paths_for_children_of_node(child)
             return ptf.paths  # OrderedDict of path -> File
         except DataServiceError as e:
-            if e.status_code == 404:
-                raise NotFoundException('Project {} not found'.format(self.project_id))
-            else:
-                raise
+            DDSZipBuilder._handle_dataservice_error(e, 'Project {} not found'.format(self.project_id))
 
     def get_url(self, dds_file):
         """
@@ -87,10 +88,7 @@ class DDSZipBuilder(object):
             else:
                 raise NotSupportedException('This file requires an unsupported download method: {}'.format(file_download.http_verb))
         except DataServiceError as e:
-            if e.status_code == 404:
-                raise NotFoundException('File with id {} not found'.format(dds_file.id))
-            else:
-                raise
+            DDSZipBuilder._handle_dataservice_error(e, 'File with id {} not found'.format(dds_file.id))
 
     def fetch(self, dds_file):
         """
