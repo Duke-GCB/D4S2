@@ -64,10 +64,9 @@ class DDSZipBuilder(object):
         :return: OrderedDict where keys are relative paths in the project and values are ddsc.sdk.client.File objects
         """
         try:
-            children = self.client.dds_connection.get_project_children(self.project_id)
+            project = self.client.get_project_by_id(self.project_id)
             ptf = PathToFiles()
-            for child in children:
-                ptf.add_paths_for_children_of_node(child)
+            ptf.add_paths_for_children_of_node(project)
             return ptf.paths  # OrderedDict of path -> File
         except DataServiceError as e:
             DDSZipBuilder._handle_dataservice_error(e, 'Project {} not found'.format(self.project_id))
