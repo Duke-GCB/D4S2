@@ -20,12 +20,10 @@ class NotSupportedException(ZipBuilderException):
 class DDSZipBuilder(object):
     """
     Builds a zip file as a stream, containing all the files in a DukeDS project.
-    Notes about generators and timeliness
     """
 
     def __init__(self, project_id, client):
         """
-
         :param project_id: The id of a DukeDS project
         :param client: A ddsc.sdk.Client instance ready to make API calls
         """
