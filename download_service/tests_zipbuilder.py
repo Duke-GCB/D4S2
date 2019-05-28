@@ -1,6 +1,7 @@
 from django.test.testcases import TestCase
-from download_service.zipbuilder import DDSZipBuilder
+from download_service.zipbuilder import DDSZipBuilder, NotFoundException, NotSupportedException
 from ddsc.sdk.client import Client, File, FileDownload, Project, DDSConnection
+from ddsc.core.ddsapi import DataServiceError
 from requests import Response
 from unittest.mock import Mock, patch, create_autospec, PropertyMock, call
 from collections import OrderedDict
@@ -176,3 +177,55 @@ class DDSZipBuilderTestCase(TestCase):
             call.response_stream(),
         ]
         self.assertEqual(manager.mock_calls, expected_calls)
+
+
+class MockDataServiceError(DataServiceError):
+
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+
+class DDSZipBuilderExceptionsTestCase(TestCase):
+
+    def setUp(self):
+        self.mock_client = create_autospec(Client)
+        self.mock_client.dds_connection = create_autospec(DDSConnection)
+        self.project_id = 'abc'
+        self.file_id = '123'
+        self.mock_dds_file = create_autospec(File, id=self.file_id)
+        self.builder = DDSZipBuilder(self.project_id, self.mock_client)
+
+    def test_get_project_name_catches_dataservice_404_raises_not_found(self):
+        self.mock_client.get_project_by_id.side_effect = MockDataServiceError(404)
+        with self.assertRaisesMessage(NotFoundException, "Project abc not found"):
+            self.builder.get_project_name()
+
+    def test_get_project_name_raises_other_dataservice_errors(self):
+        self.mock_client.get_project_by_id.side_effect = MockDataServiceError(500)
+        with self.assertRaises(DataServiceError):
+            self.builder.get_project_name()
+
+    def test_get_dds_paths_catches_dataservice_404_raises_not_found(self):
+        self.mock_client.dds_connection.get_project_children.side_effect = MockDataServiceError(404)
+        with self.assertRaisesMessage(NotFoundException, "Project abc not found"):
+            self.builder.get_dds_paths()
+
+    def test_get_dds_paths_raises_other_dataservice_errors(self):
+        self.mock_client.dds_connection.get_project_children.side_effect = MockDataServiceError(500)
+        with self.assertRaises(DataServiceError):
+            self.builder.get_dds_paths()
+
+    def test_get_url_checks_http_verb_raises_not_supported(self):
+        self.mock_client.dds_connection.get_file_download.return_value = create_autospec(FileDownload, http_verb='POST')
+        with self.assertRaisesMessage(NotSupportedException, 'This file requires an unsupported download method: POST'):
+            self.builder.get_url(self.mock_dds_file)
+
+    def test_get_url_catches_dataservice_404_raises_not_found(self):
+        self.mock_client.dds_connection.get_file_download.side_effect = MockDataServiceError(404)
+        with self.assertRaisesMessage(NotFoundException, "File with id 123 not found"):
+            self.builder.get_url(self.mock_dds_file)
+
+    def test_get_url_raises_other_dataservice_errors(self):
+        self.mock_client.dds_connection.get_file_download.side_effect = MockDataServiceError(500)
+        with self.assertRaises(DataServiceError):
+            self.builder.get_url(self.mock_dds_file)
