@@ -33,6 +33,15 @@ class DDSProjectSerializer(serializers.Serializer):
         resource_name = 'duke-ds-projects'
 
 
+class DDSProjectSummarySerializer(DDSProjectSerializer):
+    total_size = serializers.IntegerField()
+    file_count = serializers.IntegerField()
+    folder_count = serializers.IntegerField()
+
+    class Meta:
+        resource_name = 'duke-ds-project-summaries'
+
+
 class DDSProjectTransferSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     status = serializers.CharField()
