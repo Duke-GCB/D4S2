@@ -338,6 +338,35 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(permission['user'], 'user1')
         self.assertEqual(permission['auth_role'], 'file_downloader')
 
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_get_summary(self, mock_dds_util):
+        mock_project_response = Mock()
+        mock_project_response.json.return_value = {
+            'id': 'project1',
+        }
+        mock_children_response = Mock()
+        mock_children_response.json.return_value = {
+            'results': [
+                {'id': 'fo1', 'kind': 'dds-folder' },
+                {'id': 'fi1', 'kind': 'dds-file', 'current_version': {'upload': {'size': 100}}},
+                {'id': 'fi2', 'kind': 'dds-file', 'current_version': {'upload': {'size': 200}}},
+                {'id': 'fi3', 'kind': 'dds-file', 'current_version': {'upload': {'size': 300}}},
+                {'id': 'fo2', 'kind': 'dds-folder' },
+            ]
+        }
+        mock_dds_util.return_value.get_project.return_value = mock_project_response
+        mock_dds_util.return_value.get_project_children.return_value = mock_children_response
+        url = reverse('v2-dukedsproject-list') + 'project1/summary/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        summary = response.data
+        self.assertEqual(summary['id'], 'project1')
+        self.assertEqual(summary['file_count'], 3)
+        self.assertEqual(summary['folder_count'], 2)
+        self.assertEqual(summary['total_size'], 600)
+        self.assertEqual(mock_dds_util.return_value.get_project.call_args, call('project1'))
+        self.assertEqual(mock_dds_util.return_value.get_project_children.call_args, call('project1'))
+
 
 class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
