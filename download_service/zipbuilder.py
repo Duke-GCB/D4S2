@@ -56,6 +56,17 @@ class DDSZipBuilder(object):
         project_name = self.get_project_name()
         return '{}.zip'.format(project_name)
 
+    def raise_on_filename_mismatch(self, filename):
+        """
+        Raises a NotFoundException if the supplied filename does not match this builder's
+        generated filename (should be project_name + '.zip'
+
+        :param filename: str: The file name to compare
+        """
+        expected_filename = self.get_filename()
+        if filename != expected_filename:
+            raise NotFoundException('Project {} not found'.format(self.project_id))
+
     def get_dds_paths(self):
         """
         Builds a mapping of file paths (strings) in the dds project to ddsc.sdk.client.File objects

@@ -10,7 +10,9 @@ from download_service.zipbuilder import NotFoundException, NotSupportedException
 class DDSProjectZipTestCase(TestCase):
     def setUp(self):
         self.project_id = 'abc-123'
-        self.url = reverse('download-dds-project-zip', kwargs={'project_id': self.project_id})
+        self.filename = 'ABC123.zip'
+        self.url = reverse('download-dds-project-zip',
+                           kwargs={'project_id': self.project_id, 'filename': self.filename})
         username = 'download_user'
         password = 'secret'
         self.user = User.objects.create_user(username, password=password)
@@ -18,12 +20,12 @@ class DDSProjectZipTestCase(TestCase):
 
     def test_built_url(self, mock_zip_builder, mock_make_client):
         self.client.logout()
-        self.assertEqual(self.url, '/download/dds-projects/abc-123.zip')
+        self.assertEqual(self.url, '/download/dds-projects/abc-123/ABC123.zip')
 
     def test_redirects_for_login(self, mock_zip_builder, mock_make_client):
         self.client.logout()
         response = self.client.get(self.url)
-        self.assertRedirects(response, reverse('login') + '?next=/download/dds-projects/abc-123.zip')
+        self.assertRedirects(response, reverse('login') + '?next=/download/dds-projects/abc-123/ABC123.zip')
 
     def test_download_project_builds(self, mock_zip_builder, mock_make_client):
         response = self.client.get(self.url)
@@ -41,12 +43,17 @@ class DDSProjectZipTestCase(TestCase):
         self.assertEqual(response['Content-Type'], 'application/zip')
         self.assertEqual(response['Content-Disposition'], 'attachment; filename=ABC123.zip')
 
-    def test_404_if_project_not_found(self, mock_zip_builder, mock_make_client):
-        mock_zip_builder.return_value.get_filename.side_effect = NotFoundException('not found')
+    def test_404_on_filename_mismatch(self, mock_zip_builder, mock_make_client):
+        mock_zip_builder.return_value.raise_on_filename_mismatch.side_effect = NotFoundException('not found')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_404_on_dds_not_found(self, mock_zip_builder, mock_make_client):
+        mock_zip_builder.return_value.build_streaming_zipfile.side_effect = NotFoundException('not found')
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 404)
 
     def test_error_if_unsupported_verb(self, mock_zip_builder, mock_make_client):
-        mock_zip_builder.return_value.get_filename.side_effect = NotSupportedException('not supported')
+        mock_zip_builder.return_value.build_streaming_zipfile.side_effect = NotSupportedException('not supported')
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 500)
