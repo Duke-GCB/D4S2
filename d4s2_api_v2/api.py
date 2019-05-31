@@ -29,7 +29,7 @@ class WrappedDataServiceException(APIException):
     """
     def __init__(self, data_service_error):
         self.status_code = data_service_error.status_code
-        self.detail = data_service_error.response
+        self.detail = str(data_service_error)
 
 
 class BadRequestException(APIException):
