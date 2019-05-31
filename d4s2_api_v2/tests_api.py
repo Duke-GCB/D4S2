@@ -9,7 +9,7 @@ from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket
-from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser
+from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser, DataServiceError
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -208,6 +208,13 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(user['last_name'], 'Smith')
 
 
+class MockDataServiceError(DataServiceError):
+
+    def __init__(self, status_code):
+        self.status_code = status_code
+        self.response = None
+
+
 class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -283,6 +290,14 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
         self.assertEqual(project['is_deleted'], False)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_get_project_403_if_no_dds_access(self, mock_dds_util):
+        mock_dds_util.return_value.get_project.side_effect = MockDataServiceError(403)
+        url = reverse('v2-dukedsproject-list') + 'project1/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        mock_dds_util.return_value.get_project.assert_called_with('project1')
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_permissions(self, mock_dds_util):
@@ -366,6 +381,13 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(summary['total_size'], 600)
         self.assertEqual(mock_dds_util.return_value.get_project.call_args, call('project1'))
         self.assertEqual(mock_dds_util.return_value.get_project_children.call_args, call('project1'))
+
+    @patch('d4s2_api_v2.api.DDSProjectSummary.fetch_one')
+    def test_get_summary_wraps_error(self, mock_fetch_one):
+        mock_fetch_one.side_effect = MockDataServiceError(403)
+        url = reverse('v2-dukedsproject-list') + 'project1/summary/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -1322,3 +1344,4 @@ class DDSAuthProviderAffiliatesViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['id'], '999')
         mock_dds_user.get_or_register_user.assert_called_with(mock_dds_util.return_value, '456', 'joe')
+
