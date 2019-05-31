@@ -47,7 +47,8 @@ class DDSUtil(object):
         project = self.get_remote_project(project_id)
         return self.remote_store.fetch_remote_project(project.name, must_exist=True)
 
-    def get_project_url(self, project_id):
+    @staticmethod
+    def get_project_url(project_id):
         endpoint = get_default_dds_endpoint()
         return '{}/#/project/{}'.format(endpoint.portal_root, project_id)
 
@@ -181,6 +182,8 @@ class DDSProject(DDSBase):
         self.name = project_dict.get('name')
         self.description = project_dict.get('description')
         self.is_deleted = project_dict.get('is_deleted')
+        # URL is useful for all DDSProject instances not provided by DDS API
+        self.url = DDSUtil.get_project_url(self.id)
 
     @staticmethod
     def fetch_list(dds_util):
@@ -328,7 +331,7 @@ class DeliveryDetails(object):
             return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
 
     def get_project_url(self):
-        return self.ddsutil.get_project_url(self.delivery.project_id)
+        return DDSUtil.get_project_url(self.delivery.project_id)
 
     def get_user_message(self):
         return self.delivery.user_message
