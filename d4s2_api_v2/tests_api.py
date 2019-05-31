@@ -235,7 +235,8 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_list_projects(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_list_projects(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         mock_response.json.return_value = {
             'results': [
@@ -271,7 +272,8 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['is_deleted'], False)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_get_project(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_get_project(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         mock_response.json.return_value = {
             'id': 'project1',
@@ -354,7 +356,8 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(permission['auth_role'], 'file_downloader')
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_get_summary(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_get_summary(self, mock_get_project_url, mock_dds_util):
         mock_project_response = Mock()
         mock_project_response.json.return_value = {
             'id': 'project1',
@@ -410,7 +413,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_list_transfers(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_list_transfers(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         email_template_set = EmailTemplateSet.objects.create(name='someset')
         delivery = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
@@ -487,7 +491,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['delivery'], None)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_get_project(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_get_project(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         mock_response.json.return_value = {
             'id': 'transfer1',
