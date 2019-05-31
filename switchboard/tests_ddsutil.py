@@ -211,7 +211,7 @@ class TestDeliveryDetails(TestCase):
             Mock(full_name='joe', email='joe@joe.com'),
             Mock(full_name='bob', email='bob@bob.com'),
         ]
-        mock_dds_util.return_value.get_project_url.return_value = 'projecturl'
+        mock_dds_util.get_project_url.return_value = 'projecturl'
         delivery = Mock(user_message='user message text')
         user = Mock()
         details = DeliveryDetails(delivery, user)
@@ -240,7 +240,7 @@ class TestDeliveryDetails(TestCase):
             Mock(full_name='joe', email='joe@joe.com'),
             Mock(full_name='bob', email='bob@bob.com'),
         ]
-        mock_dds_util.return_value.get_project_url.return_value = 'projecturl'
+        mock_dds_util.get_project_url.return_value = 'projecturl'
         delivery = Mock(user_message='user message text', transfer_id='123')
         user = Mock()
         details = DeliveryDetails(delivery, user)
@@ -432,8 +432,10 @@ class DDSDeliveryTypeTestCase(TestCase):
         )
 
 
+@patch('switchboard.dds_util.DDSUtil.get_project_url')
 class DDSProjectTestCase(TestCase):
-    def test_constructor(self):
+    def test_constructor(self, mock_get_project_url):
+        mock_get_project_url.return_value = 'http://example.org'
         project = DDSProject({
             'id': '123',
             'name': 'mouse',
@@ -444,8 +446,10 @@ class DDSProjectTestCase(TestCase):
         self.assertEqual(project.name, 'mouse')
         self.assertEqual(project.description, 'mouse rna analysis')
         self.assertEqual(project.is_deleted, False)
+        self.assertEqual(project.url, 'http://example.org')
 
-    def test_fetch_list(self):
+    def test_fetch_list(self, mock_get_project_url):
+        mock_get_project_url.return_value = 'http://example.org'
         mock_dds_util = Mock()
         mock_dds_util.get_projects.return_value.json.return_value = {
             'results': [
@@ -463,8 +467,10 @@ class DDSProjectTestCase(TestCase):
         self.assertEqual(projects[0].name, 'mouse')
         self.assertEqual(projects[0].description, 'mouse RNA')
         self.assertEqual(projects[0].is_deleted, False)
+        self.assertEqual(projects[0].url, 'http://example.org')
 
 
+@patch('switchboard.dds_util.DDSUtil.get_project_url')
 class DDSProjectSummaryTestCase(TestCase):
 
     def setUp(self):
@@ -477,12 +483,12 @@ class DDSProjectSummaryTestCase(TestCase):
             {'id': 'fo2', 'kind': 'dds-folder'}
         ]
 
-    def test_constructor(self):
+    def test_constructor(self, mock_get_project_url):
         project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
         self.assertEqual(project_summary.id, '123')
         self.assertEqual(project_summary.children, self.children)
 
-    def test_fetch_one(self):
+    def test_fetch_one(self, mock_get_project_url):
         mock_dds_util = Mock()
         mock_dds_util.get_project.return_value.json.return_value = self.project
         mock_dds_util.get_project_children.return_value.json.return_value = {'results': self.children}
@@ -490,15 +496,15 @@ class DDSProjectSummaryTestCase(TestCase):
         self.assertEqual(project_summary.id, '123')
         self.assertEqual(project_summary.children, self.children)
 
-    def test_total_size(self):
+    def test_total_size(self, mock_get_project_url):
         project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
         self.assertEqual(project_summary.total_size(), 600)
 
-    def test_file_count(self):
+    def test_file_count(self, mock_get_project_url):
         project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
         self.assertEqual(project_summary.file_count(), 3)
 
-    def test_folder_count(self):
+    def test_folder_count(self, mock_get_project_url):
         project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
         self.assertEqual(project_summary.folder_count(), 2)
 
