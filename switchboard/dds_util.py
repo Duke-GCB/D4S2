@@ -47,8 +47,8 @@ class DDSUtil(object):
         project = self.get_remote_project(project_id)
         return self.remote_store.fetch_remote_project(project.name, must_exist=True)
 
-
-    def get_project_url(self, project_id):
+    @staticmethod
+    def get_project_url(project_id):
         endpoint = get_default_dds_endpoint()
         return '{}/#/project/{}'.format(endpoint.portal_root, project_id)
 
@@ -94,6 +94,9 @@ class DDSUtil(object):
 
     def get_project(self, project_id):
         return self.remote_store.data_service.get_project_by_id(project_id)
+
+    def get_project_children(self, project_id):
+        return self.remote_store.data_service.get_project_children(project_id, '')
 
     def get_current_user(self):
         return self.remote_store.get_current_user()
@@ -179,6 +182,8 @@ class DDSProject(DDSBase):
         self.name = project_dict.get('name')
         self.description = project_dict.get('description')
         self.is_deleted = project_dict.get('is_deleted')
+        # URL is useful for all DDSProject instances not provided by DDS API
+        self.url = DDSUtil.get_project_url(self.id)
 
     @staticmethod
     def fetch_list(dds_util):
@@ -194,6 +199,39 @@ class DDSProject(DDSBase):
     def fetch_one(dds_util, dds_project_id):
         response = dds_util.get_project(dds_project_id).json()
         return DDSProject(response)
+
+
+class DDSProjectSummary(DDSProject):
+
+    def __init__(self, project_dict):
+        super().__init__(project_dict)
+        self.children = project_dict.get('children', [])
+
+    @staticmethod
+    def fetch_one(dds_util, dds_project_id):
+        project_dict = dds_util.get_project(dds_project_id).json()
+        children = dds_util.get_project_children(dds_project_id).json()
+        project_dict['children'] = children['results']
+        return DDSProjectSummary(project_dict)
+
+    def _get_children_of_kind(self, kind):
+        return [child for child in self.children if child['kind'] == kind]
+
+    def _get_files(self):
+        return self._get_children_of_kind('dds-file')
+
+    def _get_folders(self):
+        return self._get_children_of_kind('dds-folder')
+
+    def total_size(self):
+        sizes = [file['current_version']['upload']['size'] for file in self._get_files()]
+        return sum(sizes)
+
+    def file_count(self):
+        return len(self._get_files())
+
+    def folder_count(self):
+        return len(self._get_folders())
 
 
 class DDSProjectPermissions(DDSBase):
@@ -293,7 +331,7 @@ class DeliveryDetails(object):
             return DDSProject.fetch_one(self.ddsutil, self.delivery.project_id)
 
     def get_project_url(self):
-        return self.ddsutil.get_project_url(self.delivery.project_id)
+        return DDSUtil.get_project_url(self.delivery.project_id)
 
     def get_user_message(self):
         return self.delivery.user_message

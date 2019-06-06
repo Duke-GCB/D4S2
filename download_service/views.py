@@ -6,11 +6,11 @@ from django.http import Http404
 
 
 @login_required
-def dds_project_zip(request, project_id):
+def dds_project_zip(request, project_id, filename):
     client = make_client(request.user)
     builder = DDSZipBuilder(project_id, client)
     try:
-        filename = builder.get_filename()
+        builder.raise_on_filename_mismatch(filename)
         response = StreamingHttpResponse(builder.build_streaming_zipfile(), content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename={}'.format(filename)
         return response

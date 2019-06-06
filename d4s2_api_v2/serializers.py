@@ -28,9 +28,19 @@ class DDSProjectSerializer(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField()
     is_deleted = serializers.BooleanField()
+    url = serializers.URLField()
 
     class Meta:
         resource_name = 'duke-ds-projects'
+
+
+class DDSProjectSummarySerializer(DDSProjectSerializer):
+    total_size = serializers.IntegerField()
+    file_count = serializers.IntegerField()
+    folder_count = serializers.IntegerField()
+
+    class Meta:
+        resource_name = 'duke-ds-project-summaries'
 
 
 class DDSProjectTransferSerializer(serializers.Serializer):

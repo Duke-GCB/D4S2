@@ -9,7 +9,7 @@ from mock import patch, Mock, MagicMock
 from d4s2_api.models import *
 from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket
-from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser
+from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser, DataServiceError
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -208,6 +208,13 @@ class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(user['last_name'], 'Smith')
 
 
+class MockDataServiceError(DataServiceError):
+
+    def __init__(self, status_code):
+        self.status_code = status_code
+        self.response = None
+
+
 class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
         self.client.logout()
@@ -228,7 +235,8 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_list_projects(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_list_projects(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         mock_response.json.return_value = {
             'results': [
@@ -264,7 +272,8 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['is_deleted'], False)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_get_project(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_get_project(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         mock_response.json.return_value = {
             'id': 'project1',
@@ -283,6 +292,14 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
         self.assertEqual(project['is_deleted'], False)
+
+    @patch('d4s2_api_v2.api.DDSUtil')
+    def test_get_project_403_if_no_dds_access(self, mock_dds_util):
+        mock_dds_util.return_value.get_project.side_effect = MockDataServiceError(403)
+        url = reverse('v2-dukedsproject-list') + 'project1/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        mock_dds_util.return_value.get_project.assert_called_with('project1')
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_list_permissions(self, mock_dds_util):
@@ -338,6 +355,43 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(permission['user'], 'user1')
         self.assertEqual(permission['auth_role'], 'file_downloader')
 
+    @patch('d4s2_api_v2.api.DDSUtil')
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_get_summary(self, mock_get_project_url, mock_dds_util):
+        mock_project_response = Mock()
+        mock_project_response.json.return_value = {
+            'id': 'project1',
+        }
+        mock_children_response = Mock()
+        mock_children_response.json.return_value = {
+            'results': [
+                {'id': 'fo1', 'kind': 'dds-folder' },
+                {'id': 'fi1', 'kind': 'dds-file', 'current_version': {'upload': {'size': 100}}},
+                {'id': 'fi2', 'kind': 'dds-file', 'current_version': {'upload': {'size': 200}}},
+                {'id': 'fi3', 'kind': 'dds-file', 'current_version': {'upload': {'size': 300}}},
+                {'id': 'fo2', 'kind': 'dds-folder' },
+            ]
+        }
+        mock_dds_util.return_value.get_project.return_value = mock_project_response
+        mock_dds_util.return_value.get_project_children.return_value = mock_children_response
+        url = reverse('v2-dukedsproject-list') + 'project1/summary/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        summary = response.data
+        self.assertEqual(summary['id'], 'project1')
+        self.assertEqual(summary['file_count'], 3)
+        self.assertEqual(summary['folder_count'], 2)
+        self.assertEqual(summary['total_size'], 600)
+        self.assertEqual(mock_dds_util.return_value.get_project.call_args, call('project1'))
+        self.assertEqual(mock_dds_util.return_value.get_project_children.call_args, call('project1'))
+
+    @patch('d4s2_api_v2.api.DDSProjectSummary.fetch_one')
+    def test_get_summary_wraps_error(self, mock_fetch_one):
+        mock_fetch_one.side_effect = MockDataServiceError(403)
+        url = reverse('v2-dukedsproject-list') + 'project1/summary/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
 
 class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
     def test_fails_unauthenticated(self):
@@ -359,7 +413,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_list_transfers(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_list_transfers(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         email_template_set = EmailTemplateSet.objects.create(name='someset')
         delivery = DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
@@ -436,7 +491,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['delivery'], None)
 
     @patch('d4s2_api_v2.api.DDSUtil')
-    def test_get_project(self, mock_dds_util):
+    @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
+    def test_get_project(self, mock_get_project_url, mock_dds_util):
         mock_response = Mock()
         mock_response.json.return_value = {
             'id': 'transfer1',
@@ -1293,3 +1349,4 @@ class DDSAuthProviderAffiliatesViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['id'], '999')
         mock_dds_user.get_or_register_user.assert_called_with(mock_dds_util.return_value, '456', 'joe')
+

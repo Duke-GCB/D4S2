@@ -1,11 +1,12 @@
 from django.test import TestCase
+from gcb_web_auth.models import DDSEndpoint
 from mock import patch, Mock, MagicMock, call
-from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
-    SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
-    DDS_PERMISSIONS_ID_SEP, MessageDirection, DDSUser, DDSAuthProvider, DDSAffiliate
+
 from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDelivery, ShareRole, EmailTemplateSet, \
     UserEmailTemplateSet, EmailTemplate, EmailTemplateType
-from gcb_web_auth.models import DDSEndpoint
+from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
+    SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
+    DDS_PERMISSIONS_ID_SEP, MessageDirection, DDSUser, DDSAuthProvider, DDSAffiliate, DDSProjectSummary
 
 
 class DDSUtilTestCase(TestCase):
@@ -121,6 +122,16 @@ class DDSUtilTestCase(TestCase):
         project_url = dds_util.get_project_url('123')
         self.assertEqual(project_url, 'https://portal.example.com/#/project/123')
 
+    def test_get_project_children(self):
+        dds_util = DDSUtil(user=Mock())
+        mock_remote_store = Mock()
+        dds_util._remote_store = mock_remote_store
+        mock_children = [Mock()]
+        mock_remote_store.data_service.get_project_children.return_value = mock_children
+        children = dds_util.get_project_children('123')
+        self.assertEqual(children, mock_children)
+        self.assertEqual(mock_remote_store.data_service.get_project_children.call_args, call('123', ''))
+
     def test_cancel_project_transfer(self):
         dds_util = DDSUtil(user=Mock())
         mock_remote_store = Mock()
@@ -200,7 +211,7 @@ class TestDeliveryDetails(TestCase):
             Mock(full_name='joe', email='joe@joe.com'),
             Mock(full_name='bob', email='bob@bob.com'),
         ]
-        mock_dds_util.return_value.get_project_url.return_value = 'projecturl'
+        mock_dds_util.get_project_url.return_value = 'projecturl'
         delivery = Mock(user_message='user message text')
         user = Mock()
         details = DeliveryDetails(delivery, user)
@@ -229,7 +240,7 @@ class TestDeliveryDetails(TestCase):
             Mock(full_name='joe', email='joe@joe.com'),
             Mock(full_name='bob', email='bob@bob.com'),
         ]
-        mock_dds_util.return_value.get_project_url.return_value = 'projecturl'
+        mock_dds_util.get_project_url.return_value = 'projecturl'
         delivery = Mock(user_message='user message text', transfer_id='123')
         user = Mock()
         details = DeliveryDetails(delivery, user)
@@ -421,8 +432,10 @@ class DDSDeliveryTypeTestCase(TestCase):
         )
 
 
+@patch('switchboard.dds_util.DDSUtil.get_project_url')
 class DDSProjectTestCase(TestCase):
-    def test_constructor(self):
+    def test_constructor(self, mock_get_project_url):
+        mock_get_project_url.return_value = 'http://example.org'
         project = DDSProject({
             'id': '123',
             'name': 'mouse',
@@ -433,8 +446,10 @@ class DDSProjectTestCase(TestCase):
         self.assertEqual(project.name, 'mouse')
         self.assertEqual(project.description, 'mouse rna analysis')
         self.assertEqual(project.is_deleted, False)
+        self.assertEqual(project.url, 'http://example.org')
 
-    def test_fetch_list(self):
+    def test_fetch_list(self, mock_get_project_url):
+        mock_get_project_url.return_value = 'http://example.org'
         mock_dds_util = Mock()
         mock_dds_util.get_projects.return_value.json.return_value = {
             'results': [
@@ -452,6 +467,46 @@ class DDSProjectTestCase(TestCase):
         self.assertEqual(projects[0].name, 'mouse')
         self.assertEqual(projects[0].description, 'mouse RNA')
         self.assertEqual(projects[0].is_deleted, False)
+        self.assertEqual(projects[0].url, 'http://example.org')
+
+
+@patch('switchboard.dds_util.DDSUtil.get_project_url')
+class DDSProjectSummaryTestCase(TestCase):
+
+    def setUp(self):
+        self.project = {'id': '123'}
+        self.children = [
+            {'id': 'fo1', 'kind': 'dds-folder'},
+            {'id': 'fi1', 'kind': 'dds-file', 'current_version': {'upload': {'size': 100}}},
+            {'id': 'fi2', 'kind': 'dds-file', 'current_version': {'upload': {'size': 200}}},
+            {'id': 'fi3', 'kind': 'dds-file', 'current_version': {'upload': {'size': 300}}},
+            {'id': 'fo2', 'kind': 'dds-folder'}
+        ]
+
+    def test_constructor(self, mock_get_project_url):
+        project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
+        self.assertEqual(project_summary.id, '123')
+        self.assertEqual(project_summary.children, self.children)
+
+    def test_fetch_one(self, mock_get_project_url):
+        mock_dds_util = Mock()
+        mock_dds_util.get_project.return_value.json.return_value = self.project
+        mock_dds_util.get_project_children.return_value.json.return_value = {'results': self.children}
+        project_summary = DDSProjectSummary.fetch_one(mock_dds_util, '123')
+        self.assertEqual(project_summary.id, '123')
+        self.assertEqual(project_summary.children, self.children)
+
+    def test_total_size(self, mock_get_project_url):
+        project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
+        self.assertEqual(project_summary.total_size(), 600)
+
+    def test_file_count(self, mock_get_project_url):
+        project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
+        self.assertEqual(project_summary.file_count(), 3)
+
+    def test_folder_count(self, mock_get_project_url):
+        project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
+        self.assertEqual(project_summary.folder_count(), 2)
 
 
 class DDSProjectPermissionsTestCase(TestCase):

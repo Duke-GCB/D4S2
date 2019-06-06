@@ -4,18 +4,19 @@ from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
-from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions
-from switchboard.dds_util import DDSUtil, DDSMessageFactory, DDSAuthProvider, DDSAffiliate
+from switchboard.dds_util import DDSUser, DDSProject, DDSProjectTransfer, DDSProjectPermissions, DDSProjectSummary
+from switchboard.dds_util import DDSUtil, DDSMessageFactory, DDSAuthProvider, DDSAffiliate, DataServiceError
 from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer, DDSAuthProviderSerializer, DDSAffiliateSerializer, \
-    AddUserSerializer
+    AddUserSerializer, DDSProjectSummarySerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
     ModelWithEmailTemplateSetMixin
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
+
 
 class DataServiceUnavailable(APIException):
     status_code = 503
@@ -26,13 +27,14 @@ class WrappedDataServiceException(APIException):
     """
     Converts error returned from DukeDS python code into one appropriate for django.
     """
-    def __init__(self, data_service_exception):
-        self.status_code = data_service_exception.status_code
-        self.detail = data_service_exception.message
+    def __init__(self, data_service_error):
+        self.status_code = data_service_error.status_code
+        self.detail = str(data_service_error)
 
 
 class BadRequestException(APIException):
     status_code = 400
+
     def __init__(self, detail):
         self.detail = detail
 
@@ -61,8 +63,8 @@ class DDSViewSet(viewsets.ReadOnlyModelViewSet):
     def _ds_operation(self, func, *args):
         try:
             return func(*args)
-        except WrappedDataServiceException:
-            raise # passes along status code, e.g. 404
+        except DataServiceError as e:
+            raise WrappedDataServiceException(e)
         except Exception as e:
             raise DataServiceUnavailable(e)
 
@@ -153,6 +155,13 @@ class DDSProjectsViewSet(DDSViewSet):
         user_id = request.query_params.get('user')
         project_permissions = self._ds_operation(DDSProjectPermissions.fetch_list, dds_util, pk, user_id)
         serializer = DDSProjectPermissionSerializer(project_permissions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @detail_route(methods=['get'], url_path='summary', serializer_class=DDSProjectSummarySerializer)
+    def summary(self, request, pk=None):
+        dds_util = DDSUtil(request.user)
+        project_summary = self._ds_operation(DDSProjectSummary.fetch_one, dds_util, pk)
+        serializer = DDSProjectSummarySerializer(project_summary)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

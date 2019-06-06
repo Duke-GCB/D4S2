@@ -226,3 +226,14 @@ class DDSZipBuilderExceptionsTestCase(TestCase):
         self.mock_client.dds_connection.get_file_download.side_effect = MockDataServiceError(500)
         with self.assertRaises(DataServiceError):
             self.builder.get_url(self.mock_dds_file)
+
+    @patch('download_service.zipbuilder.DDSZipBuilder.get_filename')
+    def test_raise_on_filename_mismatch_raises(self, mock_get_filename):
+        mock_get_filename.return_value = 'file1.zip'
+        with self.assertRaisesMessage(NotFoundException, 'Project abc not found'):
+            self.builder.raise_on_filename_mismatch('file2.zip')
+
+    @patch('download_service.zipbuilder.DDSZipBuilder.get_filename')
+    def test_raise_on_filename_mismatch_ok(self, mock_get_filename):
+        mock_get_filename.return_value = 'file1.zip'
+        self.builder.raise_on_filename_mismatch('file1.zip')
