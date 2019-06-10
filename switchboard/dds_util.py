@@ -204,7 +204,7 @@ class DDSProject(DDSBase):
 class DDSProjectSummary(DDSProject):
 
     def __init__(self, project_dict):
-        super().__init__(project_dict)
+        super(DDSProject, self).__init__(project_dict)
         self.children = project_dict.get('children', [])
 
     @staticmethod
