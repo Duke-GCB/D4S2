@@ -245,11 +245,19 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
                     'name': 'Mouse',
                     'description': 'Mouse RNA',
                     'is_deleted': False,
+                    'audit': {
+                        'created_on': '2019-01-01',
+                        'last_updated_on': '2019-06-01'
+                    }
                 }, {
                     'id': 'project2',
                     'name': 'Turtle',
                     'description': 'Turtle DNA',
                     'is_deleted': False,
+                    'audit': {
+                        'created_on': '2019-01-02',
+                        'last_updated_on': '2019-06-02'
+                    }
                 }
             ]
         }
@@ -264,12 +272,16 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
         self.assertEqual(project['is_deleted'], False)
+        self.assertEqual(project['created_on'], '2019-01-01')
+        self.assertEqual(project['last_updated_on'], '2019-06-01')
 
         project = response.data[1]
         self.assertEqual(project['id'], 'project2')
         self.assertEqual(project['name'], 'Turtle')
         self.assertEqual(project['description'], 'Turtle DNA')
         self.assertEqual(project['is_deleted'], False)
+        self.assertEqual(project['created_on'], '2019-01-02')
+        self.assertEqual(project['last_updated_on'], '2019-06-02')
 
     @patch('d4s2_api_v2.api.DDSUtil')
     @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
@@ -280,6 +292,10 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
             'name': 'Mouse',
             'description': 'Mouse RNA',
             'is_deleted': False,
+            'audit': {
+                'created_on': '2019-01-01',
+                'last_updated_on': '2019-06-01'
+            }
         }
         mock_dds_util.return_value.get_project.return_value = mock_response
         url = reverse('v2-dukedsproject-list') + 'project1/'
@@ -292,6 +308,8 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(project['name'], 'Mouse')
         self.assertEqual(project['description'], 'Mouse RNA')
         self.assertEqual(project['is_deleted'], False)
+        self.assertEqual(project['created_on'], '2019-01-01')
+        self.assertEqual(project['last_updated_on'], '2019-06-01')
 
     @patch('d4s2_api_v2.api.DDSUtil')
     def test_get_project_403_if_no_dds_access(self, mock_dds_util):

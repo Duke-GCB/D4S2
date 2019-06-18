@@ -441,12 +441,18 @@ class DDSProjectTestCase(TestCase):
             'name': 'mouse',
             'description': 'mouse rna analysis',
             'is_deleted': False,
+            'audit': {
+                'created_on': '2019-01-01',
+                'last_updated_on': '2019-06-01'
+            }
         })
         self.assertEqual(project.id, '123')
         self.assertEqual(project.name, 'mouse')
         self.assertEqual(project.description, 'mouse rna analysis')
         self.assertEqual(project.is_deleted, False)
         self.assertEqual(project.url, 'http://example.org')
+        self.assertEqual(project.created_on, '2019-01-01')
+        self.assertEqual(project.last_updated_on, '2019-06-01')
 
     def test_fetch_list(self, mock_get_project_url):
         mock_get_project_url.return_value = 'http://example.org'
@@ -458,6 +464,10 @@ class DDSProjectTestCase(TestCase):
                     'name': 'mouse',
                     'description': 'mouse RNA',
                     'is_deleted': False,
+                    'audit': {
+                        'created_on': '2019-01-01',
+                        'last_updated_on': '2019-06-01'
+                    }
                 }
             ]
         }
@@ -468,6 +478,8 @@ class DDSProjectTestCase(TestCase):
         self.assertEqual(projects[0].description, 'mouse RNA')
         self.assertEqual(projects[0].is_deleted, False)
         self.assertEqual(projects[0].url, 'http://example.org')
+        self.assertEqual(projects[0].created_on, '2019-01-01')
+        self.assertEqual(projects[0].last_updated_on, '2019-06-01')
 
 
 @patch('switchboard.dds_util.DDSUtil.get_project_url')
