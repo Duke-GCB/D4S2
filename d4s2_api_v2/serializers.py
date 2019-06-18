@@ -29,6 +29,8 @@ class DDSProjectSerializer(serializers.Serializer):
     description = serializers.CharField()
     is_deleted = serializers.BooleanField()
     url = serializers.URLField()
+    created_on = serializers.DateField()
+    last_updated_on = serializers.DateField()
 
     class Meta:
         resource_name = 'duke-ds-projects'

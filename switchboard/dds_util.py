@@ -182,6 +182,8 @@ class DDSProject(DDSBase):
         self.name = project_dict.get('name')
         self.description = project_dict.get('description')
         self.is_deleted = project_dict.get('is_deleted')
+        self.created_on = project_dict.get('audit', {}).get('created_on')
+        self.last_updated_on = project_dict.get('audit', {}).get('last_updated_on')
         # URL is useful for all DDSProject instances not provided by DDS API
         self.url = DDSUtil.get_project_url(self.id)
 
