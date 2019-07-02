@@ -24,4 +24,4 @@ python manage.py createddsendpoint "Duke Data Service" $D4S2_DDSCLIENT_URL $D4S2
 # 4. Launch gunicorn
 # gevent workers are async and needed to service streaming downloads
 # with the default (sync) workers, streaming download responses time out.
-gunicorn -b 0.0.0.0:8000 --worker-class gevent d4s2.wsgi:application
+gunicorn -b 0.0.0.0:8000 d4s2.wsgi:application
