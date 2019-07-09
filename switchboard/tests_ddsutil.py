@@ -488,11 +488,11 @@ class DDSProjectSummaryTestCase(TestCase):
     def setUp(self):
         self.project = {'id': '123'}
         self.children = [
-            {'id': 'fo1', 'kind': 'dds-folder'},
+            {'id': 'fo1', 'kind': 'dds-folder', 'parent': {'kind': 'dds-project'}},
             {'id': 'fi1', 'kind': 'dds-file', 'current_version': {'upload': {'size': 100}}},
             {'id': 'fi2', 'kind': 'dds-file', 'current_version': {'upload': {'size': 200}}},
             {'id': 'fi3', 'kind': 'dds-file', 'current_version': {'upload': {'size': 300}}},
-            {'id': 'fo2', 'kind': 'dds-folder'}
+            {'id': 'fo2', 'kind': 'dds-folder', 'parent': {'kind': 'dds-folder'}}
         ]
 
     def test_constructor(self, mock_get_project_url):
@@ -519,6 +519,10 @@ class DDSProjectSummaryTestCase(TestCase):
     def test_folder_count(self, mock_get_project_url):
         project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
         self.assertEqual(project_summary.folder_count(), 2)
+
+    def test_root_folder_count(self, mock_get_project_url):
+        project_summary = DDSProjectSummary({'id': '123', 'children': self.children})
+        self.assertEqual(project_summary.root_folder_count(), 1)
 
 
 class DDSProjectPermissionsTestCase(TestCase):

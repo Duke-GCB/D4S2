@@ -383,11 +383,11 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         mock_children_response = Mock()
         mock_children_response.json.return_value = {
             'results': [
-                {'id': 'fo1', 'kind': 'dds-folder' },
+                {'id': 'fo1', 'kind': 'dds-folder', 'parent': { 'kind': 'dds-project'}},
                 {'id': 'fi1', 'kind': 'dds-file', 'current_version': {'upload': {'size': 100}}},
                 {'id': 'fi2', 'kind': 'dds-file', 'current_version': {'upload': {'size': 200}}},
                 {'id': 'fi3', 'kind': 'dds-file', 'current_version': {'upload': {'size': 300}}},
-                {'id': 'fo2', 'kind': 'dds-folder' },
+                {'id': 'fo2', 'kind': 'dds-folder', 'parent': { 'kind': 'dds-folder'}},
             ]
         }
         mock_dds_util.return_value.get_project.return_value = mock_project_response
@@ -399,6 +399,7 @@ class DDSProjectsViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(summary['id'], 'project1')
         self.assertEqual(summary['file_count'], 3)
         self.assertEqual(summary['folder_count'], 2)
+        self.assertEqual(summary['root_folder_count'], 1)
         self.assertEqual(summary['total_size'], 600)
         self.assertEqual(mock_dds_util.return_value.get_project.call_args, call('project1'))
         self.assertEqual(mock_dds_util.return_value.get_project_children.call_args, call('project1'))
