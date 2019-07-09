@@ -225,7 +225,7 @@ class DDSProjectSummary(DDSProject):
     def _get_folders(self):
         return self._get_children_of_kind('dds-folder')
 
-    def get_root_folders(self):
+    def _get_root_folders(self):
         return [folder for folder in self._get_folders() if folder['parent']['kind'] == 'dds-project']
 
     def total_size(self):
@@ -239,7 +239,7 @@ class DDSProjectSummary(DDSProject):
         return len(self._get_folders())
 
     def root_folder_count(self):
-        return len(self.get_root_folders())
+        return len(self._get_root_folders())
 
 
 class DDSProjectPermissions(DDSBase):
