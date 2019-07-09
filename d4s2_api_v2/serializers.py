@@ -40,6 +40,7 @@ class DDSProjectSummarySerializer(DDSProjectSerializer):
     total_size = serializers.IntegerField()
     file_count = serializers.IntegerField()
     folder_count = serializers.IntegerField()
+    root_folder_count = serializers.IntegerField()
 
     class Meta:
         resource_name = 'duke-ds-project-summaries'
