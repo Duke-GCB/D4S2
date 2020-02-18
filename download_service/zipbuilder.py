@@ -2,7 +2,9 @@ from zipstream import ZipFile
 from ddsc.sdk.client import PathToFiles
 from ddsc.core.ddsapi import DataServiceError
 import requests
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ZipBuilderException(BaseException):
     def __init__(self, message):
@@ -27,11 +29,13 @@ class DDSZipBuilder(object):
         :param project_id: The id of a DukeDS project
         :param client: A ddsc.sdk.Client instance ready to make API calls
         """
+        logger.debug('Creating DDSZipBuilder with project %s', project_id)
         self.project_id = project_id
         self.client = client
 
     @staticmethod
     def _handle_dataservice_error(e, message):
+        logger.error('Received datservice error %s %s', message, e)
         if e.status_code == 404:
             raise NotFoundException(message)
         else:
@@ -53,6 +57,7 @@ class DDSZipBuilder(object):
         Generates a file name for the zip file based on the project name
         :return: str: file name ending in .zip
         """
+        logger.debug('Building filename')
         project_name = self.get_project_name()
         return '{}.zip'.format(project_name)
 
@@ -73,9 +78,12 @@ class DDSZipBuilder(object):
         :return: OrderedDict where keys are relative paths in the project and values are ddsc.sdk.client.File objects
         """
         try:
+            logger.debug('Getting project by id %s', self.project_id)
             project = self.client.get_project_by_id(self.project_id)
             ptf = PathToFiles()
+            logger.debug('Adding paths for children of id %s', self.project_id)
             ptf.add_paths_for_children_of_node(project)
+            logger.debug('Returning paths for children id %s', self.project_id)
             return ptf.paths  # OrderedDict of path -> File
         except DataServiceError as e:
             DDSZipBuilder._handle_dataservice_error(e, 'Project {} not found'.format(self.project_id))
@@ -88,6 +96,7 @@ class DDSZipBuilder(object):
         :param dds_file: A ddsc.sdk.client.File object for which to get a URL
         :return: The URL string to GET.
         """
+        logger.debug('Attempting to get url for file with id %s', dds_file.id)
         # This is a time-sensitive call, so we should only do it right before fetch
         try:
             file_download = self.client.dds_connection.get_file_download(dds_file.id)
@@ -113,6 +122,7 @@ class DDSZipBuilder(object):
         # Due to the specifics of how python generators work, we have to make sure the yield appears in the same
         # function as the call to self.get_url().
         url = self.get_url(dds_file)
+        logger.debug('Fetching dds file from url to stream %s', url)
         response = requests.get(url, stream=True)
         for chunk in response.raw.stream():
             yield chunk
@@ -125,10 +135,15 @@ class DDSZipBuilder(object):
         """
         # Set allowZip64 explicitly - it normally looks at file size but since we're building on the fly
         # we don't know that ahead of time
+        logger.debug('Building streaming zipfile for project %s', self.project_id)
         zipfile = ZipFile(allowZip64=True)
+        logger.debug('getting paths for project %s', self.project_id)
         paths = self.get_dds_paths()
+        logger.debug('got %d paths', len(paths))
         for (filename, dds_file) in paths.items():
             # Must provide buffer_size so that write_iter will know to use zip64
             file_size = dds_file.current_version['upload']['size']
+            logger.debug('Writing file %s of size %s to zip', filename, str(file_size))
             zipfile.write_iter(filename, self.fetch(dds_file), buffer_size=file_size)
+        logger.debug('Returning zipfile')
         return zipfile
