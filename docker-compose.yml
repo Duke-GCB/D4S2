@@ -10,6 +10,11 @@ services:
     env_file: d4s2.env
     depends_on:
       - db
+  download:
+    build: .
+    env_file: d4s2.env
+    depends_on:
+      - db
   ui:
     build: https://github.com/Duke-GCB/datadelivery-ui.git
   tasks:
@@ -19,7 +24,7 @@ services:
       - db
     command: sh -c "until pg_isready -h db;do sleep 5; done; python manage.py process_tasks"
   web:
-    image: nginx
+    image: nginx:1.13
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certdata/ssl/cacert.pem:/etc/nginx/cert.crt:ro
