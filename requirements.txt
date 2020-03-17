@@ -2,7 +2,7 @@ appnope==0.1.0
 backports.shutil-get-terminal-size==1.0.0
 boto3==1.7.4
 decorator==4.0.10
-Django==1.11
+Django==1.11.28
 django-background-tasks==1.1.13
 django-cors-headers==2.1.0
 django-crispy-forms==1.6.0
@@ -10,7 +10,7 @@ django-extensions==1.7.9
 django-filter==1.1.0
 django-simple-history==1.9.1
 django-sslserver==0.19
-djangorestframework==3.4.7
+djangorestframework==3.9.1
 drf-ember-backend==1.1
 DukeDSClient==2.1.4
 enum34==1.1.6
