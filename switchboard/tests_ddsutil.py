@@ -6,7 +6,8 @@ from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDeliver
     UserEmailTemplateSet, EmailTemplate, EmailTemplateType
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
     SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
-    DDS_PERMISSIONS_ID_SEP, MessageDirection, DDSUser, DDSAuthProvider, DDSAffiliate, DDSProjectSummary
+    DDS_PERMISSIONS_ID_SEP, MessageDirection, DDSUser, DDSAuthProvider, DDSAffiliate, DDSProjectSummary, \
+    DataServiceError, DDSNotRecipientException
 
 
 class DDSUtilTestCase(TestCase):
@@ -80,6 +81,15 @@ class DDSUtilTestCase(TestCase):
         project_transfer_response = ddsutil.get_project_transfer(transfer_id)
         self.assertTrue(get_project_transfer.called_with(transfer_id))
         self.assertEqual(project_transfer_response, mock_requests_response)
+
+    @patch('switchboard.dds_util.RemoteStore')
+    def testGetPprojectTransfer403Exception(self, mockRemoteStore):
+        transfer_id = 'abvcca-123'
+        get_project_transfer = mockRemoteStore.return_value.data_service.get_project_transfer
+        get_project_transfer.side_effect = DataServiceError(response=Mock(status_code=403), url_suffix="", request_data=Mock())
+        ddsutil = DDSUtil(self.user)
+        with self.assertRaises(DDSNotRecipientException):
+            ddsutil.get_project_transfer(transfer_id)
 
     @patch('switchboard.dds_util.RemoteStore')
     def testGetProjectTransfers(self, mockRemoteStore):

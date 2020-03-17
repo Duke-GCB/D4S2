@@ -8,7 +8,7 @@ except ImportError:
     from urllib import urlencode
 from d4s2_api.models import State
 from switchboard.s3_util import S3Exception, S3DeliveryType, S3NotRecipientException
-from switchboard.dds_util import DDSDeliveryType
+from switchboard.dds_util import DDSDeliveryType, DDSNotRecipientException
 from d4s2_api.utils import MessageDirection
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
@@ -62,7 +62,7 @@ class DeliveryViewBase(TemplateView):
                 context.update(details.get_context())
                 context['delivery_type'] = self.delivery_type.name
             return context
-        except S3NotRecipientException:
+        except (S3NotRecipientException, DDSNotRecipientException):
             self.set_error_details(403, NOT_RECIPIENT_MSG)
 
     def _get_request_var(self, key):
