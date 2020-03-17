@@ -134,7 +134,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_FROM_ADDRESS = 'noreply@localhost'
 
 REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'gcb_web_auth.dukeds_auth.DukeDSTokenAuthentication', # Allows users to authenticate with a DukeDS token
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication', # Allows users to authenticate with a JWT
