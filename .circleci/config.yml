@@ -21,6 +21,9 @@ jobs:
           paths:
             - "venv"
       - run:
+          name: Wait for db
+          command: dockerize -wait tcp://localhost:5432 -timeout 1m
+      - run:
           command: |
             source venv/bin/activate
             DJANGO_SETTINGS_MODULE=d4s2.settings_test python manage.py test
