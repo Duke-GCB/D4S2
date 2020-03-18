@@ -4,7 +4,7 @@ from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, NOT_RECIPIENT_MSG
 from switchboard.dds_util import SHARE_IN_RESPONSE_TO_DELIVERY_MSG
-from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException
+from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException, DDSNotRecipientException
 from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole, EmailTemplateSet, UserEmailTemplateSet, \
     EmailTemplate, EmailTemplateType
 from d4s2_api.utils import MessageDirection
@@ -108,11 +108,21 @@ class AcceptTestCase(AuthenticatedTestCase):
         self.assertIn(transfer_id, str(response.content))
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
-    def test_normal_with_not_recipient_exception(self, mock_get_delivery_type):
+    def test_normal_with_s3_not_recipient_exception(self, mock_get_delivery_type):
         mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
         transfer_id = self.create_delivery_get_transfer_id()
         url = url_with_transfer_id('ownership-prompt', transfer_id)
         mock_get_delivery_type.return_value.make_delivery_details.side_effect = S3NotRecipientException()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(NOT_RECIPIENT_MSG, str(response.content))
+
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_normal_with_dds_not_recipient_exception(self, mock_get_delivery_type):
+        mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
+        transfer_id = self.create_delivery_get_transfer_id()
+        url = url_with_transfer_id('ownership-prompt', transfer_id)
+        mock_get_delivery_type.return_value.make_delivery_details.side_effect = DDSNotRecipientException()
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn(NOT_RECIPIENT_MSG, str(response.content))

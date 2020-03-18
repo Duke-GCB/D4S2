@@ -63,7 +63,12 @@ class DDSUtil(object):
         self.remote_store.revoke_user_project_permission(project, user)
 
     def get_project_transfer(self, transfer_id):
-        return self.remote_store.data_service.get_project_transfer(transfer_id)
+        try:
+            return self.remote_store.data_service.get_project_transfer(transfer_id)
+        except DataServiceError as e:
+            if e.status_code == 403:
+                raise DDSNotRecipientException()
+            raise
 
     def get_project_transfers(self):
         return self.remote_store.data_service.get_all_project_transfers()
@@ -598,3 +603,7 @@ class DDSAffiliate(DDSBase):
         """
         response = dds_util.get_auth_provider_affiliate(auth_provider_id, uid)
         return DDSAffiliate(response)
+
+
+class DDSNotRecipientException(Exception):
+    pass
