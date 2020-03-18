@@ -242,6 +242,19 @@ class TestDeliveryDetails(TestCase):
     @patch('switchboard.dds_util.DDSUtil')
     @patch('switchboard.dds_util.DDSUser')
     @patch('switchboard.dds_util.DDSProjectTransfer')
+    def test_get_email_context_error(self, mock_dds_project_transfer, mock_dds_user, mock_dds_util):
+        delivery = Mock(user_message='user message text')
+        user = Mock()
+        details = DeliveryDetails(delivery, user)
+        details.get_context = Mock()
+        details.get_context.side_effect = ValueError("Nope")
+        with self.assertRaises(RuntimeError) as raised_exception:
+            details.get_email_context('accepturl', 'accepted', 'test', warning_message='warning!!')
+        self.assertEqual(str(raised_exception.exception), 'Unable to retrieve information from DukeDS: Nope')
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSUser')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
     def test_get_context(self, mock_dds_project_transfer, mock_dds_user, mock_dds_util):
         mock_dds_project_transfer.fetch_one.return_value.project_dict = {
             'name': 'SomeProject',
@@ -333,6 +346,17 @@ class DeliveryUtilTestCase(TestCase):
         delivery_util.decline_delivery('reason')
         MockDDSUtil.assert_any_call(self.user)
         mock_ddsutil.decline_project_transfer.assert_called_with(self.delivery.transfer_id, 'reason')
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DeliveryDetails')
+    def test_decline_delivery_fails(self, mock_delivery_details, MockDDSUtil):
+        mock_ddsutil = MockDDSUtil()
+        mock_ddsutil.decline_project_transfer = Mock()
+        mock_ddsutil.decline_project_transfer.side_effect = ValueError("Nope")
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        with self.assertRaises(RuntimeError) as raised_exception:
+            delivery_util.decline_delivery('reason')
+        self.assertEqual(str(raised_exception.exception), 'Unable to retrieve information from DukeDS: Nope')
 
     @patch('switchboard.dds_util.DDSUtil')
     def test_share_with_additional_users(self, mock_ddsutil):

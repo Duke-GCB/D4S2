@@ -4,7 +4,8 @@ from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, NOT_RECIPIENT_MSG
 from switchboard.dds_util import SHARE_IN_RESPONSE_TO_DELIVERY_MSG
-from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException, DDSNotRecipientException
+from ownership.views import DDSDeliveryType, S3DeliveryType, S3NotRecipientException, DDSNotRecipientException, \
+    DataServiceError, S3Exception
 from d4s2_api.models import DDSDelivery, S3Delivery, State, ShareRole, EmailTemplateSet, UserEmailTemplateSet, \
     EmailTemplate, EmailTemplateType
 from d4s2_api.utils import MessageDirection
@@ -191,6 +192,30 @@ class ProcessTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(State.DELIVERY_CHOICES[State.DECLINED][1], str(response.content))
         self.assertFalse(mock_delivery_type.mock_delivery_util.accept_project_transfer.called)
+
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_accept_when_transfer_fails_with_data_service_error(self, mock_get_delivery_type):
+        mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
+        delivery = self.create_delivery()
+        mock_delivery_type.transfer_delivery.side_effect = DataServiceError(
+            response=Mock(status_code=403),
+            url_suffix="", request_data=Mock())
+        transfer_id = delivery.transfer_id
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'transfer_id': transfer_id})
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('Unable to transfer ownership: Error 403', str(response.content))
+
+    @patch('ownership.views.DeliveryViewBase.get_delivery_type')
+    def test_accept_when_transfer_fails_with_s3_error(self, mock_get_delivery_type):
+        mock_delivery_type = setup_mock_delivery_type(mock_get_delivery_type)
+        delivery = self.create_delivery()
+        mock_delivery_type.transfer_delivery.side_effect = S3Exception()
+        transfer_id = delivery.transfer_id
+        url = reverse('ownership-process')
+        response = self.client.post(url, {'transfer_id': transfer_id})
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('Unable to transfer s3 ownership', str(response.content))
 
     @patch('ownership.views.DeliveryViewBase.get_delivery_type')
     def test_accept_with_already_accepted(self, mock_get_delivery_type):
