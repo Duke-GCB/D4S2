@@ -365,7 +365,7 @@ class DeliveryDetails(object):
             base_context = self.get_context()
             user_message = self.get_user_message()
         except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(str(e)))
 
         return {
             'service_name': base_context['service_name'],
@@ -495,7 +495,7 @@ class DeliveryUtil(object):
         try:
             self.dds_util.decline_project_transfer(self.delivery.transfer_id, reason)
         except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(str(e)))
 
 
 class DDSDeliveryType:
