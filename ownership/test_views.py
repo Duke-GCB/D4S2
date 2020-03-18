@@ -316,8 +316,8 @@ class ProcessTestCase(AuthenticatedTestCase):
         # check that the sender template subject/body was used to render the email
         self.assertEqual(mock_message.mock_calls, [
             call(ANY, ANY, sender_template1.subject, sender_template1.body, ANY, None),
-            call().send(),
             call(ANY, ANY, sender_template2.subject, sender_template2.body, ANY, None),
+            call().send(),
             call().send(),
         ])
 

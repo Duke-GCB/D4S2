@@ -524,11 +524,12 @@ class DDSDeliveryType:
         sender_message = message_factory.make_processed_message('accepted',
                                                                 MessageDirection.ToSender,
                                                                 warning_message=warning_message)
-        sender_message.send()
         recipient_message = message_factory.make_processed_message('accepted_recipient',
                                                                    MessageDirection.ToRecipient)
-        recipient_message.send()
+        # Save email messages first so the the emails can be resent if they fail
         delivery.mark_accepted(user.get_username(), sender_message.email_text, recipient_message.email_text)
+        sender_message.send()
+        recipient_message.send()
         return warning_message
 
     @staticmethod

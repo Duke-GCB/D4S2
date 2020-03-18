@@ -143,9 +143,9 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.assertEqual(mock_message.mock_calls, [
             call(self.recipient_email, self.sender_email, 'Sender Delivery Accepted Subject',
                  'Sender Delivery Accepted Body', ANY, None),
-            call().send(),
             call(self.sender_email, self.recipient_email, 'Sender Delivery Accepted To Recipient Subject',
                  'Sender Delivery Accepted To Recipient Body', ANY, None),
+            call().send(),
             call().send()
         ])
 
@@ -322,8 +322,8 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.assertEqual(mock_message.mock_calls, [
             call(self.recipient_email, self.sender_email, 'Sender Delivery Accepted Subject',
                  'Sender Delivery Accepted Body', ANY, self.cc_email),
-            call().send(),
             call(self.sender_email, self.recipient_email, 'Sender Delivery Accepted To Recipient Subject',
                  'Sender Delivery Accepted To Recipient Body', ANY, self.cc_email),
+            call().send(),
             call().send()
         ])
