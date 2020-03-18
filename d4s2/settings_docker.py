@@ -34,6 +34,7 @@ if os.getenv('D4S2_SMTP_HOST') is not None:
   EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
   EMAIL_HOST = os.getenv('D4S2_SMTP_HOST')
   EMAIL_FROM_ADDRESS = os.getenv('D4S2_EMAIL_FROM_ADDRESS')
+  EMAIL_TIMEOUT = os.getenv('D4S2_EMAIL_TIMEOUT', 5)  # default to allowing 5 seconds when sending an email
 
 # Additional production security settings
 if os.getenv('D4S2_PRODUCTION'):
