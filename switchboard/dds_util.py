@@ -1,4 +1,5 @@
 from django.conf import settings
+import socket
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, UserEmailTemplateSet
 from gcb_web_auth.backends.dukeds import make_auth_config
@@ -528,8 +529,14 @@ class DDSDeliveryType:
                                                                    MessageDirection.ToRecipient)
         # Save email messages first so the the emails can be resent if they fail
         delivery.mark_accepted(user.get_username(), sender_message.email_text, recipient_message.email_text)
-        sender_message.send()
-        recipient_message.send()
+        try:
+            sender_message.send()
+        except OSError as e:
+            warning_message += 'Failed to email to {}: {}\n'.format(sender_message.to, str(e))
+        try:
+            recipient_message.send()
+        except OSError as e:
+            warning_message += 'Failed to email to {}: {}\n'.format(recipient_message.to, str(e))
         return warning_message
 
     @staticmethod

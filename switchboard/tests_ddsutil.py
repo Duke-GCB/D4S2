@@ -452,6 +452,44 @@ class DDSDeliveryTypeTestCase(TestCase):
             'second_email_content'
         )
 
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSMessageFactory')
+    @patch('switchboard.dds_util.Share')
+    def test_transfer_delivery_with_send_errors(self, mock_share, mock_dds_message_factory, mock_dds_util):
+        share_users = Mock()
+        share_users.all.return_value = [Mock(dds_id='shareuser1'), Mock(dds_id='shareuser2')]
+        mock_delivery = Mock(share_users=share_users)
+        mock_user = Mock()
+        message1 = Mock(email_text='first_email_content', to='user1')
+        message1.send.side_effect = OSError("Timeout 1")
+        message2 = Mock(email_text='second_email_content', to='user2')
+        message2.send.side_effect = OSError("Timeout 2")
+        mock_dds_message_factory.return_value.make_processed_message.side_effect = [
+            message1,
+            message2
+        ]
+
+        warning_message = self.delivery_type.transfer_delivery(mock_delivery, mock_user)
+
+        self.assertEqual(warning_message, 'Failed to email to user1: Timeout 1\nFailed to email to user2: Timeout 2\n')
+        mock_dds_util.return_value.accept_project_transfer.assert_called_with(mock_delivery.transfer_id)
+        mock_dds_util.return_value.share_project_with_user.assert_has_calls([
+            call(mock_delivery.project_id, 'shareuser1', 'file_downloader'),
+            call(mock_delivery.project_id, 'shareuser2', 'file_downloader'),
+            call(mock_delivery.project_id, mock_delivery.from_user_id, 'file_downloader'),
+        ])
+
+        make_processed_message = mock_dds_message_factory.return_value.make_processed_message
+        make_processed_message.assert_has_calls([
+            call('accepted', MessageDirection.ToSender, warning_message=''),
+            call('accepted_recipient', MessageDirection.ToRecipient),
+        ])
+        mock_delivery.mark_accepted.assert_called_with(
+            mock_user.get_username.return_value,
+            'first_email_content',
+            'second_email_content'
+        )
+
     @patch('switchboard.dds_util.DDSMessageFactory')
     def test_make_processed_message(self, mock_dds_message_factory):
         mock_delivery = Mock()
