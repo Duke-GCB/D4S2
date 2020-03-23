@@ -15,6 +15,6 @@ def dds_project_zip(request, project_id, filename):
         response['Content-Disposition'] = 'attachment; filename={}'.format(filename)
         return response
     except NotFoundException as e:
-        raise Http404(e.message)
+        raise Http404(str(e))
     except NotSupportedException as e:
-        return HttpResponseServerError(content=e.message)
+        return HttpResponseServerError(content=str(e))

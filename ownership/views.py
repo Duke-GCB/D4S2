@@ -168,9 +168,9 @@ class ProcessView(DeliveryViewBase):
         try:
             self.warning_message = self.delivery_type.transfer_delivery(delivery, request.user)
         except S3Exception as e:
-            self.set_error_details(500, 'Unable to transfer s3 ownership: {}'.format(e.message))
+            self.set_error_details(500, 'Unable to transfer s3 ownership: {}'.format(str(e)))
         except DataServiceError as e:
-            self.set_error_details(500, 'Unable to transfer ownership: {}'.format(e.message))
+            self.set_error_details(500, 'Unable to transfer ownership: {}'.format(str(e)))
         except Exception as e:
             self.set_error_details(500, str(e))
 

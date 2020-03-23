@@ -242,6 +242,19 @@ class TestDeliveryDetails(TestCase):
     @patch('switchboard.dds_util.DDSUtil')
     @patch('switchboard.dds_util.DDSUser')
     @patch('switchboard.dds_util.DDSProjectTransfer')
+    def test_get_email_context_error(self, mock_dds_project_transfer, mock_dds_user, mock_dds_util):
+        delivery = Mock(user_message='user message text')
+        user = Mock()
+        details = DeliveryDetails(delivery, user)
+        details.get_context = Mock()
+        details.get_context.side_effect = ValueError("Nope")
+        with self.assertRaises(RuntimeError) as raised_exception:
+            details.get_email_context('accepturl', 'accepted', 'test', warning_message='warning!!')
+        self.assertEqual(str(raised_exception.exception), 'Unable to retrieve information from DukeDS: Nope')
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSUser')
+    @patch('switchboard.dds_util.DDSProjectTransfer')
     def test_get_context(self, mock_dds_project_transfer, mock_dds_user, mock_dds_util):
         mock_dds_project_transfer.fetch_one.return_value.project_dict = {
             'name': 'SomeProject',
@@ -335,6 +348,17 @@ class DeliveryUtilTestCase(TestCase):
         mock_ddsutil.decline_project_transfer.assert_called_with(self.delivery.transfer_id, 'reason')
 
     @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DeliveryDetails')
+    def test_decline_delivery_fails(self, mock_delivery_details, MockDDSUtil):
+        mock_ddsutil = MockDDSUtil()
+        mock_ddsutil.decline_project_transfer = Mock()
+        mock_ddsutil.decline_project_transfer.side_effect = ValueError("Nope")
+        delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
+        with self.assertRaises(RuntimeError) as raised_exception:
+            delivery_util.decline_delivery('reason')
+        self.assertEqual(str(raised_exception.exception), 'Unable to retrieve information from DukeDS: Nope')
+
+    @patch('switchboard.dds_util.DDSUtil')
     def test_share_with_additional_users(self, mock_ddsutil):
         delivery_util = DeliveryUtil(self.delivery, self.user, 'file_downloader', 'Share in response to delivery.')
         delivery_util.share_with_additional_users()
@@ -410,6 +434,44 @@ class DDSDeliveryTypeTestCase(TestCase):
         warning_message = self.delivery_type.transfer_delivery(mock_delivery, mock_user)
 
         self.assertEqual(warning_message, '')
+        mock_dds_util.return_value.accept_project_transfer.assert_called_with(mock_delivery.transfer_id)
+        mock_dds_util.return_value.share_project_with_user.assert_has_calls([
+            call(mock_delivery.project_id, 'shareuser1', 'file_downloader'),
+            call(mock_delivery.project_id, 'shareuser2', 'file_downloader'),
+            call(mock_delivery.project_id, mock_delivery.from_user_id, 'file_downloader'),
+        ])
+
+        make_processed_message = mock_dds_message_factory.return_value.make_processed_message
+        make_processed_message.assert_has_calls([
+            call('accepted', MessageDirection.ToSender, warning_message=''),
+            call('accepted_recipient', MessageDirection.ToRecipient),
+        ])
+        mock_delivery.mark_accepted.assert_called_with(
+            mock_user.get_username.return_value,
+            'first_email_content',
+            'second_email_content'
+        )
+
+    @patch('switchboard.dds_util.DDSUtil')
+    @patch('switchboard.dds_util.DDSMessageFactory')
+    @patch('switchboard.dds_util.Share')
+    def test_transfer_delivery_with_send_errors(self, mock_share, mock_dds_message_factory, mock_dds_util):
+        share_users = Mock()
+        share_users.all.return_value = [Mock(dds_id='shareuser1'), Mock(dds_id='shareuser2')]
+        mock_delivery = Mock(share_users=share_users)
+        mock_user = Mock()
+        message1 = Mock(email_text='first_email_content', to='user1')
+        message1.send.side_effect = OSError("Timeout 1")
+        message2 = Mock(email_text='second_email_content', to='user2')
+        message2.send.side_effect = OSError("Timeout 2")
+        mock_dds_message_factory.return_value.make_processed_message.side_effect = [
+            message1,
+            message2
+        ]
+
+        warning_message = self.delivery_type.transfer_delivery(mock_delivery, mock_user)
+
+        self.assertEqual(warning_message, 'Failed to email to user1: Timeout 1\nFailed to email to user2: Timeout 2\n')
         mock_dds_util.return_value.accept_project_transfer.assert_called_with(mock_delivery.transfer_id)
         mock_dds_util.return_value.share_project_with_user.assert_has_calls([
             call(mock_delivery.project_id, 'shareuser1', 'file_downloader'),

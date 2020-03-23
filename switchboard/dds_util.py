@@ -1,4 +1,5 @@
 from django.conf import settings
+import socket
 from ddsc.core.remotestore import RemoteStore
 from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, UserEmailTemplateSet
 from gcb_web_auth.backends.dukeds import make_auth_config
@@ -365,7 +366,7 @@ class DeliveryDetails(object):
             base_context = self.get_context()
             user_message = self.get_user_message()
         except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(str(e)))
 
         return {
             'service_name': base_context['service_name'],
@@ -495,7 +496,7 @@ class DeliveryUtil(object):
         try:
             self.dds_util.decline_project_transfer(self.delivery.transfer_id, reason)
         except ValueError as e:
-            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(e.message))
+            raise RuntimeError('Unable to retrieve information from DukeDS: {}'.format(str(e)))
 
 
 class DDSDeliveryType:
@@ -524,11 +525,18 @@ class DDSDeliveryType:
         sender_message = message_factory.make_processed_message('accepted',
                                                                 MessageDirection.ToSender,
                                                                 warning_message=warning_message)
-        sender_message.send()
         recipient_message = message_factory.make_processed_message('accepted_recipient',
                                                                    MessageDirection.ToRecipient)
-        recipient_message.send()
+        # Save email messages first so the the emails can be resent if they fail
         delivery.mark_accepted(user.get_username(), sender_message.email_text, recipient_message.email_text)
+        try:
+            sender_message.send()
+        except OSError as e:
+            warning_message += 'Failed to email to {}: {}\n'.format(sender_message.to, str(e))
+        try:
+            recipient_message.send()
+        except OSError as e:
+            warning_message += 'Failed to email to {}: {}\n'.format(recipient_message.to, str(e))
         return warning_message
 
     @staticmethod
