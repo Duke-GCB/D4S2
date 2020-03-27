@@ -30,6 +30,7 @@ class DeliveryTestCase(TransferBaseTestCase):
     def test_initial_state(self):
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW, 'New deliveries should be in initiated state')
+        self.assertEqual(delivery.project_name, '')
 
     def test_required_fields(self):
         with self.assertRaises(IntegrityError):
@@ -91,11 +92,13 @@ class DeliveryTestCase(TransferBaseTestCase):
         performed_by = 'performer'
         delivery = DDSDelivery.objects.first()
         self.assertEqual(delivery.state, State.NEW)
+        delivery.project_name = 'MouseRNA'
         delivery.mark_accepted(performed_by, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
         self.assertEqual(delivery.state, State.ACCEPTED)
         self.assertEqual(delivery.performed_by, performed_by)
         self.assertEqual(delivery.sender_completion_email_text, DeliveryTestCase.SENDER_COMPLETE_EMAIL_TEXT)
         self.assertEqual(delivery.recipient_completion_email_text, '')
+        self.assertEqual(delivery.project_name, 'MouseRNA')
 
     def test_mark_accepted_with_recipient_email(self):
         performed_by = 'performer'

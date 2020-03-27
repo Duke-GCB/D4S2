@@ -186,7 +186,6 @@ class DDSProject(DDSBase):
     def __init__(self, project_dict):
         self.id = project_dict.get('id')
         self.name = project_dict.get('name')
-        self.delivery_name = project_dict.get('delivery_name')
         self.description = project_dict.get('description')
         self.is_deleted = project_dict.get('is_deleted')
         self.created_on = project_dict.get('audit', {}).get('created_on')
