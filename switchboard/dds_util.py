@@ -294,8 +294,10 @@ class DDSProjectTransfer(DDSBase):
         self.delivery = None
         if delivery_obj:
             self.delivery = delivery_obj.id
+            # If the delivery has a project name recorded use that instead of the project name from DDS.
+            # This is to keep consistent names for deliveries even if the recipient renames the project.
             if delivery_obj.project_name:
-                self.project_dict['delivery_name'] = delivery_obj.project_name
+                self.project_dict['name'] = delivery_obj.project_name
         self.project = DDSProject(self.project_dict)
 
     @staticmethod
