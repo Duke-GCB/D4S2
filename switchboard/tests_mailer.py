@@ -1,5 +1,6 @@
 from django.test import TestCase, override_settings
 from switchboard.mailer import generate_message
+from django.template import Template, Context
 
 TEST_EMAIL_FROM_ADDRESS='noreply@domain.com'
 

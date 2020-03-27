@@ -251,6 +251,8 @@ class ProcessTestCase(AuthenticatedTestCase):
     @patch('d4s2_api.utils.Message', autospec=True)
     def test_receiving_user_can_accept_deliveries_without_email_template_set(self, mock_message,
                                                                              mock_dds_project_transfer, mock_dds_util):
+        mock_dds_project_transfer.fetch_one.return_value.project_dict = {'name': 'MouseRNA'}
+
         mock_message.return_value.email_text = ''
 
         # accepting/current user should have not email template setup
@@ -281,12 +283,14 @@ class ProcessTestCase(AuthenticatedTestCase):
 
         delivery.refresh_from_db()
         self.assertEqual(delivery.state, State.ACCEPTED)
+        self.assertEqual(delivery.project_name, 'MouseRNA')
 
     @patch('switchboard.dds_util.DDSUtil', autospec=True)
     @patch('switchboard.dds_util.DDSProjectTransfer', autospec=True)
     @patch('d4s2_api.utils.Message', autospec=True)
     def test_delivery_emails_always_use_senders_email_template_set(self, mock_message, mock_dds_project_transfer,
                                                                    mock_dds_util):
+        mock_dds_project_transfer.fetch_one.return_value.project_dict = {'name': 'MouseRNA'}
         mock_message.return_value.email_text = ''
 
         # a template set is specified when the delivery was created

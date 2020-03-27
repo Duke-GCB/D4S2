@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'd4s2_api_v1',
     'd4s2_api_v2',
     'gcb_web_auth',
+    'django_filters',
     'switchboard',
     'crispy_forms',
     'ownership',

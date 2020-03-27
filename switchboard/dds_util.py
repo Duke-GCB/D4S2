@@ -186,6 +186,7 @@ class DDSProject(DDSBase):
     def __init__(self, project_dict):
         self.id = project_dict.get('id')
         self.name = project_dict.get('name')
+        self.delivery_name = project_dict.get('delivery_name')
         self.description = project_dict.get('description')
         self.is_deleted = project_dict.get('is_deleted')
         self.created_on = project_dict.get('audit', {}).get('created_on')
@@ -288,16 +289,19 @@ class DDSProjectTransfer(DDSBase):
         self.status_comment = transfer_dict.get('status_comment')
         self.to_users = DDSUser.from_list(transfer_dict.get('to_users'))
         self.from_user = DDSUser(transfer_dict.get('from_user'))
-        self.project = DDSProject(transfer_dict.get('project'))
         self.project_dict = transfer_dict.get('project')
-        self.delivery = DDSProjectTransfer._lookup_delivery_id(self.id)
+        delivery_obj = DDSProjectTransfer._lookup_delivery(self.id)
+        self.delivery = None
+        if delivery_obj:
+            self.delivery = delivery_obj.id
+            if delivery_obj.project_name:
+                self.project_dict['delivery_name'] = delivery_obj.project_name
+        self.project = DDSProject(self.project_dict)
 
     @staticmethod
-    def _lookup_delivery_id(transfer_id):
+    def _lookup_delivery(transfer_id):
         delivery = DDSDelivery.objects.filter(transfer_id=transfer_id).first()
-        if delivery:
-            return delivery.id
-        return None
+        return delivery
 
     @staticmethod
     def fetch_list(dds_util):
@@ -527,6 +531,9 @@ class DDSDeliveryType:
                                                                 warning_message=warning_message)
         recipient_message = message_factory.make_processed_message('accepted_recipient',
                                                                    MessageDirection.ToRecipient)
+        # Record a copy of the project name to account for renamed projects after acceptance.
+        # This will allow the user sending the project delivery to view consistent project names.
+        delivery.project_name = message_factory.delivery_details.get_project().name
         # Save email messages first so the the emails can be resent if they fail
         delivery.mark_accepted(user.get_username(), sender_message.email_text, recipient_message.email_text)
         try:
