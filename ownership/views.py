@@ -172,8 +172,7 @@ class ProcessView(DeliveryViewBase):
         except DataServiceError as e:
             self.set_error_details(500, 'Unable to transfer ownership: {}'.format(str(e)))
         except Exception as e:
-            raise
-            #self.set_error_details(500, str(e))
+            self.set_error_details(500, str(e))
 
     def handle_post(self):
         if self.delivery.is_complete():

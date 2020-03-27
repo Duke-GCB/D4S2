@@ -136,6 +136,7 @@ class DeliveryIntegrationTestCase(APITestCase, ResponseStatusCodeTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         dds_delivery = DDSDelivery.objects.get()
         self.assertEqual(dds_delivery.state, State.ACCEPTED)
+        self.assertEqual(dds_delivery.project_name, 'MouseRNA')
 
         # Recipient has no email templates
         self.assertEqual(UserEmailTemplateSet.objects.filter(user=self.recipient_user).count(), 0)
