@@ -163,6 +163,8 @@ class DDSDelivery(DeliveryBase):
     """
     history = HistoricalRecords()
     project_id = models.CharField(max_length=255, help_text='DukeDS uuid project to deliver')
+    project_name = models.TextField(help_text='Copy of the project name from when delivery is accepted.', default='',
+                                    blank=True)
     from_user_id = models.CharField(max_length=255, help_text='DukeDS uuid user sending delivery')
     to_user_id = models.CharField(max_length=255, help_text='DukeDS uuid user receiving delivery')
     transfer_id = models.CharField(max_length=36, null=False, unique=True)
@@ -171,7 +173,6 @@ class DDSDelivery(DeliveryBase):
         return 'Delivery Project: {} State: {} Performed by: {}'.format(
             self.project_id, State.DELIVERY_CHOICES[self.state][1], self.performed_by
         )
-
 
 
 class DDSDeliveryError(models.Model):

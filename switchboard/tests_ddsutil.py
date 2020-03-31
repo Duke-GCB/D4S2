@@ -7,7 +7,7 @@ from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDeliver
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
     SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
     DDS_PERMISSIONS_ID_SEP, MessageDirection, DDSUser, DDSAuthProvider, DDSAffiliate, DDSProjectSummary, \
-    DataServiceError, DDSNotRecipientException
+    DataServiceError, DDSNotRecipientException, DDSProjectTransfer
 
 
 class DDSUtilTestCase(TestCase):
@@ -451,6 +451,8 @@ class DDSDeliveryTypeTestCase(TestCase):
             'first_email_content',
             'second_email_content'
         )
+        mock_delivery_details = mock_dds_message_factory.return_value.delivery_details
+        self.assertEqual(mock_delivery.project_name, mock_delivery_details.get_project.return_value.name)
 
     @patch('switchboard.dds_util.DDSUtil')
     @patch('switchboard.dds_util.DDSMessageFactory')
@@ -788,3 +790,30 @@ class DDSAffiliateTestCase(TestCase):
         self.assertEqual(affiliates[0].uid, 'joe123')
         self.assertEqual(affiliates[0].full_name, 'Joe Smith')
         self.mock_dds_util.get_auth_provider_affiliates.assert_called_with('provider1', 'Joe', None, None)
+
+
+class DDSProjectTransferTestCase(TestCase):
+    def setUp(self):
+        self.transfer_dict = {
+            'id': '123',
+            'from_user': {},
+            'to_users': [],
+            'project': {
+                'name': 'MouseRNA'
+            }
+        }
+        self.delivery = DDSDelivery.objects.create(
+            transfer_id=self.transfer_dict['id']
+        )
+
+    @patch('switchboard.dds_util.DDSUtil')
+    def test_constructor(self, mock_dds_util):
+        transfer = DDSProjectTransfer(transfer_dict=self.transfer_dict)
+        self.assertEqual(transfer.project.name, 'MouseRNA')
+
+    @patch('switchboard.dds_util.DDSUtil')
+    def test_constructor_with_name_override(self, mock_dds_util):
+        self.delivery.project_name = 'Acceptance Name'
+        self.delivery.save()
+        transfer = DDSProjectTransfer(transfer_dict=self.transfer_dict)
+        self.assertEqual(transfer.project.name, 'Acceptance Name')
