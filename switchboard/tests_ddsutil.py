@@ -218,8 +218,8 @@ class TestDeliveryDetails(TestCase):
             'name': 'SomeProject'
         }
         mock_dds_user.fetch_one.side_effect = [
-            Mock(full_name='joe', email='joe@joe.com'),
-            Mock(full_name='bob', email='bob@bob.com'),
+            Mock(full_name='joe', email='joe@joe.com', username='joe1'),
+            Mock(full_name='bob', email='bob@bob.com', username='bob1'),
         ]
         mock_dds_util.get_project_url.return_value = 'projecturl'
         delivery = Mock(user_message='user message text')
@@ -230,8 +230,10 @@ class TestDeliveryDetails(TestCase):
         self.assertEqual(context['project_name'], 'SomeProject')
         self.assertEqual(context['recipient_name'], 'bob')
         self.assertEqual(context['recipient_email'], 'bob@bob.com')
+        self.assertEqual(context['recipient_netid'], 'bob1')
         self.assertEqual(context['sender_email'], 'joe@joe.com')
         self.assertEqual(context['sender_name'], 'joe')
+        self.assertEqual(context['sender_netid'], 'joe1')
         self.assertEqual(context['project_url'], 'projecturl')
         self.assertEqual(context['accept_url'], 'accepturl')
         self.assertEqual(context['type'], 'accepted')
@@ -260,8 +262,8 @@ class TestDeliveryDetails(TestCase):
             'name': 'SomeProject',
         }
         mock_dds_user.fetch_one.side_effect = [
-            Mock(full_name='joe', email='joe@joe.com'),
-            Mock(full_name='bob', email='bob@bob.com'),
+            Mock(full_name='joe', email='joe@joe.com', username='joe1'),
+            Mock(full_name='bob', email='bob@bob.com', username='bob1'),
         ]
         mock_dds_util.get_project_url.return_value = 'projecturl'
         delivery = Mock(user_message='user message text', transfer_id='123')
@@ -272,8 +274,10 @@ class TestDeliveryDetails(TestCase):
         self.assertEqual(context['transfer_id'], '123')
         self.assertEqual(context['from_name'], 'joe')
         self.assertEqual(context['from_email'], 'joe@joe.com')
+        self.assertEqual(context['from_netid'], 'joe1')
         self.assertEqual(context['to_name'], 'bob')
         self.assertEqual(context['to_email'], 'bob@bob.com')
+        self.assertEqual(context['to_netid'], 'bob1')
         self.assertEqual(context['project_title'], 'SomeProject')
         self.assertEqual(context['project_url'], 'projecturl')
 
