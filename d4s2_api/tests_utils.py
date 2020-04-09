@@ -60,21 +60,21 @@ class MessageFactoryTestCase(TestCase):
 
     @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_share_message(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        factory = MessageFactory(self.delivery_details, None)
         factory.make_share_message()
         self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
         self.assert_template_for_name_call(self.delivery_details.delivery.email_template_name.return_value)
 
     @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_delivery_message(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        factory = MessageFactory(self.delivery_details, None)
         factory.make_delivery_message(accept_url='accept url')
         self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
         self.assert_template_for_name_call('delivery')
 
     @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_processed_message_to_sender(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        factory = MessageFactory(self.delivery_details, None)
         factory.make_processed_message('accepted', MessageDirection.ToSender, warning_message='warning details')
         self.assertEqual(mock_message.call_args,
                          call('joe@joe.com', 'bob@bob.com', 'subject', 'body', {}, None))
@@ -84,7 +84,7 @@ class MessageFactoryTestCase(TestCase):
 
     @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_processed_message_to_recipient(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        factory = MessageFactory(self.delivery_details, None)
         factory.make_processed_message('accepted_recipient', MessageDirection.ToRecipient,
                                        warning_message='warning details')
         self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
@@ -94,7 +94,7 @@ class MessageFactoryTestCase(TestCase):
 
     @patch('d4s2_api.utils.Message', autospec=True)
     def test_make_canceled_message(self, mock_message):
-        factory = MessageFactory(self.delivery_details)
+        factory = MessageFactory(self.delivery_details, None)
         factory.make_canceled_message()
         self.assertEqual(mock_message.call_args, call('bob@bob.com', 'joe@joe.com', 'subject', 'body', {}, None))
         self.assert_template_for_name_call('delivery_canceled')
@@ -102,18 +102,23 @@ class MessageFactoryTestCase(TestCase):
     def assert_template_for_name_call(self, arg):
         self.assertEqual(self.email_template_set.template_for_name.call_args, call(arg))
 
-    def test_get_reply_to_address_uses_template_set(self):
+    @patch('d4s2_api.utils.UserEmailTemplateSet')
+    def test_get_reply_to_address_uses_template_set(self, mock_use_email_template_set):
+        mock_user = Mock()
         delivery_details = create_autospec(DeliveryDetails)
-        delivery_details.email_template_set = Mock(reply_address='reply@email.com')
-        factory = MessageFactory(delivery_details)
+        delivery_details.email_template_set = Mock()
+        mock_use_email_template_set.user_is_setup.return_value = True
+        mock_email_template_set = Mock(reply_address='reply@email.com')
+        mock_use_email_template_set.objects.get.return_value.email_template_set = mock_email_template_set
+        factory = MessageFactory(delivery_details, mock_user)
         sender = Mock(email='sender@email.com')
         reply_to_address = factory.get_reply_to_address(sender)
         self.assertEqual(reply_to_address, 'reply@email.com')
 
     def test_get_reply_to_address_falls_back_to_sender(self):
         delivery_details = create_autospec(DeliveryDetails)
-        delivery_details.email_template_set = Mock(reply_address=None)
-        factory = MessageFactory(delivery_details)
+        delivery_details.email_template_set = Mock()
+        factory = MessageFactory(delivery_details, None)
         sender = Mock(email='sender@email.com')
         reply_to_address = factory.get_reply_to_address(sender)
         self.assertEqual(reply_to_address, 'sender@email.com')
@@ -121,13 +126,13 @@ class MessageFactoryTestCase(TestCase):
     def test_get_cc_address_uses_template_set(self):
         delivery_details = create_autospec(DeliveryDetails)
         delivery_details.email_template_set = Mock(cc_address='cc@email.com')
-        factory = MessageFactory(delivery_details)
+        factory = MessageFactory(delivery_details, None)
         cc_address = factory.get_cc_address()
         self.assertEqual(cc_address, 'cc@email.com')
 
     def test_get_cc_address_falls_back_to_none(self):
         delivery_details = create_autospec(DeliveryDetails)
         delivery_details.email_template_set = Mock(cc_address=None)
-        factory = MessageFactory(delivery_details)
+        factory = MessageFactory(delivery_details, None)
         cc_address = factory.get_cc_address()
         self.assertIsNone(cc_address)

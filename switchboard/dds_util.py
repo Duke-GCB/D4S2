@@ -556,7 +556,8 @@ class DDSDeliveryType:
 class DDSMessageFactory(MessageFactory):
     def __init__(self, delivery, user):
         super(DDSMessageFactory, self).__init__(
-            DeliveryDetails(delivery, user)
+            DeliveryDetails(delivery, user),
+            user
         )
 
 
