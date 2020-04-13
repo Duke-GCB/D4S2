@@ -1,5 +1,5 @@
 from switchboard.mailer import generate_message
-
+from d4s2_api.models import UserEmailTemplateSet
 
 class MessageDirection(object):
     ToRecipient = 0
@@ -47,9 +47,10 @@ class Message(object):
 
 class MessageFactory(object):
 
-    def __init__(self, delivery_details):
+    def __init__(self, delivery_details, user):
         self.delivery_details = delivery_details
         self.email_template_set = delivery_details.email_template_set
+        self.user = user
 
     def make_share_message(self):
         # This method is only applicable if the internal delivery is a share type
@@ -73,10 +74,11 @@ class MessageFactory(object):
         return self._make_message(email_template)
 
     def get_reply_to_address(self, sender):
-        if self.email_template_set.reply_address:
-            return self.email_template_set.reply_address
-        else:
-            return sender.email
+        if UserEmailTemplateSet.user_is_setup(self.user):
+            reply_address = UserEmailTemplateSet.objects.get(user=self.user).email_template_set.reply_address
+            if reply_address:
+                return reply_address
+        return sender.email
 
     def get_cc_address(self):
         if self.email_template_set.cc_address:
