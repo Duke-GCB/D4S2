@@ -378,8 +378,10 @@ class DeliveryDetails(object):
             'project_name': base_context['project_title'],
             'recipient_name': base_context['to_name'],
             'recipient_email': base_context['to_email'],
+            'recipient_netid': base_context['to_netid'],
             'sender_email': base_context['from_email'],
             'sender_name': base_context['from_name'],
+            'sender_netid': base_context['from_netid'],
             'project_url': base_context['project_url'],
             'accept_url': accept_url,
             'type': process_type,  # accept or decline
@@ -400,8 +402,10 @@ class DeliveryDetails(object):
             'transfer_id': transfer_id,
             'from_name': from_user.full_name,
             'from_email': from_user.email,
+            'from_netid': from_user.username,
             'to_name': to_user.full_name,
             'to_email': to_user.email,
+            'to_netid': to_user.username,
             'project_title': project.name,
             'project_url': project_url
         }
