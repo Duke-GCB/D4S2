@@ -183,3 +183,5 @@ JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
     'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=7200),
 }
+
+USERNAME_EMAIL_HOST = os.getenv('D4S2_USERNAME_EMAIL_HOST')
