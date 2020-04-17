@@ -15,6 +15,14 @@ PROJECT_ADMIN_ID = 'project_admin'
 DDS_PERMISSIONS_ID_SEP = '_'
 
 
+def create_email_from_username(username):
+    # email addresses can be created by adding a host to a username for users who
+    # have their email addresses hidden in the DukeDS affiliates API
+    if settings.USERNAME_EMAIL_HOST:
+        return '{}@{}'.format(username, settings.USERNAME_EMAIL_HOST)
+    return None
+
+
 class DDSUtil(object):
     def __init__(self, user):
         if not user:
@@ -157,6 +165,8 @@ class DDSUser(DDSBase):
         self.first_name = user_dict.get('first_name')
         self.last_name = user_dict.get('last_name')
         self.email = user_dict.get('email')
+        if not self.email:
+            self.email = create_email_from_username(self.username)
 
     @staticmethod
     def fetch_list(dds_util, full_name_contains, email, username):
@@ -598,6 +608,8 @@ class DDSAffiliate(DDSBase):
         self.first_name = project_dict.get('first_name')
         self.last_name = project_dict.get('last_name')
         self.email = project_dict.get('email')
+        if not self.email:
+            self.email = create_email_from_username(self.uid)
 
     @staticmethod
     def fetch_list(dds_util, auth_provider_id, full_name_contains, email, username):

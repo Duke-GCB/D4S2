@@ -7,7 +7,16 @@ from d4s2_api.models import User, Share, State, DDSDeliveryShareUser, DDSDeliver
 from switchboard.dds_util import DDSUtil, DeliveryDetails, DeliveryUtil, DDSDeliveryType, \
     SHARE_IN_RESPONSE_TO_DELIVERY_MSG, PROJECT_ADMIN_ID, DDSProject, DDSProjectPermissions, \
     DDS_PERMISSIONS_ID_SEP, MessageDirection, DDSUser, DDSAuthProvider, DDSAffiliate, DDSProjectSummary, \
-    DataServiceError, DDSNotRecipientException, DDSProjectTransfer
+    DataServiceError, DDSNotRecipientException, DDSProjectTransfer, create_email_from_username
+
+
+class CreateEmailTestCase(TestCase):
+    @patch('switchboard.dds_util.settings')
+    def test_create_email_from_username(self, mock_settings):
+        mock_settings.USERNAME_EMAIL_HOST = None
+        self.assertEqual(create_email_from_username('user1'), None)
+        mock_settings.USERNAME_EMAIL_HOST = 'test.com'
+        self.assertEqual(create_email_from_username('user1'), 'user1@test.com')
 
 
 class DDSUtilTestCase(TestCase):
@@ -697,6 +706,33 @@ class DDSUserTestCase(TestCase):
             'email': 'flast@example.com'
         }
 
+    def test_constructor(self):
+        dds_user = DDSUser(self.user_dict)
+        self.assertEqual(dds_user.id, 'user-id-1')
+        self.assertEqual(dds_user.username, 'username-123')
+        self.assertEqual(dds_user.full_name, 'First Last')
+        self.assertEqual(dds_user.email, 'flast@example.com')
+
+    @patch('switchboard.dds_util.settings')
+    def test_constructor_null_email(self, mock_settings):
+        mock_settings.USERNAME_EMAIL_HOST = None
+        self.user_dict['email'] = None
+        dds_user = DDSUser(self.user_dict)
+        self.assertEqual(dds_user.id, 'user-id-1')
+        self.assertEqual(dds_user.username, 'username-123')
+        self.assertEqual(dds_user.full_name, 'First Last')
+        self.assertEqual(dds_user.email, None)
+
+    @patch('switchboard.dds_util.settings')
+    def test_constructor_null_email_with_email_host(self, mock_settings):
+        self.user_dict['email'] = None
+        mock_settings.USERNAME_EMAIL_HOST = 'test.com'
+        dds_user = DDSUser(self.user_dict)
+        self.assertEqual(dds_user.id, 'user-id-1')
+        self.assertEqual(dds_user.username, 'username-123')
+        self.assertEqual(dds_user.full_name, 'First Last')
+        self.assertEqual(dds_user.email, 'username-123@test.com')
+
     def test_get_or_register_user_when_user_exists(self):
         mock_dds_util = Mock()
         mock_dds_util.get_users.return_value.json.return_value = {'results': [self.user_dict]}
@@ -782,6 +818,28 @@ class DDSAffiliateTestCase(TestCase):
         self.assertEqual(affiliate.first_name, 'Joe')
         self.assertEqual(affiliate.last_name, 'Smith')
         self.assertEqual(affiliate.email, 'joe@joe.com')
+
+    @patch('switchboard.dds_util.settings')
+    def test_constructor_null_email(self, mock_settings):
+        mock_settings.USERNAME_EMAIL_HOST = None
+        self.dds_affiliate_dict['email'] = None
+        affiliate = DDSAffiliate(self.dds_affiliate_dict)
+        self.assertEqual(affiliate.uid, 'joe123')
+        self.assertEqual(affiliate.full_name, 'Joe Smith')
+        self.assertEqual(affiliate.first_name, 'Joe')
+        self.assertEqual(affiliate.last_name, 'Smith')
+        self.assertEqual(affiliate.email, None)
+
+    @patch('switchboard.dds_util.settings')
+    def test_constructor_null_email_with_email_host(self, mock_settings):
+        mock_settings.USERNAME_EMAIL_HOST = 'test.com'
+        self.dds_affiliate_dict['email'] = None
+        affiliate = DDSAffiliate(self.dds_affiliate_dict)
+        self.assertEqual(affiliate.uid, 'joe123')
+        self.assertEqual(affiliate.full_name, 'Joe Smith')
+        self.assertEqual(affiliate.first_name, 'Joe')
+        self.assertEqual(affiliate.last_name, 'Smith')
+        self.assertEqual(affiliate.email, 'joe123@test.com')
 
     def test_fetch_list(self):
         self.mock_dds_util.get_auth_provider_affiliates.return_value = {
