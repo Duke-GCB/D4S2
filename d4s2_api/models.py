@@ -238,6 +238,8 @@ class EmailTemplateType(models.Model):
     Type of email template, e.g. share_project_viewer, delivery, final_notification
     """
     name = models.CharField(max_length=64, null=False, blank=False, unique=True)
+    help_text = models.TextField(null=False, blank=True)
+    sequence = models.IntegerField(null=True, help_text='determines order')
 
     def __str__(self):
         return self.name
@@ -248,7 +250,7 @@ class EmailTemplate(models.Model):
     Represents a base email message that can be sent
     """
     history = HistoricalRecords()
-    template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE)
+    template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE, related_name='email_templates')
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     template_type = models.ForeignKey(EmailTemplateType, on_delete=models.CASCADE)
     body = models.TextField(null=False, blank=False)

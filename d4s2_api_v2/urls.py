@@ -14,6 +14,8 @@ router.register(r's3-endpoints', api.S3EndpointViewSet, 'v2-s3endpoint')
 router.register(r's3-users', api.S3UserViewSet, 'v2-s3user')
 router.register(r's3-buckets', api.S3BucketViewSet, 'v2-s3bucket')
 router.register(r's3-deliveries', api.S3DeliveryViewSet, 'v2-s3delivery')
+router.register(r'email-template-sets', api.EmailTemplateSetViewSet, 'v2-emailtemplatesets')
+router.register(r'email-templates', api.EmailTemplateViewSet, 'v2-emailtemplates')
 
 urlpatterns = [
     url(r'^', include(router.urls)),
