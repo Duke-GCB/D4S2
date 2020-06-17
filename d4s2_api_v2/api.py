@@ -17,6 +17,9 @@ from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_acc
     ModelWithEmailTemplateSetMixin
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
+from gcb_web_auth.models import GroupManagerConnection
+from gcb_web_auth.groupmanager import get_users_group_names
+from gcb_web_auth.utils import get_default_oauth_service, current_user_details, OAuthConfigurationException
 
 
 class DataServiceUnavailable(APIException):
@@ -359,6 +362,30 @@ class DDSAuthProviderAffiliatesViewSet(DDSViewSet):
 
 
 class EmailTemplateSetViewSet(viewsets.ReadOnlyModelViewSet):
+    @staticmethod
+    def get_users_group_names(user):
+        try:
+            user_details = current_user_details(get_default_oauth_service(), user)
+            duke_unique_id = user_details['dukeUniqueID']
+            group_manager_connection = GroupManagerConnection.objects.first()
+            if group_manager_connection and duke_unique_id:
+                group_manager_groups = get_users_group_names(group_manager_connection, duke_unique_id)
+                return [group_name for group_name in group_manager_groups if group_name]
+            else:
+                return []
+        except OAuthConfigurationException:
+            return []
+
+    def get_queryset(self):
+        """
+        Include a users default template set and those for the current user's groups.
+        """
+        current_user_groups = self.get_users_group_names(self.request.user)
+        return EmailTemplateSet.objects.filter(
+            Q(useremailtemplateset__user=self.request.user) |
+            Q(group_name__in=current_user_groups)
+        )
+
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = EmailTemplateSetSerializer
     queryset = EmailTemplateSet.objects.all()
@@ -367,6 +394,16 @@ class EmailTemplateSetViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class EmailTemplateViewSet(viewsets.ReadOnlyModelViewSet):
+    def get_queryset(self):
+        """
+        Include a users default template set and those for the current user's groups.
+        """
+        current_user_groups = EmailTemplateSetViewSet.get_users_group_names(self.request.user)
+        return EmailTemplate.objects.filter(
+            Q(template_set__useremailtemplateset__user=self.request.user) |
+            Q(template_set__group_name__in=current_user_groups)
+        )
+
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = EmailTemplateSerializer
     queryset = EmailTemplate.objects.all()
