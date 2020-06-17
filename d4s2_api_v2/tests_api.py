@@ -1486,7 +1486,6 @@ class EmailTemplateViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceT
         self.assertEqual(item['id'], self.core1t2.id)
         self.assertEqual(item['type'], 'accepted_recipient')
 
-
     @patch('d4s2_api_v2.api.get_users_group_names')
     @patch('d4s2_api_v2.api.current_user_details')
     @patch('d4s2_api_v2.api.get_default_oauth_service')
@@ -1503,10 +1502,6 @@ class EmailTemplateViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceT
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 3)
-        item = response.data[0]
-        self.assertEqual(item['id'], self.core1t2.id)
-        item = response.data[1]
-        self.assertEqual(item['id'], self.core1t1.id)
-        item = response.data[2]
-        self.assertEqual(item['id'], self.core2t1.id)
+        item_ids = set([item['id'] for item in response.data])
+        self.assertEqual(item_ids, set([self.core1t1.id, self.core1t2.id, self.core2t1.id]))
         mock_get_users_group_names.assert_called_with(group_manager_connection, '555666')
