@@ -85,7 +85,7 @@ class EmailTemplateSet(models.Model):
     cc_address = models.EmailField(blank=True, help_text='Optional address to CC when using this template set')
     reply_address = models.EmailField(blank=True, help_text='Optional address to set as reply-to when using this template set (replacing the sending user\'s email address')
     group_name = models.CharField(max_length=64, null=False, blank=True,
-                                  help_text='Name of the group manager group users must belong to to use this group.')
+                                  help_text='group manager group assigned to this set')
 
     def __str__(self):
         return self.name

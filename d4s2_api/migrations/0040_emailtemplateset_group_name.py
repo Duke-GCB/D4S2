@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='emailtemplateset',
             name='group_name',
-            field=models.CharField(blank=True, help_text='Name of the group manager group users must belong to to use this group.', max_length=64),
+            field=models.CharField(blank=True, help_text='group manager group assigned to this set', max_length=64),
         ),
     ]
