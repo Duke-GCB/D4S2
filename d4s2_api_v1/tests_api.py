@@ -431,6 +431,7 @@ class ModelWithEmailTemplateSetMixinTestCase(AuthenticatedResourceTestCase):
     def test_get_email_template_for_request(self):
         mixin = ModelWithEmailTemplateSetMixin()
         mixin.request = Mock(user=self.user)
+        mixin.request.data = {}
         email_template_set = mixin.get_email_template_for_request()
         self.assertEqual(email_template_set, self.email_template_set)
 
@@ -438,6 +439,17 @@ class ModelWithEmailTemplateSetMixinTestCase(AuthenticatedResourceTestCase):
         with self.assertRaises(rest_framework.exceptions.ValidationError) as raised_exception:
             mixin.get_email_template_for_request()
         self.assertEqual(raised_exception.exception.detail[0], EMAIL_TEMPLATES_NOT_SETUP_MSG)
+
+    @patch('d4s2_api_v1.api.EmailTemplateSet')
+    def test_get_email_template_for_request_with_template_set_id(self, mock_email_template_set):
+        other_email_template_set = EmailTemplateSet.objects.create(name='otherset')
+        mixin = ModelWithEmailTemplateSetMixin()
+        mixin.request = Mock(user=self.user)
+        mixin.request.data = {'email_template_set': other_email_template_set.id}
+        email_template_set = mixin.get_email_template_for_request()
+        self.assertEqual(email_template_set, mock_email_template_set.get_for_user.return_value.get.return_value)
+        mock_email_template_set.get_for_user.assert_called_with(mixin.request.user)
+        mock_email_template_set.get_for_user.return_value.get.assert_called_with(pk=other_email_template_set.id)
 
     def test_prevent_null_email_template_set(self):
         mixin = ModelWithEmailTemplateSetMixin()

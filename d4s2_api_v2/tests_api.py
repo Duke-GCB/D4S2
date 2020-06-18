@@ -1435,9 +1435,9 @@ class EmailTemplateSetViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResour
         self.assertEqual(item['email_templates'], [self.core1t1.id, self.core1t2.id])
         self.assertEqual(item['default'], True)
 
-    @patch('d4s2_api_v2.api.get_users_group_names')
-    @patch('d4s2_api_v2.api.current_user_details')
-    @patch('d4s2_api_v2.api.get_default_oauth_service')
+    @patch('d4s2_api.models.get_users_group_names')
+    @patch('d4s2_api.models.current_user_details')
+    @patch('d4s2_api.models.get_default_oauth_service')
     def test_get_with_groups(self, mock_get_default_oauth_service, mock_current_user_details,
                              mock_get_users_group_names):
         mock_current_user_details.return_value = {
@@ -1486,9 +1486,9 @@ class EmailTemplateViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceT
         self.assertEqual(item['id'], self.core1t2.id)
         self.assertEqual(item['type'], 'accepted_recipient')
 
-    @patch('d4s2_api_v2.api.get_users_group_names')
-    @patch('d4s2_api_v2.api.current_user_details')
-    @patch('d4s2_api_v2.api.get_default_oauth_service')
+    @patch('d4s2_api.models.get_users_group_names')
+    @patch('d4s2_api.models.current_user_details')
+    @patch('d4s2_api.models.get_default_oauth_service')
     def test_get_with_groups(self, mock_get_default_oauth_service, mock_current_user_details,
                              mock_get_users_group_names):
         mock_current_user_details.return_value = {
