@@ -42,3 +42,22 @@ class MailerTestCase(TestCase):
         }
         message = generate_message(self.reply_to_email, self.rcpt_email, self.cc_email, self.subject, template_text, context)
         self.assertIn("message I don't want this", message.body)
+
+    def test_generate_message_strsplit(self):
+        template_text = 'message {{ message | strsplit:"_" | listidx:1 }}'
+        context = {
+            'message': "This_that_other",
+        }
+        message = generate_message(self.reply_to_email, self.rcpt_email, self.cc_email, self.subject, template_text, context)
+        self.assertEqual("message that", message.body)
+
+        context = {
+            'message': "one_two_three_four",
+        }
+        message = generate_message(self.reply_to_email, self.rcpt_email, self.cc_email, self.subject, template_text, context)
+        self.assertEqual("message two", message.body)
+        context = {
+            'message': "one",
+        }
+        message = generate_message(self.reply_to_email, self.rcpt_email, self.cc_email, self.subject, template_text, context)
+        self.assertEqual("message ", message.body)
