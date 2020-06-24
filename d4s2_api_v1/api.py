@@ -47,7 +47,7 @@ class ModelWithEmailTemplateSetMixin(object):
         :return: EmailTemplateSet
         """
         try:
-            email_template_set_id = self.request.data.get('email_template_set')
+            email_template_set_id = self.request.data.get('email_template_set_id')
             if email_template_set_id:
                 return EmailTemplateSet.get_for_user(self.request.user).get(pk=email_template_set_id)
             user_email_template_set = UserEmailTemplateSet.objects.get(user=self.request.user)
