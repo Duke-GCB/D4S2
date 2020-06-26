@@ -2,11 +2,12 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import detail_route
 from rest_framework.response import Response
-from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet
+from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
 from switchboard.dds_util import DDSUtil, DDSMessageFactory
 from django.core.urlresolvers import reverse
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q
 EMAIL_TEMPLATES_NOT_SETUP_MSG = """Email templates need to be setup for your account.
 Please contact gcb-help@duke.edu."""
 CANNOT_PASS_EMAIL_TEMPLATE_SET = """You cannot create this item by passing email_template_set, 
@@ -46,6 +47,9 @@ class ModelWithEmailTemplateSetMixin(object):
         :return: EmailTemplateSet
         """
         try:
+            email_template_set_id = self.request.data.get('email_template_set_id')
+            if email_template_set_id:
+                return EmailTemplateSet.get_for_user(self.request.user).get(pk=email_template_set_id)
             user_email_template_set = UserEmailTemplateSet.objects.get(user=self.request.user)
             return user_email_template_set.email_template_set
         except UserEmailTemplateSet.DoesNotExist:

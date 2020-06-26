@@ -2,10 +2,15 @@ from __future__ import unicode_literals
 
 import uuid
 from django.db import models
+from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import JSONField
 from simple_history.models import HistoricalRecords
+from gcb_web_auth.utils import get_default_oauth_service, current_user_details, OAuthConfigurationException
+from gcb_web_auth.models import DDSUserCredential, GroupManagerConnection
+from gcb_web_auth.groupmanager import get_users_group_names
+
 
 DEFAULT_EMAIL_TEMPLATE_SET_NAME = 'default'
 
@@ -84,6 +89,8 @@ class EmailTemplateSet(models.Model):
     name = models.CharField(max_length=64, null=False, blank=False, unique=True)
     cc_address = models.EmailField(blank=True, help_text='Optional address to CC when using this template set')
     reply_address = models.EmailField(blank=True, help_text='Optional address to set as reply-to when using this template set (replacing the sending user\'s email address')
+    group_name = models.CharField(max_length=64, null=False, blank=True,
+                                  help_text='group manager group assigned to this set')
 
     def __str__(self):
         return self.name
@@ -94,6 +101,31 @@ class EmailTemplateSet(models.Model):
         except EmailTemplate.DoesNotExist:
             raise EmailTemplateException(
                 "Setup Error: Unable to find email template for type {}".format(name))
+
+    @staticmethod
+    def get_group_names_for_user(user):
+        try:
+            user_details = current_user_details(get_default_oauth_service(), user)
+            duke_unique_id = user_details['dukeUniqueID']
+            group_manager_connection = GroupManagerConnection.objects.first()
+            if group_manager_connection and duke_unique_id:
+                group_manager_groups = get_users_group_names(group_manager_connection, duke_unique_id)
+                return [group_name for group_name in group_manager_groups if group_name]
+            else:
+                return []
+        except OAuthConfigurationException:
+            return []
+
+    @staticmethod
+    def get_for_user(user):
+        """
+        Include a users default template set and those for the current user's groups.
+        """
+        user_group_names = EmailTemplateSet.get_group_names_for_user(user)
+        return EmailTemplateSet.objects.filter(
+            Q(useremailtemplateset__user=user) |
+            Q(group_name__in=user_group_names)
+        )
 
 
 class DeliveryBase(models.Model):
@@ -238,6 +270,8 @@ class EmailTemplateType(models.Model):
     Type of email template, e.g. share_project_viewer, delivery, final_notification
     """
     name = models.CharField(max_length=64, null=False, blank=False, unique=True)
+    help_text = models.TextField(null=False, blank=True)
+    sequence = models.IntegerField(null=True, help_text='determines order')
 
     def __str__(self):
         return self.name
@@ -248,7 +282,7 @@ class EmailTemplate(models.Model):
     Represents a base email message that can be sent
     """
     history = HistoricalRecords()
-    template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE)
+    template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE, related_name='email_templates')
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     template_type = models.ForeignKey(EmailTemplateType, on_delete=models.CASCADE)
     body = models.TextField(null=False, blank=False)
@@ -264,6 +298,17 @@ class EmailTemplate(models.Model):
     class Meta:
         unique_together = (
             ('template_set', 'template_type'),
+        )
+
+    @staticmethod
+    def get_for_user(user):
+        """
+        Include a users default template set templates and those for the current user's groups.
+        """
+        user_group_names = EmailTemplateSet.get_group_names_for_user(user)
+        return EmailTemplate.objects.filter(
+            Q(template_set__useremailtemplateset__user=user) |
+            Q(template_set__group_name__in=user_group_names)
         )
 
 

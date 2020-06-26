@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from switchboard.dds_util import DDSUtil
-from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet, UserEmailTemplateSet
+from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet, UserEmailTemplateSet, EmailTemplate
 from d4s2_api_v2.models import DDSDeliveryPreview
 
 
@@ -192,5 +192,41 @@ class DDSAffiliateSerializer(serializers.Serializer):
     class Meta:
         resource_name = 'duke-ds-auth-provider-affiliates'
 
+
 class AddUserSerializer(serializers.Serializer):
     username = serializers.CharField()
+
+
+class EmailTemplateSetSerializer(serializers.ModelSerializer):
+    email_templates = serializers.SerializerMethodField()
+    default = serializers.SerializerMethodField()
+
+    def get_email_templates(self, obj):
+        return [x.id for x in obj.email_templates.order_by('template_type__sequence')]
+
+    def get_default(self, obj):
+        return UserEmailTemplateSet.objects.filter(
+            email_template_set=obj,
+            user=self.context['request'].user
+        ).exists()
+
+    class Meta:
+        model = EmailTemplateSet
+        resource_name = 'email-template-set'
+        fields = ('id', 'name', 'cc_address', 'reply_address', 'email_templates', 'default')
+
+
+class EmailTemplateSerializer(serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+    help_text = serializers.SerializerMethodField()
+
+    def get_type(self, obj):
+        return obj.template_type.name
+
+    def get_help_text(self, obj):
+        return obj.template_type.help_text
+
+    class Meta:
+        model = EmailTemplate
+        resource_name = 'email-template'
+        fields = ('id', 'template_set', 'owner', 'type', 'help_text', 'body', 'subject')

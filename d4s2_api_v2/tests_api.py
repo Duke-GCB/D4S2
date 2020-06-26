@@ -10,6 +10,7 @@ from d4s2_api.models import *
 from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket
 from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser, DataServiceError
+from gcb_web_auth.models import GroupManagerConnection
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -1276,6 +1277,7 @@ class DDSAuthProviderViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(provider['is_default'], True)
         mock_dds_auth_provider.fetch_one.assert_called_with(mock_dds_util.return_value, '123')
 
+
 class DDSAuthProviderAffiliatesViewSetTestCase(AuthenticatedResourceTestCase):
 
     def setUp(self):
@@ -1369,3 +1371,137 @@ class DDSAuthProviderAffiliatesViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(response.data['id'], '999')
         mock_dds_user.get_or_register_user.assert_called_with(mock_dds_util.return_value, '456', 'joe')
 
+
+class EmailTemplateSetSetup(object):
+    def setUp(self):
+        self.user = django_user.objects.create_user(username='user', password='secret')
+        self.client.login(username='user', password='secret')
+        self.core1ts = EmailTemplateSet.objects.create(
+            name='core1',
+            cc_address='joe@joe.joe',
+            reply_address='bob@joe.joe',
+            group_name='group1'
+        )
+        delivery_type = EmailTemplateType.objects.get(name='delivery')
+        delivery_type.sequence = 1
+        delivery_type.save()
+        delivery_type = EmailTemplateType.objects.get(name='accepted_recipient')
+        delivery_type.sequence = 2
+        delivery_type.save()
+        self.core1t2 = EmailTemplate.objects.create(
+            template_set=self.core1ts,
+            owner=self.user,
+            template_type=EmailTemplateType.objects.get(name='accepted_recipient'),
+            body="my body",
+            subject="some subject",
+        )
+        self.core1t1 = EmailTemplate.objects.create(
+            template_set=self.core1ts,
+            owner=self.user,
+            template_type=EmailTemplateType.objects.get(name='delivery'),
+            body="my body",
+            subject="some subject",
+        )
+        UserEmailTemplateSet.objects.create(
+            user=self.user,
+            email_template_set=self.core1ts
+        )
+        self.core2ts = EmailTemplateSet.objects.create(
+            name='core2',
+            cc_address='joe@joe.joe',
+            reply_address='bob@joe.joe',
+            group_name='group2'
+        )
+        self.core2t1 = EmailTemplate.objects.create(
+            template_set=self.core2ts,
+            owner=self.user,
+            template_type=EmailTemplateType.objects.get(name='delivery'),
+            body="my body2",
+            subject="some subject2",
+        )
+
+
+class EmailTemplateSetViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTestCase):
+    def test_get(self):
+        url = reverse('v2-emailtemplatesets-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        item = response.data[0]
+        self.assertEqual(item['id'], self.core1ts.id)
+        self.assertEqual(item['name'], 'core1')
+        self.assertEqual(item['cc_address'], 'joe@joe.joe')
+        self.assertEqual(item['reply_address'], 'bob@joe.joe')
+        self.assertEqual(item['email_templates'], [self.core1t1.id, self.core1t2.id])
+        self.assertEqual(item['default'], True)
+
+    @patch('d4s2_api.models.get_users_group_names')
+    @patch('d4s2_api.models.current_user_details')
+    @patch('d4s2_api.models.get_default_oauth_service')
+    def test_get_with_groups(self, mock_get_default_oauth_service, mock_current_user_details,
+                             mock_get_users_group_names):
+        mock_current_user_details.return_value = {
+            'dukeUniqueID': '555666'
+        }
+        group_manager_connection = GroupManagerConnection.objects.create(account_id='123', password='secret')
+        mock_get_users_group_names.return_value = [
+            'group2'
+        ]
+        url = reverse('v2-emailtemplatesets-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        item = response.data[0]
+        self.assertEqual(item['id'], self.core1ts.id)
+        self.assertEqual(item['name'], 'core1')
+        self.assertEqual(item['cc_address'], 'joe@joe.joe')
+        self.assertEqual(item['reply_address'], 'bob@joe.joe')
+        self.assertEqual(item['email_templates'], [self.core1t1.id, self.core1t2.id])
+        self.assertEqual(item['default'], True)
+        item = response.data[1]
+        self.assertEqual(item['id'], self.core2ts.id)
+        self.assertEqual(item['name'], 'core2')
+        self.assertEqual(item['cc_address'], 'joe@joe.joe')
+        self.assertEqual(item['reply_address'], 'bob@joe.joe')
+        self.assertEqual(item['email_templates'], [self.core2t1.id])
+        self.assertEqual(item['default'], False)
+        mock_get_users_group_names.assert_called_with(group_manager_connection, '555666')
+
+
+class EmailTemplateViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTestCase):
+    def test_get(self):
+        url = reverse('v2-emailtemplates-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        item = response.data[0]
+        self.assertEqual(item['id'], self.core1t1.id)
+        self.assertEqual(item['template_set'], self.core1ts.id)
+        self.assertEqual(item['owner'], self.user.id)
+        self.assertEqual(item['type'], 'delivery')
+        self.assertEqual(item['help_text'], '')
+        self.assertEqual(item['body'], 'my body')
+        self.assertEqual(item['subject'], 'some subject')
+        item = response.data[1]
+        self.assertEqual(item['id'], self.core1t2.id)
+        self.assertEqual(item['type'], 'accepted_recipient')
+
+    @patch('d4s2_api.models.get_users_group_names')
+    @patch('d4s2_api.models.current_user_details')
+    @patch('d4s2_api.models.get_default_oauth_service')
+    def test_get_with_groups(self, mock_get_default_oauth_service, mock_current_user_details,
+                             mock_get_users_group_names):
+        mock_current_user_details.return_value = {
+            'dukeUniqueID': '555666'
+        }
+        group_manager_connection = GroupManagerConnection.objects.create(account_id='123', password='secret')
+        mock_get_users_group_names.return_value = [
+            'group2'
+        ]
+        url = reverse('v2-emailtemplates-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+        item_ids = set([item['id'] for item in response.data])
+        self.assertEqual(item_ids, set([self.core1t1.id, self.core1t2.id, self.core2t1.id]))
+        mock_get_users_group_names.assert_called_with(group_manager_connection, '555666')
