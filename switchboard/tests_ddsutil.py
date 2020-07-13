@@ -876,6 +876,8 @@ class DDSProjectTransferTestCase(TestCase):
     def test_constructor(self, mock_dds_util):
         transfer = DDSProjectTransfer(transfer_dict=self.transfer_dict)
         self.assertEqual(transfer.project.name, 'MouseRNA')
+        self.assertEqual(transfer.created_on, '2019-01-01')
+        self.assertEqual(transfer.last_updated_on, None)
 
     @patch('switchboard.dds_util.DDSUtil')
     def test_constructor_with_name_override(self, mock_dds_util):
