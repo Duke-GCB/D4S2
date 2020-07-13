@@ -308,6 +308,9 @@ class DDSProjectTransfer(DDSBase):
             if delivery_obj.project_name:
                 self.project_dict['name'] = delivery_obj.project_name
         self.project = DDSProject(self.project_dict)
+        audit = transfer_dict['audit']
+        self.created_on = audit['created_on']
+        self.last_updated_on = audit['last_updated_on']
 
     @staticmethod
     def _lookup_delivery(transfer_id):
