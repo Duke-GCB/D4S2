@@ -445,6 +445,10 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
                     'id': 'transfer1',
                     'status': 'pending',
                     'status_comment': 'Some status comment',
+                    'audit': {
+                        'created_on': '2019-01-01',
+                        'last_updated_on': None
+                    },
                     'to_users': [
                         {
                             'id': 'user1',
@@ -465,6 +469,10 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
                     'id': 'transfer2',
                     'status': 'accepted',
                     'status_comment': None,
+                    'audit': {
+                        'created_on': '2019-01-01',
+                        'last_updated_on': '2019-06-01'
+                    },
                     'to_users': [
                         {
                             'id': 'user1',
@@ -518,6 +526,10 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
             'id': 'transfer1',
             'status': 'pending',
             'status_comment': 'Some status comment',
+            'audit': {
+                'created_on': '2019-01-01',
+                'last_updated_on': '2019-06-01'
+            },
             'to_users': [
                 {
                     'id': 'user1',

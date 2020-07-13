@@ -860,6 +860,10 @@ class DDSProjectTransferTestCase(TestCase):
             'id': '123',
             'from_user': {},
             'to_users': [],
+            'audit': {
+                'created_on': '2019-01-01',
+                'last_updated_on': None
+            },
             'project': {
                 'name': 'MouseRNA'
             }
