@@ -445,6 +445,10 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
                     'id': 'transfer1',
                     'status': 'pending',
                     'status_comment': 'Some status comment',
+                    'audit': {
+                        'created_on': '2019-01-01',
+                        'last_updated_on': None
+                    },
                     'to_users': [
                         {
                             'id': 'user1',
@@ -465,6 +469,10 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
                     'id': 'transfer2',
                     'status': 'accepted',
                     'status_comment': None,
+                    'audit': {
+                        'created_on': '2019-01-01',
+                        'last_updated_on': '2019-06-01'
+                    },
                     'to_users': [
                         {
                             'id': 'user1',
@@ -494,6 +502,9 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['id'], 'transfer1')
         self.assertEqual(transfer['status'], 'pending')
         self.assertEqual(transfer['status_comment'], 'Some status comment')
+        self.assertEqual(transfer['created_on'], '2019-01-01')
+        self.assertEqual(transfer['last_updated_on'], None)
+
         self.assertEqual(len(transfer['to_users']), 1)
         self.assertEqual(transfer['to_users'][0]['id'], 'user1')
         self.assertEqual(transfer['from_user']['id'], 'user2')
@@ -509,6 +520,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['from_user']['id'], 'user3')
         self.assertEqual(transfer['project']['name'], 'Rat')
         self.assertEqual(transfer['delivery'], None)
+        self.assertEqual(transfer['created_on'], '2019-01-01')
+        self.assertEqual(transfer['last_updated_on'], '2019-06-01')
 
     @patch('d4s2_api_v2.api.DDSUtil')
     @patch('d4s2_api_v2.api.DDSUtil.get_project_url')
@@ -518,6 +531,10 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
             'id': 'transfer1',
             'status': 'pending',
             'status_comment': 'Some status comment',
+            'audit': {
+                'created_on': '2019-01-01',
+                'last_updated_on': '2019-06-01'
+            },
             'to_users': [
                 {
                     'id': 'user1',
@@ -549,6 +566,8 @@ class DDSProjectTransfersViewSetTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(transfer['to_users'][0]['id'], 'user1')
         self.assertEqual(transfer['from_user']['id'], 'user2')
         self.assertEqual(transfer['project']['name'], 'Mouse')
+        self.assertEqual(transfer['created_on'], '2019-01-01')
+        self.assertEqual(transfer['last_updated_on'], '2019-06-01')
 
 
 class UserLogin(object):
