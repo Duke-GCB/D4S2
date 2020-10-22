@@ -101,14 +101,7 @@ class DDSZipBuilderTestCase(TestCase):
             ]
         )
         builder = DDSZipBuilder(self.project_id, self.mock_client)
-        response = builder.build_streaming_zipfile()
-
-        # check generator responses
-        self.assertEqual(next(response), mock_zipfile.return_value.flush.return_value)
-        self.assertEqual(next(response), mock_zipfile.return_value.flush.return_value)
-        self.assertEqual(next(response), mock_zipfile.return_value)
-        with self.assertRaises(StopIteration):
-            next(response)
+        list(builder.build_streaming_zipfile())
 
         # check zipfile added with appropriate files
         mock_zipfile.return_value.write_iter.assert_has_calls([
