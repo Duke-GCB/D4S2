@@ -21,12 +21,12 @@ def make_client(user):
         authentication_service_id = endpoint.openid_provider_service_id
 
         def create_data_service_auth(config, set_status_msg=print):
-            return MyOAuthDataServiceAuth(user, authentication_service_id, config, set_status_msg=set_status_msg)
+            return CustomOAuthDataServiceAuth(user, authentication_service_id, config, set_status_msg=set_status_msg)
 
         return Client(config=config, create_data_service_auth=create_data_service_auth)
 
 
-class MyOAuthDataServiceAuth(OAuthDataServiceAuth):
+class CustomOAuthDataServiceAuth(OAuthDataServiceAuth):
     def __init__(self, user, authentication_service_id, config, set_status_msg=print):
         super().__init__(config, set_status_msg)
         self._auth = None
@@ -38,5 +38,4 @@ class MyOAuthDataServiceAuth(OAuthDataServiceAuth):
         return oauth_token.token_dict.get('access_token')
 
     def get_authentication_service_id(self):
-        endpoint = get_default_dds_endpoint()
-        return endpoint.openid_provider_service_id
+        return self.authentication_service_id
