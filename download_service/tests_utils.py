@@ -48,7 +48,7 @@ class MakeClientTestCase(TestCase):
         self.assertEqual(client, mock_client.return_value)
         client_config = mock_client.call_args[1]['config']
         self.assertEqual(client_config.url, 'somehost')
-        create_data_service_auth = mock_client.call_args.kwargs['create_data_service_auth']
+        create_data_service_auth = mock_client.call_args[1]['create_data_service_auth']
         data_service_auth = create_data_service_auth(None)
         self.assertEqual(data_service_auth, mock_custom_oauth_data_service_auth.return_value)
         mock_custom_oauth_data_service_auth.assert_called_with(self.user, '12345', None, set_status_msg=print)
