@@ -46,7 +46,7 @@ class MakeClientTestCase(TestCase):
         self.assertEqual(DDSUserCredential.objects.count(), 0)
         client = make_client(self.user)
         self.assertEqual(client, mock_client.return_value)
-        client_config = mock_client.call_args.kwargs['config']
+        client_config = mock_client.call_args[1]['config']
         self.assertEqual(client_config.url, 'somehost')
         create_data_service_auth = mock_client.call_args.kwargs['create_data_service_auth']
         data_service_auth = create_data_service_auth(None)
