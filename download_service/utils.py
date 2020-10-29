@@ -7,7 +7,7 @@ from gcb_web_auth.utils import get_dds_config_for_credentials, get_oauth_token, 
 
 def make_client(user):
     try:
-        dds_credential = DDSUserCredential.objects.get(user=user, token='blah')
+        dds_credential = DDSUserCredential.objects.get(user=user)
         config = get_dds_config_for_credentials(dds_credential)
         return Client(config=config)
     except DDSUserCredential.DoesNotExist:
