@@ -12,7 +12,7 @@ django-simple-history==1.9.1
 django-sslserver==0.19
 djangorestframework==3.9.1
 drf-ember-backend==1.1
-DukeDSClient==3.0.0
+-e git://github.com/Duke-GCB/DukeDSClient.git@313-refresh-token-via-oauth#egg=DukeDSClient
 enum34==1.1.6
 funcsigs==0.4
 future==0.16.0
