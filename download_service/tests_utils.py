@@ -1,5 +1,5 @@
 from django.test.testcases import TestCase
-from download_service.utils import make_client
+from download_service.utils import make_client, CustomOAuthDataServiceAuth
 from gcb_web_auth.models import DDSUserCredential, DDSEndpoint
 from django.contrib.auth.models import User
 from unittest.mock import patch, call, Mock
@@ -30,17 +30,45 @@ class MakeClientTestCase(TestCase):
         self.assertEqual(mock_client.call_args, call(config=mock_get_dds_config_for_credentials.return_value))
         self.assertEqual(client, mock_client.return_value)
 
-    @patch('download_service.utils.get_dds_token')
-    @patch('download_service.utils.make_auth_config')
+    @patch('download_service.utils.CustomOAuthDataServiceAuth')
+    @patch('download_service.utils.get_dds_config_for_credentials')
+    @patch('download_service.utils.get_oauth_token')
+    @patch('download_service.utils.get_default_dds_endpoint')
     @patch('download_service.utils.Client')
-    def test_makes_client_from_dds_token_when_no_dds_user_credential(self, mock_client, mock_make_auth_config, mock_get_dds_token):
+    def test_makes_client_from_dds_token_when_no_dds_user_credential(self, mock_client, mock_get_default_dds_endpoint,
+                                                                     mock_get_oauth_token,
+                                                                     mock_get_dds_config_for_credentials,
+                                                                     mock_custom_oauth_data_service_auth):
+        mock_get_default_dds_endpoint.return_value = Mock(
+            api_root='somehost',
+            openid_provider_service_id='12345'
+        )
         self.assertEqual(DDSUserCredential.objects.count(), 0)
-        mock_key = Mock()
-        mock_get_dds_token.return_value.key = mock_key
         client = make_client(self.user)
-        self.assertEqual(mock_get_dds_token.call_args, call(self.user))
-        self.assertEqual(mock_make_auth_config.call_args, call(mock_key))
-        self.assertEqual(mock_client.call_args, call(config=mock_make_auth_config.return_value))
         self.assertEqual(client, mock_client.return_value)
+        client_config = mock_client.call_args[1]['config']
+        self.assertEqual(client_config.url, 'somehost')
+        create_data_service_auth = mock_client.call_args[1]['create_data_service_auth']
+        data_service_auth = create_data_service_auth(None)
+        self.assertEqual(data_service_auth, mock_custom_oauth_data_service_auth.return_value)
+        mock_custom_oauth_data_service_auth.assert_called_with(self.user, '12345', None, set_status_msg=print)
 
 
+class TestCustomOAuthDataServiceAuth(TestCase):
+    def setUp(self):
+        self.user = Mock()
+        self.authentication_service_id = '1234'
+        self.config = Mock()
+
+    @patch('download_service.utils.get_oauth_token')
+    def test_create_oauth_access_token(self, mock_get_oauth_token):
+        mock_get_oauth_token.return_value.token_dict = {
+            'access_token': '5678'
+        }
+        auth = CustomOAuthDataServiceAuth(self.user, self.authentication_service_id, self.config)
+        token = auth.create_oauth_access_token()
+        self.assertEqual(token, '5678')
+
+    def test_get_authentication_service_id(self):
+        auth = CustomOAuthDataServiceAuth(self.user, self.authentication_service_id, self.config)
+        self.assertEqual(auth.get_authentication_service_id(), '1234')
