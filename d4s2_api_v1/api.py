@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
-from rest_framework.decorators import detail_route
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
@@ -84,7 +84,7 @@ class DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
         request.data['transfer_id'] = project_transfer['id']
         return super(DeliveryViewSet, self).create(request, args, kwargs)
 
-    @detail_route(methods=['POST'])
+    @action(detail=True, methods=['POST'])
     def send(self, request, pk=None):
         delivery = self.get_object()
         self.prevent_null_email_template_set()
@@ -97,7 +97,7 @@ class DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
         delivery.mark_notified(message.email_text)
         return self.retrieve(request)
 
-    @detail_route(methods=['POST'])
+    @action(detail=True, methods=['POST'])
     def cancel(self, request, pk=None):
         delivery = self.get_object()
         self.prevent_null_email_template_set()
@@ -122,7 +122,7 @@ class ShareViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('project_id', 'from_user_id', 'to_user_id')
 
-    @detail_route(methods=['POST'])
+    @action(detail=True, methods=['POST'])
     def send(self, request, pk=None):
         share = self.get_object()
         self.prevent_null_email_template_set()
