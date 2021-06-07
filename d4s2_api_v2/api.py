@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.exceptions import APIException
-from rest_framework.decorators import list_route, detail_route
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
@@ -125,7 +125,7 @@ class DDSUsersViewSet(DDSViewSet):
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSUser.fetch_one, dds_util, dds_user_id)
 
-    @list_route(methods=['get'], url_path='current-duke-ds-user')
+    @action(detail=False, methods=['get'], url_path='current-duke-ds-user')
     def current_duke_ds_user(self, request):
         dds_util = DDSUtil(self.request.user)
         remote_dds_user = dds_util.get_current_user()
@@ -150,7 +150,7 @@ class DDSProjectsViewSet(DDSViewSet):
         dds_util = DDSUtil(self.request.user)
         return self._ds_operation(DDSProject.fetch_one, dds_util, dds_project_id)
 
-    @detail_route(methods=['get'], serializer_class=DDSProjectPermissionSerializer)
+    @action(detail=True, methods=['get'], serializer_class=DDSProjectPermissionSerializer)
     def permissions(self, request, pk=None):
         dds_util = DDSUtil(request.user)
         user_id = request.query_params.get('user')
@@ -158,7 +158,7 @@ class DDSProjectsViewSet(DDSViewSet):
         serializer = DDSProjectPermissionSerializer(project_permissions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @detail_route(methods=['get'], url_path='summary', serializer_class=DDSProjectSummarySerializer)
+    @action(detail=True, methods=['get'], url_path='summary', serializer_class=DDSProjectSummarySerializer)
     def summary(self, request, pk=None):
         dds_util = DDSUtil(request.user)
         project_summary = self._ds_operation(DDSProjectSummary.fetch_one, dds_util, pk)
@@ -184,7 +184,7 @@ class UserViewSet(viewsets.GenericViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = UserSerializer
 
-    @list_route(methods=['get'], url_path='current-user')
+    @action(detail=False, methods=['get'], url_path='current-user')
     def current_user(self, request):
         current_user = self.request.user
         serializer = UserSerializer(self.request.user)
@@ -270,7 +270,7 @@ class S3DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
         """
         return S3Delivery.objects.filter(Q(from_user__user=self.request.user) | Q(to_user__user=self.request.user))
 
-    @detail_route(methods=['POST'])
+    @action(detail=True, methods=['POST'])
     def send(self, request, pk=None):
         s3_delivery = self.get_object()
         self.prevent_null_email_template_set()
@@ -349,7 +349,7 @@ class DDSAuthProviderAffiliatesViewSet(DDSViewSet):
         uid = self.kwargs.get('pk')
         return self._ds_operation(DDSAffiliate.fetch_one, dds_util, auth_provider_id, uid)
 
-    @detail_route(methods=['POST'], serializer_class=DDSUserSerializer, url_path='get-or-register-user')
+    @action(detail=True, methods=['POST'], serializer_class=DDSUserSerializer, url_path='get-or-register-user')
     def get_or_register_user(self, request, pk):
         dds_util = DDSUtil(self.request.user)
         auth_provider_id = self._get_auth_provider_id()
