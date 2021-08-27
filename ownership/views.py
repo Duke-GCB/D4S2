@@ -1,6 +1,6 @@
 from ddsc.core.ddsapi import DataServiceError
-from django.core.urlresolvers import reverse
-from django.shortcuts import redirect, render_to_response
+from django.urls import reverse
+from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 try:
     from urllib.parse import urlencode
@@ -114,9 +114,10 @@ class DeliveryViewBase(TemplateView):
         self.set_error_details(400, message)
 
     def make_error_response(self):
-        return render_to_response('ownership/error.html',
-                                  status=self.error_details.get('status'),
-                                  context=self.error_details.get('context'))
+        return render(None,
+                      'ownership/error.html',
+                      status=self.error_details.get('status'),
+                      context=self.error_details.get('context'))
 
     def _get_query_string(self):
         query_dict = {}

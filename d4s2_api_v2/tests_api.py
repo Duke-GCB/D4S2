@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse, NoReverseMatch
+from django.urls import reverse, NoReverseMatch
 from django.contrib.auth.models import User as django_user
 from rest_framework import status
 from rest_framework.test import APITestCase

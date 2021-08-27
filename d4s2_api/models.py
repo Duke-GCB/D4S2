@@ -3,10 +3,10 @@ from __future__ import unicode_literals
 import uuid
 import os.path
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, JSONField
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
 from django.contrib.auth.models import User, Group
-from django.contrib.postgres.fields import JSONField, ArrayField
+from django.contrib.postgres.fields import ArrayField
 from simple_history.models import HistoricalRecords
 from gcb_web_auth.utils import get_default_oauth_service, current_user_details, OAuthConfigurationException
 from gcb_web_auth.models import DDSUserCredential, GroupManagerConnection
@@ -519,7 +519,7 @@ class AzDelivery(DeliveryBase):
                                             on_delete=models.CASCADE)
     to_netid = models.CharField(max_length=255, help_text='NetID of the recipient user.')
     manifest = models.OneToOneField(AzObjectManifest, on_delete=models.CASCADE, null=True, blank=True)
-    share_user_ids = ArrayField(models.CharField(max_length=255), blank=True, default=[])
+    share_user_ids = ArrayField(models.CharField(max_length=255), blank=True, default=list)
     transfer_state = models.IntegerField(choices=AzTransferStates.CHOICES, default=AzTransferStates.NEW,
                                          help_text='State within transfer')
 

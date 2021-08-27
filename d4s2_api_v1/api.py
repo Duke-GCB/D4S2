@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet, StorageTypes
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
 from switchboard.dds_util import DDSUtil, DDSMessageFactory
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 EMAIL_TEMPLATES_NOT_SETUP_MSG = """Email templates need to be setup for your account.
