@@ -17,6 +17,7 @@ from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_acc
     ModelWithEmailTemplateSetMixin
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
+from rest_framework.views import APIView
 
 
 class DataServiceUnavailable(APIException):
@@ -378,3 +379,35 @@ class EmailTemplateViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = EmailTemplate.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('template_set', )
+
+
+class Person(object):
+    """
+    A simple object to represent a DDSUser
+    """
+
+    def __init__(self, pk):
+        self.pk = pk
+
+from rest_framework import serializers
+
+
+class PersonSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    username = serializers.CharField()
+    full_name = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()
+
+    class Meta:
+        resource_name = 'people'
+
+
+from rest_framework import generics
+
+class PeopleList(generics.ListAPIView):
+    serializer_class = PersonSerializer
+
+    def get_queryset(self):
+        return [Person("joe")]

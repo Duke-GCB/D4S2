@@ -19,5 +19,6 @@ router.register(r'email-templates', api.EmailTemplateViewSet, 'v2-emailtemplates
 
 urlpatterns = [
     url(r'^', include(router.urls)),
-    url(r'delivery-previews', api.DeliveryPreviewView.as_view(), name='v2-delivery_previews')
+    url(r'delivery-previews', api.DeliveryPreviewView.as_view(), name='v2-delivery_previews'),
+    url(r'people', api.PeopleList.as_view(), name="instances"),
 ]
