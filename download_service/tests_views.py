@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test.testcases import TestCase
 from unittest.mock import patch, call
 from django.contrib.auth.models import User
@@ -25,7 +25,8 @@ class DDSProjectZipTestCase(TestCase):
     def test_redirects_for_login(self, mock_zip_builder, mock_make_client):
         self.client.logout()
         response = self.client.get(self.url)
-        self.assertRedirects(response, reverse('login') + '?next=/download/dds-projects/abc-123/ABC123.zip')
+        url = reverse('login') + '?next=/download/dds-projects/abc-123/ABC123.zip'
+        self.assertRedirects(response, url, fetch_redirect_response=False)
 
     def test_download_project_builds(self, mock_zip_builder, mock_make_client):
         response = self.client.get(self.url)
