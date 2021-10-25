@@ -202,6 +202,7 @@ class DDSProject(DDSBase):
         self.last_updated_on = project_dict.get('audit', {}).get('last_updated_on')
         # URL is useful for all DDSProject instances not provided by DDS API
         self.url = DDSUtil.get_project_url(self.id)
+        self.backend = 'dds'
 
     @staticmethod
     def fetch_list(dds_util):

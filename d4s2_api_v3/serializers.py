@@ -11,3 +11,15 @@ class UserSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'users'
+
+
+class ProjectSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    url = serializers.URLField()
+    created_on = serializers.DateField()
+    last_updated_on = serializers.DateField()
+    backend = serializers.CharField()
+
+    class Meta:
+        resource_name = 'projects'
