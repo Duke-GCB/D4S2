@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
-from switchboard.dds_util import DDSUtil, DDSMessageFactory
+from switchboard.dds_util import DDSUtil, DDSMessageFactory, MessageDirection
 from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
@@ -110,6 +110,20 @@ class DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
         message.send()
         delivery.mark_canceled()
         return self.retrieve(request)
+
+    @action(detail=True, url_path='resend-acceptance-email', methods=['POST'])
+    def resend_acceptance_email(self, request, pk=None):
+        delivery = self.get_object()
+        resend_acceptance_email(delivery, request.user)
+        return self.retrieve(request)
+
+
+def resend_acceptance_email(delivery, request_user):
+    if delivery.state != State.ACCEPTED:
+        raise ValidationError('Only deliveries in accepted state can have the acceptance email resent.')
+    message_factory = DDSMessageFactory(delivery, request_user)
+    recipient_message = message_factory.make_processed_message('accepted_recipient', MessageDirection.ToRecipient)
+    recipient_message.send()
 
 
 class ShareViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
