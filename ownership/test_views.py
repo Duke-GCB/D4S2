@@ -1,5 +1,5 @@
 import uuid
-from django.urls import reverse
+from django.core.urlresolvers import reverse
 from rest_framework import status
 from django.test.testcases import TestCase
 from ownership.views import MISSING_TRANSFER_ID_MSG, TRANSFER_ID_NOT_FOUND, REASON_REQUIRED_MSG, NOT_RECIPIENT_MSG
