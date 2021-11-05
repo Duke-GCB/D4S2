@@ -1,4 +1,4 @@
-from django.urls import reverse
+from django.core.urlresolvers import reverse
 from django.test.testcases import TestCase
 from django.urls.exceptions import NoReverseMatch
 

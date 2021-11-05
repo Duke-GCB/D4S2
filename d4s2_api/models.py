@@ -2,9 +2,10 @@ from __future__ import unicode_literals
 
 import uuid
 from django.db import models
-from django.db.models import Q, JSONField
+from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
 from django.contrib.auth.models import User, Group
+from django.contrib.postgres.fields import JSONField
 from simple_history.models import HistoricalRecords
 from gcb_web_auth.utils import get_default_oauth_service, current_user_details, OAuthConfigurationException
 from gcb_web_auth.models import DDSUserCredential, GroupManagerConnection

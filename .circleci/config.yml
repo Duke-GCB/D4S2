@@ -27,5 +27,4 @@ jobs:
       - run:
           command: |
             source venv/bin/activate
-            DJANGO_SETTINGS_MODULE=d4s2.settings_test python manage.py collectstatic --noinput
             DJANGO_SETTINGS_MODULE=d4s2.settings_test python manage.py test

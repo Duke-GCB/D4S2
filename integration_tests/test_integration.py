@@ -1,4 +1,4 @@
-from django.urls import reverse
+from django.core.urlresolvers import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from mock import patch, Mock, call, ANY
