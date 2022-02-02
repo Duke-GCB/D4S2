@@ -79,6 +79,21 @@ class DeliveryViewTestCase(AuthenticatedResourceTestCase):
         self.assertEqual(mock_ddsutil.return_value.create_project_transfer.call_count, 1)
         self.assertTrue(mock_ddsutil.return_value.create_project_transfer.called_with('project-id-2', ['user2']))
 
+    @patch('d4s2_api_v1.api.DDSUtil')
+    def test_create_delivery_with_dds_error(self, mock_ddsutil):
+        setup_mock_ddsutil(mock_ddsutil)
+        url = reverse('ddsdelivery-list')
+        bad_dds_response = Mock(status_code=500)
+        bad_dds_response.json.return_value = {"reason":"server overloaded", "suggestion": "retry"}
+        mock_ddsutil.return_value.create_project_transfer.side_effect = DataServiceError(bad_dds_response, "/someapi", {})
+        data = {'project_id': 'project-id-2', 'from_user_id': 'user1', 'to_user_id': 'user2'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        expected_detail = """Error 500 on /someapi
+Reason:server overloaded
+Suggestion:retry"""
+        self.assertEqual(response.json()["detail"], expected_detail)
+
     def test_list_deliveries(self):
         DDSDelivery.objects.create(project_id='project1', from_user_id='user1', to_user_id='user2',
                                    transfer_id=self.transfer_id1, email_template_set=self.email_template_set)
