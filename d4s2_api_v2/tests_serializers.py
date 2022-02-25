@@ -39,7 +39,7 @@ class DeliveryPreviewSerializerTestCase(TestCase):
 
 class UserSerializerSerializerTestCase(TestCase):
     @patch('d4s2_api_v2.serializers.UserEmailTemplateSet')
-    def test_stuff(self, mock_user_email_template_set):
+    def test_create(self, mock_user_email_template_set):
         mock_user_email_template_set.user_is_setup.return_value = True
         user = django_user.objects.create_user(username='user', password='secret')
         serializer = UserSerializer(user)

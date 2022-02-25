@@ -1,11 +1,12 @@
 from __future__ import unicode_literals
 
 import uuid
+import os.path
 from django.db import models
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
 from django.contrib.auth.models import User, Group
-from django.contrib.postgres.fields import JSONField
+from django.contrib.postgres.fields import JSONField, ArrayField
 from simple_history.models import HistoricalRecords
 from gcb_web_auth.utils import get_default_oauth_service, current_user_details, OAuthConfigurationException
 from gcb_web_auth.models import DDSUserCredential, GroupManagerConnection
@@ -434,3 +435,116 @@ class S3DeliveryError(models.Model):
     message = models.TextField()
     delivery = models.ForeignKey(S3Delivery, on_delete=models.CASCADE, related_name='errors')
     created = models.DateTimeField(auto_now_add=True)
+
+
+class AzContainerPath(models.Model):
+    """
+    Represents a directory(project) within an Azure container/filesystem/bucket
+    """
+    path = models.CharField(max_length=255, help_text='Path in the Azure container to a directory (project)')
+    container_url = models.URLField(help_text='URL to the container where directory (project) resides')
+
+    def make_project_url(self):
+        return os.path.join(self.container_url, self.path)
+
+    def __str__(self):
+        return 'Azure Project: {} URL: {} '.format(self.path, self.container_url)
+
+
+class AzObjectManifest(models.Model):
+    content = models.TextField(help_text='Signed JSON array of object metadata from project at time of delivery')
+
+
+class AzTransferStates:
+    NEW = 0
+    CREATED_MANIFEST = 1
+    TRANSFERRED_PROJECT = 2
+    ADDED_DOWNLOAD_USERS = 3
+    CHANGED_OWNER = 4
+    EMAILED_SENDER = 5
+    EMAILED_RECIPIENT = 6
+    COMPLETE = 7
+    CHOICES = (
+        (NEW, 'New'),
+        (CREATED_MANIFEST, 'Created manifest'),
+        (TRANSFERRED_PROJECT, 'Transferred project'),
+        (ADDED_DOWNLOAD_USERS, 'Added download users to project'),
+        (CHANGED_OWNER, 'Gave recipient owner permissions'),
+        (EMAILED_SENDER, 'Emailed Sender'),
+        (EMAILED_RECIPIENT, 'Emailed Recipient'),
+        (COMPLETE, 'Delivery Complete'),
+    )
+
+
+class AzDelivery(DeliveryBase):
+    """
+    Represents a delivery of a Azure container/bucket from one user to another.
+    When a delivery is notified, an email is sent to the recipient with an acceptance
+    link. The recipient can accept or decline the delivery. On acceptance, the bucket is moved/copied
+    to the destination.
+    """
+    history = HistoricalRecords()
+    source_project = models.ForeignKey(AzContainerPath, related_name='from_project', on_delete=models.CASCADE)
+    from_netid = models.CharField(max_length=255, help_text='NetID of the sending user.')
+    destination_project = models.ForeignKey(AzContainerPath, related_name='to_project', null=True, blank=True,
+                                            on_delete=models.CASCADE)
+    to_netid = models.CharField(max_length=255, help_text='NetID of the recipient user.')
+    manifest = models.OneToOneField(AzObjectManifest, on_delete=models.CASCADE, null=True, blank=True)
+    share_user_ids = ArrayField(models.CharField(max_length=255), blank=True, default=[])
+    transfer_state = models.IntegerField(choices=AzTransferStates.CHOICES, default=AzTransferStates.NEW,
+                                         help_text='State within transfer')
+
+
+    def get_simple_project_name(self):
+        return os.path.basename(self.source_project.path)
+
+    def make_project_url(self):
+        if self.state == State.ACCEPTED:
+            return self.destination_project.make_project_url()
+        else:
+            return self.source_project.make_project_url()
+
+    @property
+    def transfer_id(self):
+        return self.id
+
+    def __str__(self):
+        return 'Azure Delivery: {} - {}  State: {}  To: {}  Performed by: {}'.format(
+            self.id, self.source_project.path, State.DELIVERY_CHOICES[self.state][1], self.to_netid, self.performed_by
+        )
+
+    @staticmethod
+    def get_incomplete_delivery(from_netid, source_container_url, source_path):
+        """
+        Return a incomplete delivery for the specified keys or None if not found.
+        There should only be at most one incomplete delivery at a time for a set of keys.
+        """
+        deliveries = AzDelivery.objects.filter(
+            from_netid=from_netid,
+            source_project__container_url=source_container_url,
+            source_project__path=source_path
+        )
+        for delivery in deliveries:
+            if not delivery.is_complete():
+                return delivery
+        return None
+
+
+class AzDeliveryError(models.Model):
+    message = models.TextField()
+    delivery = models.ForeignKey(AzDelivery, on_delete=models.CASCADE, related_name='errors')
+    created = models.DateTimeField(auto_now_add=True)
+
+
+class AzStorageConfig(models.Model):
+    name = models.CharField(max_length=255, help_text='User facing name for these storage config settings.')
+    subscription_id = models.CharField(max_length=255,
+                                       help_text='Azure subscription id that contains the resource group.')
+    resource_group = models.CharField(max_length=255,
+                                      help_text='Azure Resource Group containing the storage account.')
+    storage_account = models.CharField(max_length=255,
+                                       help_text='Azure storage account containing the container (bucket).')
+    container_name = models.CharField(max_length=255,
+                                      help_text='Azure container (bucket) where files will be stored.')
+    storage_account_key = models.CharField(max_length=255, help_text='Azure storage account key.',
+                                           blank=True)

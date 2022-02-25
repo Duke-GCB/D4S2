@@ -1,6 +1,7 @@
 from django.contrib import admin
 from d4s2_api.models import *
 from simple_history.admin import SimpleHistoryAdmin
+from switchboard.azure_util import TransferFunctions
 
 admin.site.register(EmailTemplate)
 
@@ -35,3 +36,18 @@ class S3DeliveryAdmin(SimpleHistoryAdmin):
 admin.site.register(S3Delivery, S3DeliveryAdmin)
 admin.site.register(S3DeliveryError)
 admin.site.register(S3ObjectManifest)
+
+def restart_transfer(modeladmin, request, queryset):
+    for delivery in queryset:
+        TransferFunctions.restart_transfer(delivery.id)
+
+
+class AzDeliveryAdmin(SimpleHistoryAdmin):
+    actions = [restart_transfer]
+
+
+admin.site.register(AzDelivery, AzDeliveryAdmin)
+admin.site.register(AzContainerPath)
+admin.site.register(AzObjectManifest)
+admin.site.register(AzDeliveryError)
+admin.site.register(AzStorageConfig)

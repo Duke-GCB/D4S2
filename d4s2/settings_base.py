@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     'd4s2_api',
     'd4s2_api_v1',
     'd4s2_api_v2',
-    'd4s2_api_v3',
     'gcb_web_auth',
     'django_filters',
     'switchboard',
@@ -191,3 +190,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 USERNAME_EMAIL_HOST = os.getenv('D4S2_USERNAME_EMAIL_HOST')
 DIRECTORY_SERVICE_TOKEN = os.getenv('D4S2_DIRECTORY_SERVICE_TOKEN')
 DIRECTORY_SERVICE_URL = os.getenv('D4S2_DIRECTORY_SERVICE_URL')
+AZCOPY_COMMAND =  os.getenv('D4S2_AZCOPY_COMMAND','azcopy')

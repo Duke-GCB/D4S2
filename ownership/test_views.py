@@ -52,7 +52,8 @@ def setup_mock_delivery_details(MockDeliveryDetails):
 
 def setup_mock_delivery_type(mock_get_delivery_type):
     mock_delivery_type = mock_get_delivery_type.return_value
-    mock_delivery_type.name = 'mock'
+    mock_delivery_type.name = 'dds'
+    mock_delivery_type.get_delivery = DDSDelivery.objects.get
     mock_delivery_type.delivery_cls = DDSDelivery
     mock_delivery_type.make_delivery_details.return_value = setup_mock_delivery_details(Mock())
     # Convenience for tests to assign return values without .return_value.return_value
@@ -167,7 +168,7 @@ class ProcessTestCase(AuthenticatedTestCase):
         transfer_id = delivery.transfer_id
         url = reverse('ownership-process')
         response = self.client.post(url, {'transfer_id': transfer_id})
-        expected_warning_message = urlencode({'transfer_id': transfer_id, 'warning_message': 'Failed to share with Joe, Tom', 'delivery_type': 'mock'})
+        expected_warning_message = urlencode({'transfer_id': transfer_id, 'warning_message': 'Failed to share with Joe, Tom', 'delivery_type': 'dds'})
         expected_url = reverse('ownership-accepted') + '?' + expected_warning_message
         self.assertRedirects(response, expected_url)
         self.assertNotIn(MISSING_TRANSFER_ID_MSG, str(response.content))

@@ -527,6 +527,10 @@ class DDSDeliveryType:
     transfer_in_background = False
 
     @staticmethod
+    def get_delivery(transfer_id):
+        return DDSDelivery.objects.get(transfer_id=transfer_id)
+
+    @staticmethod
     def make_delivery_details(*args):
         return DeliveryDetails(*args)
 

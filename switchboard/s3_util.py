@@ -330,6 +330,10 @@ class S3DeliveryType:
     transfer_in_background = True
 
     @staticmethod
+    def get_delivery(transfer_id):
+        return S3Delivery.objects.get(transfer_id=transfer_id)
+
+    @staticmethod
     def make_delivery_details(s3_delivery, user):
         if s3_delivery.to_user.user != user:
             raise S3NotRecipientException()
