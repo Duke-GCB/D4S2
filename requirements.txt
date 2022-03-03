@@ -7,7 +7,7 @@ django-background-tasks==1.1.13
 django-cors-headers==2.1.0
 django-crispy-forms==1.6.0
 django-extensions==1.7.9
-django-filter==1.1.0
+django-filter==2.4.0
 django-simple-history==1.9.1
 django-sslserver==0.19
 djangorestframework==3.11.2
