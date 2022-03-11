@@ -246,8 +246,8 @@ class AzDeliveryType:
 
 
 class TransferFunctions(object):
-    # TODO add @background
     @staticmethod
+    @background
     def transfer_delivery(delivery_id, transfer_project=True, add_download_users=True, change_owner=True,
                           email_sender=True, email_recipient=True):
         transfer = AzureTransfer(delivery_id, get_credential())

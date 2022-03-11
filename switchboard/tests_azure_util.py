@@ -1,4 +1,5 @@
 from django.test import TestCase
+from background_task.tasks import tasks
 from mock import patch, ANY, Mock, call
 from switchboard.azure_util import get_details_from_container_url, make_acl, project_exists, AzDataLakeProject, \
     AzUsers, AzDeliveryDetails, AzDeliveryType, AzDelivery, AzContainerPath, State, TransferFunctions, AzureTransfer, \
@@ -291,6 +292,7 @@ class TestTransferFunctions(TestCase):
         mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
         mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
         TransferFunctions.transfer_delivery(delivery_id='123')
+        tasks.run_next_task()
         expected_calls = [
             call.ensure_transferring_state(),
             call.record_object_manifest(),
@@ -308,6 +310,7 @@ class TestTransferFunctions(TestCase):
         mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
         mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
         TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False)
+        tasks.run_next_task()
         expected_calls = [
             call.ensure_transferring_state(),
             call.give_download_users_permissions(),
@@ -323,6 +326,7 @@ class TestTransferFunctions(TestCase):
         mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
         mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
         TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False)
+        tasks.run_next_task()
         expected_calls = [
             call.ensure_transferring_state(),
             call.update_owner_permissions(),
@@ -338,6 +342,7 @@ class TestTransferFunctions(TestCase):
         mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
         TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False,
                                             change_owner=False)
+        tasks.run_next_task()
         expected_calls = [
             call.ensure_transferring_state(),
             call.email_sender(),
@@ -352,6 +357,7 @@ class TestTransferFunctions(TestCase):
         mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
         TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False,
                                             change_owner=False, email_sender=False)
+        tasks.run_next_task()
         expected_calls = [
             call.ensure_transferring_state(),
             call.email_recipient(),
@@ -365,6 +371,7 @@ class TestTransferFunctions(TestCase):
         mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
         TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False,
                                             change_owner=False, email_sender=False, email_recipient=False)
+        tasks.run_next_task()
         expected_calls = [
             call.ensure_transferring_state(),
             call.mark_complete()
