@@ -11,6 +11,8 @@ from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket
 from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser, DataServiceError
 from gcb_web_auth.models import GroupManagerConnection
+from switchboard import userservice
+from django.core.signing import Signer
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -1524,3 +1526,201 @@ class EmailTemplateViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceT
         item_ids = set([item['id'] for item in response.data])
         self.assertEqual(item_ids, set([self.core1t1.id, self.core1t2.id, self.core2t1.id]))
         mock_get_users_group_names.assert_called_with(group_manager_connection, '555666')
+
+
+class DukeUserViewSetTestCase(AuthenticatedResourceTestCase):
+    @patch('d4s2_api_v2.api.get_users_for_query')
+    def test_get_list(self, mock_get_users_for_query):
+        mock_get_users_for_query.return_value = [userservice.User({
+            'givenName': 'Bob',
+            'sn': 'bob',
+            'netid': 'bob',
+            'display_name': 'Bob Bob',
+        })]
+        url = reverse('v2-duke-users-list') + "?query=Bob"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], "bob")
+
+    def test_get_fails_without_query(self):
+        url = reverse('v2-duke-users-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(str(response.data[0]), "The 'query' parameter is required.")
+
+    def test_get_fails_with_small_query(self):
+        url = reverse('v2-duke-users-list') + "?query=AB"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(str(response.data[0]), "The query parameter must be at least 3 characters.")
+
+    @patch('d4s2_api_v2.api.get_user_for_netid')
+    def test_get_current_user(self, mock_get_user_for_netid):
+        mock_get_user_for_netid.return_value = userservice.User({
+            'givenName': 'Bob',
+            'sn': 'bob',
+            'netid': 'bob',
+            'display_name': 'Bob Bob',
+        })
+        url = reverse('v2-duke-users-list') + "current-user/"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], "bob")
+
+
+class AzDeliveryViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTestCase):
+    def test_get_list(self):
+        other_delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="user1/rat",
+                container_url="http://127.0.0.1"),
+            from_netid="user1",
+            to_netid='user2',
+            share_user_ids=['user3', 'user4']
+        )
+        my_delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="api_user/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid=self.user.username,
+            to_netid='user2',
+            share_user_ids=['user3', 'user4']
+        )
+        to_me_delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="user2/cat",
+                container_url="http://127.0.0.1"),
+            from_netid='user2',
+            to_netid=self.user.username,
+            share_user_ids=['user3', 'user4']
+        )
+        url = reverse('v2-azdeliveries-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        paths = set([item["source_project"]["path"] for item in response.data])
+        self.assertEqual(paths, set(["api_user/mouse", 'user2/cat']))
+
+    def test_create_required_fields(self):
+        url = reverse('v2-azdeliveries-list')
+        response = self.client.post(url, {}, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('This field is required', str(response.data["source_project"]))
+        self.assertIn('This field is required', str(response.data["from_netid"]))
+        self.assertIn('This field is required', str(response.data["to_netid"]))
+
+    @patch('d4s2_api_v2.api.project_exists')
+    def test_create(self, mock_project_exists):
+        mock_project_exists.return_value = True
+        url = reverse('v2-azdeliveries-list')
+        response = self.client.post(url, {
+            'source_project': {
+                'path': 'api_user/mouse',
+                'container_url': 'http://127.0.0.1'
+            },
+            'from_netid': 'user2',
+            'to_netid': self.user.username,
+            'share_user_ids': ['user3', 'user4']
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['state'], State.NEW)
+        mock_project_exists.assert_called_with('http://127.0.0.1', 'api_user/mouse')
+
+    @patch('d4s2_api_v2.api.project_exists')
+    def test_create_project_not_found(self, mock_project_exists):
+        mock_project_exists.return_value = False
+        url = reverse('v2-azdeliveries-list')
+        response = self.client.post(url, {
+            'source_project': {
+                'path': 'api_user/mouse',
+                'container_url': 'http://127.0.0.1'
+            },
+            'from_netid': 'user2',
+            'to_netid': self.user.username,
+            'share_user_ids': ['user3', 'user4']
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(str(response.data[0]), 'Data Delivery Error: Unable to find project api_user/mouse.')
+
+    @patch('d4s2_api_v2.api.project_exists')
+    def test_create_project_delivery_already_exists(self, mock_project_exists):
+        AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="api_user/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid='user2',
+            to_netid=self.user.username,
+            share_user_ids=['user3', 'user4']
+        )
+        mock_project_exists.return_value = True
+        url = reverse('v2-azdeliveries-list')
+        response = self.client.post(url, {
+            'source_project': {
+                'path': 'api_user/mouse',
+                'container_url': 'http://127.0.0.1'
+            },
+            'from_netid': 'user2',
+            'to_netid': self.user.username,
+            'share_user_ids': ['user3', 'user4']
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(str(response.data[0]), 'Data Delivery Error: An active delivery for this project already exists.')
+
+    @patch('d4s2_api_v2.api.AzMessageFactory')
+    def test_send(self, mock_message_factory):
+        mock_message_factory.return_value.make_delivery_message.return_value = Mock(email_text="Email Details")
+        az_delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="api_user/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid='user2',
+            to_netid=self.user.username,
+            share_user_ids=['user3', 'user4'],
+            email_template_set=self.core2ts
+        )
+        url = reverse('v2-azdeliveries-list') + str(az_delivery.id) + '/send/'
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['delivery_email_text'], 'Email Details')
+        mock_message_factory.return_value.make_delivery_message.return_value.send.assert_called_with()
+        az_delivery.refresh_from_db()
+        self.assertEqual(az_delivery.state, State.NOTIFIED)
+
+
+    @patch('d4s2_api_v2.api.AzMessageFactory')
+    def test_cancel(self, mock_message_factory):
+        mock_message_factory.return_value.make_canceled_message.return_value = Mock(email_text="Email Details")
+        az_delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="api_user/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid='user2',
+            to_netid=self.user.username,
+            share_user_ids=['user3', 'user4'],
+            email_template_set=self.core2ts
+        )
+        url = reverse('v2-azdeliveries-list') + str(az_delivery.id) + '/cancel/'
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, 200)
+        mock_message_factory.return_value.make_canceled_message.return_value.send.assert_called_with()
+        az_delivery.refresh_from_db()
+        self.assertEqual(az_delivery.state, State.CANCELED)
+
+    def test_manifest(self):
+        signed_manifest = Signer().sign('{"A":1}')
+        az_delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="api_user/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid='user2',
+            to_netid=self.user.username,
+            share_user_ids=['user3', 'user4'],
+            email_template_set=self.core2ts,
+            manifest=AzObjectManifest.objects.create(content=signed_manifest)
+        )
+        url = reverse('v2-azdeliveries-list') + str(az_delivery.id) + '/manifest/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['manifest'], {'A': 1})
+        self.assertEqual(response.data['status'], 'Signature Verified')

@@ -2,7 +2,7 @@
 {% block title %}Delivery Accepted{% endblock %}
 {% block content %}
 <h4>Delivery Service</h4>
-{% if delivery_type == 's3' %}
+{% if delivery_type != 'dds' %}
 <p>
     Project {{ project_title }} is now being transferred to you.
 </p>

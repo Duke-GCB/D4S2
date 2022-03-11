@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from switchboard.dds_util import DDSUtil
 from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet, UserEmailTemplateSet, EmailTemplate
 from d4s2_api_v2.models import DDSDeliveryPreview
+from d4s2_api.models import AzDelivery, AzContainerPath, AzStorageConfig
+
 
 
 class DDSUserSerializer(serializers.Serializer):
@@ -232,3 +234,52 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
         model = EmailTemplate
         resource_name = 'email-template'
         fields = ('id', 'template_set', 'owner', 'type', 'help_text', 'body', 'subject')
+
+
+class DukeUserSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    username = serializers.CharField()
+    full_name = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()
+
+    class Meta:
+        resource_name = 'duke-users'
+
+
+class AzContainerPathSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AzContainerPath
+        resource_name = 'azcontainerpath'
+        fields = ('id', 'path', 'container_url')
+
+
+class AzDeliverySerializer(serializers.ModelSerializer):
+    share_user_ids = serializers.ListField(child=serializers.CharField(), required=False)
+    email_template_set = serializers.PrimaryKeyRelatedField(queryset=EmailTemplateSet.objects.all(), required=False)
+    source_project = AzContainerPathSerializer()
+    destination_project = AzContainerPathSerializer(read_only=True)
+    complete = serializers.SerializerMethodField()
+
+    def get_complete(self, obj):
+        return obj.is_complete()
+
+    class Meta:
+        model = AzDelivery
+        resource_name = 'azdelivery'
+        fields = ('id', 'source_project', 'from_netid', 'destination_project', 'to_netid', 'state', 'user_message',
+                  'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set',
+                  'complete')
+        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set')
+
+    def create(self, validated_data):
+        validated_data['source_project'] = AzContainerPath.objects.create(**validated_data['source_project'])
+        return super().create(validated_data)
+
+
+class AzStorageConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AzStorageConfig
+        resource_name = 'azstorageconfig'
+        fields = ('id', 'name', 'subscription_id', 'resource_group', 'storage_account', 'container_name')

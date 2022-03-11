@@ -16,6 +16,8 @@ router.register(r's3-buckets', api.S3BucketViewSet, 'v2-s3bucket')
 router.register(r's3-deliveries', api.S3DeliveryViewSet, 'v2-s3delivery')
 router.register(r'email-template-sets', api.EmailTemplateSetViewSet, 'v2-emailtemplatesets')
 router.register(r'email-templates', api.EmailTemplateViewSet, 'v2-emailtemplates')
+router.register(r'duke-users', api.DukeUserViewSet, 'v2-duke-users')
+router.register(r'az-deliveries', api.AzDeliveryViewSet, 'v2-azdeliveries')
 
 urlpatterns = [
     url(r'^', include(router.urls)),

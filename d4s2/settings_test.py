@@ -32,3 +32,4 @@ DATABASES = {
 # To enable SMTP email, uncomment EMAIL_BACKEND and supply an SMTP host
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = ''
+USERNAME_EMAIL_HOST = ""

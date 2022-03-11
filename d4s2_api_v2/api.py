@@ -1,5 +1,6 @@
-from rest_framework import viewsets, permissions, status, generics
-from rest_framework.exceptions import APIException
+import json
+from rest_framework import viewsets, permissions, status, generics, mixins
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
@@ -10,13 +11,19 @@ from switchboard.s3_util import S3BucketUtil
 from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDSProjectTransferSerializer, \
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer, DDSAuthProviderSerializer, DDSAffiliateSerializer, \
-    AddUserSerializer, DDSProjectSummarySerializer, EmailTemplateSetSerializer, EmailTemplateSerializer
+    AddUserSerializer, DDSProjectSummarySerializer, EmailTemplateSetSerializer, EmailTemplateSerializer, \
+    DukeUserSerializer, AzDeliverySerializer, AzStorageConfigSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateSet, \
     EmailTemplate
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
     ModelWithEmailTemplateSetMixin
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
 from d4s2_api_v2.models import DDSDeliveryPreview
+from d4s2_api.models import AzDelivery, State, AzStorageConfig
+from switchboard.userservice import get_users_for_query, get_user_for_netid, get_netid_from_user
+from switchboard.azure_util import project_exists, AzMessageFactory
+from django.core.signing import Signer, BadSignature
+from rest_framework.authtoken.models import Token
 
 
 class DataServiceUnavailable(APIException):
@@ -378,3 +385,108 @@ class EmailTemplateViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = EmailTemplate.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('template_set', )
+
+
+def get_user_netid(request):
+    return request.user.username.replace("@duke.edu", "")
+
+
+class DukeUserViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = DukeUserSerializer
+
+    def get_queryset(self):
+        query = self.request.query_params.get('query', None)
+        if not query:
+            raise ValidationError(detail="The 'query' parameter is required.", code=400)
+        if len(query) < 3:
+            raise ValidationError(detail="The query parameter must be at least 3 characters.", code=400)
+        return get_users_for_query(query)
+
+    def get_object(self):
+        pk = self.kwargs.get('pk')
+        return get_user_for_netid(netid=pk)
+
+    @action(detail=False, methods=['get'], url_path='current-user')
+    def current_user(self, request):
+        # strip off trailing @ and domain from username
+        netid = get_netid_from_user(self.request.user)
+        person = get_user_for_netid(netid)
+        serializer = DukeUserSerializer(person)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
+                        mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    """
+    API endpoint that allows deliveries to be viewed or edited.
+    """
+    serializer_class = AzDeliverySerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    # Allow users to filter to avoid the active delivery error message in create
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('from_netid', 'to_netid', 'source_project__container_url', 'source_project__path')
+
+    def get_queryset(self):
+        """
+        Users can only see the deliveries they sent or received.
+        """
+        request_netid = get_user_netid(self.request)
+        return AzDelivery.objects.filter(Q(from_netid=request_netid) | Q(to_netid=request_netid))
+
+    def before_saving_new_model(self, serializer):
+        validated_data = serializer.validated_data
+        existing_delivery = AzDelivery.get_incomplete_delivery(
+            from_netid=validated_data["from_netid"],
+            source_container_url=validated_data["source_project"]["container_url"],
+            source_path=validated_data["source_project"]["path"]
+        )
+        if existing_delivery:
+            raise ValidationError("Data Delivery Error: An active delivery for this project already exists.")
+        source_project = validated_data["source_project"]
+        if not project_exists(source_project["container_url"], source_project["path"]):
+            raise ValidationError("Data Delivery Error: Unable to find project {}.".format(source_project["path"]))
+
+    @action(detail=True, methods=['POST'])
+    def send(self, request, pk=None):
+        delivery = self.get_object()
+        self.prevent_null_email_template_set()
+        if not delivery.is_new() and not get_force_param(request):
+            raise AlreadyNotifiedException(detail='Delivery already in progress')
+        accept_url = build_accept_url(request, delivery.id, 'azure')
+        message_factory = AzMessageFactory(delivery, request.user)
+        message = message_factory.make_delivery_message(accept_url)
+        message.send()
+        delivery.mark_notified(message.email_text)
+        return self.retrieve(request)
+
+    @action(detail=True, methods=['POST'])
+    def cancel(self, request, pk=None):
+        delivery = self.get_object()
+        self.prevent_null_email_template_set()
+        if delivery.state != State.NEW and delivery.state != State.NOTIFIED:
+              raise ValidationError('Only deliveries in new and notified state can be canceled.')
+        message_factory = AzMessageFactory(delivery, request.user)
+        message = message_factory.make_canceled_message()
+        message.send()
+        delivery.mark_canceled()
+        return self.retrieve(request)
+
+    @action(detail=True, methods=['GET'])
+    def manifest(self, request, pk=None):
+        delivery = self.get_object()
+        manifest = None
+        status = "None"
+        if delivery.manifest:
+            try:
+                signer = Signer()
+                manifest = json.loads(signer.unsign(delivery.manifest.content))
+                status = "Signature Verified"
+            except BadSignature:
+                status = "Invalid Signature"
+        delivery_serializer = AzDeliverySerializer(delivery)
+        return Response(data={
+            "delivery": delivery_serializer.data,
+            "status": status,
+            "manifest": manifest
+        })

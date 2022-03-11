@@ -596,3 +596,77 @@ class ShareRoleTestCase(TestCase):
     def test_email_template_name(self):
         self.assertEqual(ShareRole.email_template_name('somerole'), 'share_somerole')
         self.assertEqual(ShareRole.email_template_name('file_downloader'), 'share_file_downloader')
+
+
+class AzDeliveryTestCase(TestCase):
+    def test_delivery_workflow(self):
+        # user1 creates a delivery of project mouse to user2
+        delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path='user1/mouse',
+                container_url='http://127.0.0.1'),
+            from_netid='user1',
+            to_netid='user2',
+            share_user_ids=['user3', 'user4']
+        )
+        self.assertEqual(delivery.transfer_id, delivery.id)
+        self.assertEqual(delivery.get_simple_project_name(), 'mouse')
+        self.assertEqual(delivery.make_project_url(), 'http://127.0.0.1/user1/mouse')
+
+        # user2 accepts delivery and populates destination_project, manifest is created
+        delivery.destination_project = AzContainerPath.objects.create(path='user2/mouseRNA',
+                                                                      container_url='http://127.0.0.1')
+        delivery.manifest = AzObjectManifest.objects.create(content='Details about files')
+        delivery.state = State.ACCEPTED
+        delivery.save()
+        self.assertEqual(delivery.make_project_url(), 'http://127.0.0.1/user2/mouseRNA')
+
+    def test_get_incomplete_delivery(self):
+        from_netid = "user1"
+        source_container_url = "http://127.0.0.1"
+        source_path = "user1/mouse"
+        self.assertEqual(AzDelivery.get_incomplete_delivery(from_netid, source_container_url, source_path), None)
+        delivery1 = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path=source_path,
+                container_url=source_container_url),
+            from_netid=from_netid,
+            to_netid='user2',
+            share_user_ids=['user3', 'user4']
+        )
+        self.assertEqual(AzDelivery.get_incomplete_delivery(from_netid, source_container_url, source_path), delivery1)
+        delivery1.state = State.ACCEPTED
+        delivery1.save()
+        self.assertEqual(AzDelivery.get_incomplete_delivery(from_netid, source_container_url, source_path), None)
+        delivery2 = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path=source_path,
+                container_url=source_container_url),
+            from_netid=from_netid,
+            to_netid='user2',
+            share_user_ids=['user3', 'user4']
+        )
+        self.assertEqual(AzDelivery.get_incomplete_delivery(from_netid, source_container_url, source_path), delivery2)
+
+
+class AzDeliveryErrorTestCase(TestCase):
+    def test_create(self):
+        delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="user1/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid="user1",
+            to_netid='user2',
+            share_user_ids=['user3', 'user4']
+        )
+        AzDeliveryError.objects.create(message="Error", delivery=delivery)
+
+
+class AzStorageConfigTestCase(TestCase):
+    def test_create(self):
+        AzStorageConfig.objects.create(
+            subscription_id='sub1',
+            resource_group='rg1',
+            storage_account='sa1',
+            container_name='bucket1'
+        )

@@ -9,7 +9,9 @@ except ImportError:
 from d4s2_api.models import State
 from switchboard.s3_util import S3Exception, S3DeliveryType, S3NotRecipientException
 from switchboard.dds_util import DDSDeliveryType, DDSNotRecipientException
+from switchboard.azure_util import AzDeliveryType, AzNotRecipientException, AzDestinationProjectAlreadyExists
 from d4s2_api.utils import MessageDirection
+
 
 MISSING_TRANSFER_ID_MSG = 'Missing transfer ID.'
 TRANSFER_ID_NOT_FOUND = 'Transfer ID not found.'
@@ -62,7 +64,7 @@ class DeliveryViewBase(TemplateView):
                 context.update(details.get_context())
                 context['delivery_type'] = self.delivery_type.name
             return context
-        except (S3NotRecipientException, DDSNotRecipientException):
+        except (S3NotRecipientException, DDSNotRecipientException, AzNotRecipientException):
             self.set_error_details(403, NOT_RECIPIENT_MSG)
 
     def _get_request_var(self, key):
@@ -78,6 +80,8 @@ class DeliveryViewBase(TemplateView):
         delivery_type_name = self._get_request_var('delivery_type')
         if delivery_type_name == S3DeliveryType.name:
             return S3DeliveryType
+        elif delivery_type_name == AzDeliveryType.name:
+            return AzDeliveryType
         else:
             return DDSDeliveryType
 
@@ -85,7 +89,7 @@ class DeliveryViewBase(TemplateView):
         transfer_id = self._get_request_var('transfer_id')
         if transfer_id:
             try:
-                return self.delivery_type.delivery_cls.objects.get(transfer_id=transfer_id)
+                return self.delivery_type.get_delivery(transfer_id=transfer_id)
             except self.delivery_type.delivery_cls.DoesNotExist as e:
                 self.set_error_details(404, TRANSFER_ID_NOT_FOUND)
         else:
@@ -167,6 +171,8 @@ class ProcessView(DeliveryViewBase):
         request = self.request
         try:
             self.warning_message = self.delivery_type.transfer_delivery(delivery, request.user)
+        except AzDestinationProjectAlreadyExists as dpae:
+            self.set_error_details(400, str(dpae))
         except S3Exception as e:
             self.set_error_details(500, 'Unable to transfer s3 ownership: {}'.format(str(e)))
         except DataServiceError as e:
