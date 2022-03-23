@@ -4,6 +4,7 @@ from django.test import TestCase
 from d4s2_api.models import *
 from django.contrib.auth.models import User
 import datetime
+from mock import Mock
 
 
 class TransferBaseTestCase(TestCase):
@@ -317,6 +318,11 @@ class EmailTemplateTestCase(TestCase):
         template_name = ShareRole.email_template_name(ShareRole.VIEW)
         self.assertEqual(self.template_set.template_for_name(template_name), view_template)
 
+    def test_get_storage_name(self):
+        self.assertEqual(self.template_set.get_storage_name(), "Duke Data Service")
+        azure_template_set = EmailTemplateSet.objects.create(name='template_set2', storage=StorageTypes.AZURE)
+        self.assertEqual(azure_template_set.get_storage_name(), "Azure Blob Storage")
+
 
 class EmailTemplateSetTestCase(TestCase):
 
@@ -352,6 +358,36 @@ class EmailTemplateSetTestCase(TestCase):
                                                        cc_address='cc@domain.com')
         template_set.clean_fields()
         self.assertEqual(template_set.cc_address, 'cc@domain.com')
+
+    def test_get_for_user(self):
+        template_set = EmailTemplateSet.objects.create(name='template_set')
+        self.assertEqual(template_set.storage, StorageTypes.DDS)
+        user = User.objects.create(username='test_user')
+        UserEmailTemplateSet.objects.create(user=user, email_template_set=template_set)
+        found = EmailTemplateSet.get_for_user(user)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found.first().id, template_set.id)
+        found = EmailTemplateSet.get_for_user(user, StorageTypes.DDS)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found.first().id, template_set.id)
+        found = EmailTemplateSet.get_for_user(user, StorageTypes.AZURE)
+        self.assertEqual(len(found), 0)
+
+    def test_user_is_setup(self):
+        template_set = EmailTemplateSet.objects.create(name='template_set')
+        self.assertEqual(template_set.storage, StorageTypes.DDS)
+        template_set_azure = EmailTemplateSet.objects.create(name='template_set_azure', storage=StorageTypes.AZURE)
+        self.assertEqual(template_set_azure.storage, StorageTypes.AZURE)
+        user = User.objects.create(username='test_user')
+        self.assertFalse(UserEmailTemplateSet.user_is_setup(user, StorageTypes.DDS))
+        self.assertFalse(UserEmailTemplateSet.user_is_setup(user, StorageTypes.AZURE))
+        UserEmailTemplateSet.objects.create(user=user, email_template_set=template_set, storage=StorageTypes.DDS)
+        self.assertTrue(UserEmailTemplateSet.user_is_setup(user, StorageTypes.DDS))
+        self.assertFalse(UserEmailTemplateSet.user_is_setup(user, StorageTypes.AZURE))
+        UserEmailTemplateSet.objects.create(user=user, email_template_set=template_set_azure,
+                                            storage=StorageTypes.AZURE)
+        self.assertTrue(UserEmailTemplateSet.user_is_setup(user, StorageTypes.DDS))
+        self.assertTrue(UserEmailTemplateSet.user_is_setup(user, StorageTypes.AZURE))
 
 
 class S3EndpointTestCase(TestCase):

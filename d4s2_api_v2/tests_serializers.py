@@ -1,7 +1,7 @@
 from django.test import TestCase
 from d4s2_api_v2.serializers import DDSDeliveryPreviewSerializer, UserSerializer
 from django.contrib.auth.models import User as django_user
-from mock import patch
+from mock import patch, call
 
 
 class DeliveryPreviewSerializerTestCase(TestCase):
@@ -45,4 +45,8 @@ class UserSerializerSerializerTestCase(TestCase):
         serializer = UserSerializer(user)
         self.assertEqual(serializer.data['username'], user.username)
         self.assertEqual(serializer.data['setup_for_delivery'], True)
-        mock_user_email_template_set.user_is_setup.assert_called_with(user)
+        self.assertEqual(serializer.data['setup_for_cloud_delivery'], True)
+        mock_user_email_template_set.user_is_setup.assert_has_calls([
+            call(user, 'dds'),
+            call(user, 'azure'),
+        ])

@@ -3,7 +3,8 @@ from background_task.tasks import tasks
 from mock import patch, ANY, Mock, call
 from switchboard.azure_util import get_details_from_container_url, make_acl, project_exists, AzDataLakeProject, \
     AzUsers, AzDeliveryDetails, AzDeliveryType, AzDelivery, AzContainerPath, State, TransferFunctions, AzureTransfer, \
-    User, settings, AzDeliveryError, AzStorageConfig, AzNotRecipientException, AzDestinationProjectAlreadyExists
+    User, settings, AzDeliveryError, AzStorageConfig, AzNotRecipientException, AzDestinationProjectAlreadyExists, \
+    AzureProjectSummary
 from d4s2_api.utils import MessageDirection
 from d4s2_api.models import AzTransferStates
 from django.conf import settings
@@ -88,6 +89,7 @@ class TestAzDataLakeProject(TestCase):
             mock_dir,
             mock_file
         ]
+
         fc = fsc.get_file_client.return_value
         fc.get_file_properties.return_value = {
             'lease': 'SomeValue',
@@ -98,6 +100,7 @@ class TestAzDataLakeProject(TestCase):
         }
         manifest = self.project.get_file_manifest()
         self.assertEqual(manifest, [
+            mock_dir,
             {
                 'content_settings': {
                     'content_type': 'text/plain',
@@ -555,3 +558,40 @@ class TestAzureTransfer(TestCase):
         self.assertEqual(error.message, "Oops")
         self.delivery.refresh_from_db()
         self.assertEqual(self.delivery.state, State.FAILED)
+
+
+class TestAzureProjectSummary(TestCase):
+    def test_apply_path_dict(self):
+        summary = AzureProjectSummary(id='1', based_on='somelocation')
+        self.assertEqual(summary.total_size, 0)
+        self.assertEqual(summary.file_count, 0)
+        self.assertEqual(summary.folder_count, 0)
+        self.assertEqual(summary.root_folder_count, 0)
+        self.assertEqual(summary.sub_folder_count, 0)
+        summary.apply_path_dict({
+            "is_directory": True,
+            "name": "netid/projectname/top.txt"
+        })
+        self.assertEqual(summary.total_size, 0)
+        self.assertEqual(summary.file_count, 0)
+        self.assertEqual(summary.folder_count, 1)
+        self.assertEqual(summary.root_folder_count, 1)
+        self.assertEqual(summary.sub_folder_count, 0)
+        summary.apply_path_dict({
+            "is_directory": True,
+            "name": "netid/projectname/data/subdir.txt"
+        })
+        self.assertEqual(summary.total_size, 0)
+        self.assertEqual(summary.file_count, 0)
+        self.assertEqual(summary.folder_count, 2)
+        self.assertEqual(summary.root_folder_count, 1)
+        self.assertEqual(summary.sub_folder_count, 1)
+        summary.apply_path_dict({
+            "is_directory": False,
+            "content_length": 1000
+        })
+        self.assertEqual(summary.total_size, 1000)
+        self.assertEqual(summary.file_count, 1)
+        self.assertEqual(summary.folder_count, 2)
+        self.assertEqual(summary.root_folder_count, 1)
+        self.assertEqual(summary.sub_folder_count, 1)

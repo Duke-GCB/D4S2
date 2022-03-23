@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet
+from d4s2_api.models import DDSDelivery, Share, State, UserEmailTemplateSet, EmailTemplateSet, StorageTypes
 from d4s2_api_v1.serializers import DeliverySerializer, ShareSerializer
 from switchboard.dds_util import DDSUtil, DDSMessageFactory
 from django.core.urlresolvers import reverse
@@ -43,6 +43,9 @@ class ModelWithEmailTemplateSetMixin(object):
     def before_saving_new_model(self, serializer):
         pass
 
+    def get_storage(self):
+        return StorageTypes.DDS
+
     def get_email_template_for_request(self):
         """
         Given a request lookup the email_template associated with the user of the request.
@@ -53,8 +56,9 @@ class ModelWithEmailTemplateSetMixin(object):
         try:
             email_template_set_id = self.request.data.get('email_template_set_id')
             if email_template_set_id:
-                return EmailTemplateSet.get_for_user(self.request.user).get(pk=email_template_set_id)
-            user_email_template_set = UserEmailTemplateSet.objects.get(user=self.request.user)
+                return EmailTemplateSet.get_for_user(self.request.user, self.get_storage()).get(pk=email_template_set_id)
+            user_email_template_set = UserEmailTemplateSet.objects.get(user=self.request.user,
+                                                                       storage=self.get_storage())
             return user_email_template_set.email_template_set
         except UserEmailTemplateSet.DoesNotExist:
             raise ValidationError(EMAIL_TEMPLATES_NOT_SETUP_MSG)
@@ -94,7 +98,7 @@ class DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
         self.prevent_null_email_template_set()
         if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
-        accept_url = build_accept_url(request, delivery.transfer_id, 'dds')
+        accept_url = build_accept_url(request, delivery.transfer_id, StorageTypes.DDS)
         message_factory = DDSMessageFactory(delivery, request.user)
         message = message_factory.make_delivery_message(accept_url)
         message.send()

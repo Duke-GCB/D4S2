@@ -12,16 +12,17 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     UserSerializer, S3EndpointSerializer, S3UserSerializer, S3BucketSerializer, S3DeliverySerializer, \
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer, DDSAuthProviderSerializer, DDSAffiliateSerializer, \
     AddUserSerializer, DDSProjectSummarySerializer, EmailTemplateSetSerializer, EmailTemplateSerializer, \
-    DukeUserSerializer, AzDeliverySerializer, AzStorageConfigSerializer
+    DukeUserSerializer, AzDeliverySerializer, AzDeliveryUpdateSerializer, AzStorageConfigSerializer, AzDeliverySummarySerializer, \
+    AzDeliveryPreviewSerializer, StorageTypes
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateSet, \
     EmailTemplate
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
     ModelWithEmailTemplateSetMixin
 from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperation
-from d4s2_api_v2.models import DDSDeliveryPreview
+from d4s2_api_v2.models import DDSDeliveryPreview, AzDeliveryPreview
 from d4s2_api.models import AzDelivery, State, AzStorageConfig
 from switchboard.userservice import get_users_for_query, get_user_for_netid, get_netid_from_user
-from switchboard.azure_util import project_exists, AzMessageFactory
+from switchboard.azure_util import project_exists, AzMessageFactory, create_project_summary
 from django.core.signing import Signer, BadSignature
 from rest_framework.authtoken.models import Token
 
@@ -271,6 +272,9 @@ class S3DeliveryViewSet(ModelWithEmailTemplateSetMixin, viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = S3DeliverySerializer
 
+    def get_storage(self):
+        return StorageTypes.S3
+
     def get_queryset(self):
         """
         Users can only see the deliveries they sent or received.
@@ -415,9 +419,9 @@ class DukeUserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = DukeUserSerializer(person)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
-                        mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+                        mixins.RetrieveModelMixin, mixins.ListModelMixin, mixins.UpdateModelMixin,
+                        viewsets.GenericViewSet):
     """
     API endpoint that allows deliveries to be viewed or edited.
     """
@@ -426,6 +430,17 @@ class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
     # Allow users to filter to avoid the active delivery error message in create
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('from_netid', 'to_netid', 'source_project__container_url', 'source_project__path')
+
+    def get_storage(self):
+        return StorageTypes.AZURE
+
+    def get_serializer_class(self):
+        serializer_class = self.serializer_class
+
+        if self.request.method == 'PUT':
+            serializer_class = AzDeliveryUpdateSerializer
+
+        return serializer_class
 
     def get_queryset(self):
         """
@@ -453,7 +468,7 @@ class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
         self.prevent_null_email_template_set()
         if not delivery.is_new() and not get_force_param(request):
             raise AlreadyNotifiedException(detail='Delivery already in progress')
-        accept_url = build_accept_url(request, delivery.id, 'azure')
+        accept_url = build_accept_url(request, delivery.id, StorageTypes.AZURE)
         message_factory = AzMessageFactory(delivery, request.user)
         message = message_factory.make_delivery_message(accept_url)
         message.send()
@@ -484,9 +499,41 @@ class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
                 status = "Signature Verified"
             except BadSignature:
                 status = "Invalid Signature"
-        delivery_serializer = AzDeliverySerializer(delivery)
+        delivery_serializer = AzDeliverySerializer(delivery, context={'request': request})
         return Response(data={
             "delivery": delivery_serializer.data,
             "status": status,
             "manifest": manifest
         })
+
+    @action(detail=True, methods=['get'], url_path='summary', serializer_class=AzDeliverySummarySerializer)
+    def summary(self, request, pk=None):
+        delivery = self.get_object()
+        summary = create_project_summary(delivery)
+        serializer = AzDeliverySummarySerializer(summary)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AzDeliveryPreviewView(ModelWithEmailTemplateSetMixin, generics.CreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = AzDeliveryPreviewSerializer
+
+    def get_storage(self):
+        return StorageTypes.AZURE
+
+    def create(self, request, *args, **kwargs):
+        email_template_set = self.get_email_template_for_request()
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        delivery_preview = AzDeliveryPreview(**serializer.validated_data)
+        delivery_preview.email_template_set = email_template_set
+
+        accept_url = build_accept_url(request, delivery_preview.transfer_id, StorageTypes.AZURE)
+        message_factory = AzMessageFactory(delivery_preview, self.request.user)
+        message = message_factory.make_delivery_message(accept_url)
+        delivery_preview.delivery_email_text = message.email_text
+        serializer = self.get_serializer(instance=delivery_preview)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

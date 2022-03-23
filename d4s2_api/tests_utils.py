@@ -1,7 +1,7 @@
 from mock import patch, Mock, MagicMock, call, create_autospec
 from django.test import TestCase
-from d4s2_api.utils import MessageDirection, Message, MessageFactory
-from switchboard.dds_util import DeliveryDetails
+from d4s2_api.utils import MessageDirection, Message, MessageFactory, get_netid_from_user
+from switchboard.dds_util import DeliveryDetails, StorageTypes
 
 
 class MessageDirectionTestCase(TestCase):
@@ -48,6 +48,7 @@ class MessageFactoryTestCase(TestCase):
 
     def setUp(self):
         self.delivery_details = create_autospec(DeliveryDetails)
+        self.delivery_details.storage = 'dds'
         self.email_template_set = Mock()
         self.delivery_details.email_template_set = self.email_template_set
         self.email_template_set.template_for_name.return_value = Mock(subject='subject', body='body')
@@ -106,6 +107,7 @@ class MessageFactoryTestCase(TestCase):
     def test_get_reply_to_address_uses_template_set(self, mock_use_email_template_set):
         mock_user = Mock()
         delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.storage = 'dds'
         delivery_details.email_template_set = Mock()
         mock_use_email_template_set.user_is_setup.return_value = True
         mock_email_template_set = Mock(reply_address='reply@email.com')
@@ -117,6 +119,7 @@ class MessageFactoryTestCase(TestCase):
 
     def test_get_reply_to_address_falls_back_to_sender(self):
         delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.storage = 'dds'
         delivery_details.email_template_set = Mock()
         factory = MessageFactory(delivery_details, None)
         sender = Mock(email='sender@email.com')
@@ -125,6 +128,7 @@ class MessageFactoryTestCase(TestCase):
 
     def test_get_cc_address_uses_template_set(self):
         delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.storage = 'dds'
         delivery_details.email_template_set = Mock(cc_address='cc@email.com')
         factory = MessageFactory(delivery_details, None)
         cc_address = factory.get_cc_address()
@@ -136,3 +140,23 @@ class MessageFactoryTestCase(TestCase):
         factory = MessageFactory(delivery_details, None)
         cc_address = factory.get_cc_address()
         self.assertIsNone(cc_address)
+
+    @patch('d4s2_api.utils.UserEmailTemplateSet')
+    def test_get_reply_to_address(self, mock_user_email_template_set):
+        mock_user_email_template_set.user_is_setup.return_value = False
+        mock_user_email_template_set.objects.get.return_value = Mock(
+            email_template_set=Mock(reply_address="important@email.com")
+        )
+        delivery_details = create_autospec(DeliveryDetails)
+        delivery_details.storage = StorageTypes.DDS
+        delivery_details.email_template_set = Mock(cc_address=None)
+        factory = MessageFactory(delivery_details, None)
+        self.assertEqual(factory.get_reply_to_address(Mock(email='test@email.com')), 'test@email.com')
+        mock_user_email_template_set.user_is_setup.return_value = True
+        self.assertEqual(factory.get_reply_to_address(Mock(email='test@email.com')), 'important@email.com')
+
+
+class TestFuncs(TestCase):
+    def test_get_netid_from_user(self):
+        self.assertEqual(get_netid_from_user(user=Mock(username='joe')), 'joe')
+        self.assertEqual(get_netid_from_user(user=Mock(username='joe@email.com')), 'joe')
