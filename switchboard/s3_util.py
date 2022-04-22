@@ -1,5 +1,5 @@
 from d4s2_api.models import S3Delivery, EmailTemplate, S3User, S3UserTypes, S3DeliveryError, State, S3ObjectManifest, \
-    EmailTemplateException
+    EmailTemplateException, StorageTypes
 from d4s2_api.utils import MessageFactory, MessageDirection
 import boto3
 import botocore
@@ -157,6 +157,7 @@ class S3DeliveryUtil(object):
 
 class S3DeliveryDetails(object):
     def __init__(self, s3_delivery, user):
+        self.storage = StorageTypes.S3
         self.s3_delivery = s3_delivery
         self.email_template_set = s3_delivery.email_template_set
         self.user = user

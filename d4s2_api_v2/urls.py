@@ -21,5 +21,7 @@ router.register(r'az-deliveries', api.AzDeliveryViewSet, 'v2-azdeliveries')
 
 urlpatterns = [
     url(r'^', include(router.urls)),
-    url(r'delivery-previews', api.DeliveryPreviewView.as_view(), name='v2-delivery_previews')
+    url(r'az-delivery-previews', api.AzDeliveryPreviewView.as_view(), name='v2-az-delivery_previews'),
+    url(r'delivery-previews', api.DeliveryPreviewView.as_view(), name='v2-delivery_previews'),
+
 ]

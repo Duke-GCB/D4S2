@@ -448,7 +448,7 @@ class ModelWithEmailTemplateSetMixinTestCase(AuthenticatedResourceTestCase):
         mixin.request.data = {'email_template_set_id': other_email_template_set.id}
         email_template_set = mixin.get_email_template_for_request()
         self.assertEqual(email_template_set, mock_email_template_set.get_for_user.return_value.get.return_value)
-        mock_email_template_set.get_for_user.assert_called_with(mixin.request.user)
+        mock_email_template_set.get_for_user.assert_called_with(mixin.request.user, 'dds')
         mock_email_template_set.get_for_user.return_value.get.assert_called_with(pk=other_email_template_set.id)
 
     def test_prevent_null_email_template_set(self):

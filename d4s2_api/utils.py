@@ -1,5 +1,6 @@
 from switchboard.mailer import generate_message
 from d4s2_api.models import UserEmailTemplateSet
+import re
 
 class MessageDirection(object):
     ToRecipient = 0
@@ -74,8 +75,11 @@ class MessageFactory(object):
         return self._make_message(email_template)
 
     def get_reply_to_address(self, sender):
-        if UserEmailTemplateSet.user_is_setup(self.user):
-            reply_address = UserEmailTemplateSet.objects.get(user=self.user).email_template_set.reply_address
+        if UserEmailTemplateSet.user_is_setup(self.user, self.delivery_details.storage):
+            user_email_template_set = UserEmailTemplateSet.objects.get(
+                user=self.user,
+                storage=self.delivery_details.storage)
+            reply_address = user_email_template_set.email_template_set.reply_address
             if reply_address:
                 return reply_address
         return sender.email
@@ -104,3 +108,7 @@ class MessageFactory(object):
 
         except ValueError as e:
             raise RuntimeError('Unable to retrieve information to build message: {}'.format(str(e)))
+
+
+def get_netid_from_user(user):
+    return re.sub("@.*", "", user.username)

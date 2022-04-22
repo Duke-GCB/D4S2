@@ -1,7 +1,7 @@
 from django.conf import settings
 import socket
 from ddsc.core.remotestore import RemoteStore
-from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, UserEmailTemplateSet
+from d4s2_api.models import EmailTemplate, DDSDelivery, ShareRole, Share, UserEmailTemplateSet, StorageTypes
 from gcb_web_auth.backends.dukeds import make_auth_config
 from gcb_web_auth.utils import get_dds_token, get_dds_config_for_credentials, get_default_dds_endpoint
 from gcb_web_auth.models import DDSUserCredential
@@ -330,6 +330,7 @@ class DDSProjectTransfer(DDSBase):
 
 class DeliveryDetails(object):
     def __init__(self, delivery_or_share, user):
+        self.storage = StorageTypes.DDS
         self.delivery = delivery_or_share
         self.ddsutil = DDSUtil(user)
         self.email_template_set = delivery_or_share.email_template_set
@@ -522,7 +523,7 @@ class DeliveryUtil(object):
 
 
 class DDSDeliveryType:
-    name = 'dds'
+    name = StorageTypes.DDS
     delivery_cls = DDSDelivery
     transfer_in_background = False
 

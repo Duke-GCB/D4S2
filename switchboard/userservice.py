@@ -2,6 +2,7 @@ from django.conf import settings
 from rest_framework.exceptions import APIException, NotFound
 import requests
 import re
+from d4s2_api.utils import get_netid_from_user
 
 
 class UserServiceException(APIException):
@@ -67,10 +68,6 @@ def get_user_for_netid(netid):
     if len(resp) != 1:
         raise NotFound("No user found for netid {}".format(netid))
     return User(resp[0])
-
-
-def get_netid_from_user(user):
-    return re.sub("@.*", "", user.username)
 
 
 def create_email_from_netid(netid):

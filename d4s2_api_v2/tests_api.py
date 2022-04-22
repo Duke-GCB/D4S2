@@ -10,6 +10,7 @@ from d4s2_api.models import *
 from mock import call
 from switchboard.s3_util import S3Exception, S3NoSuchBucket
 from switchboard.dds_util import DDSAuthProvider, DDSAffiliate, DDSUser, DataServiceError
+from switchboard.azure_util import AzureProjectSummary
 from gcb_web_auth.models import GroupManagerConnection
 from switchboard import userservice
 from django.core.signing import Signer
@@ -996,12 +997,15 @@ class S3DeliveryViewSetTestCase(APITestCase):
                                                              owner=self.other_endpoint_s3_user,
                                                              endpoint=self.endpoint2)
 
-        self.user1_email_template_set = EmailTemplateSet.objects.create(name='user1set')
-        UserEmailTemplateSet.objects.create(user=self.normal_user1, email_template_set=self.user1_email_template_set)
-        self.user2_email_template_set = EmailTemplateSet.objects.create(name='user2set')
-        UserEmailTemplateSet.objects.create(user=self.normal_user2, email_template_set=self.user2_email_template_set)
-        self.user3_email_template_set = EmailTemplateSet.objects.create(name='user3set')
-        UserEmailTemplateSet.objects.create(user=self.normal_user3, email_template_set=self.user3_email_template_set)
+        self.user1_email_template_set = EmailTemplateSet.objects.create(name='user1set', storage=StorageTypes.S3)
+        UserEmailTemplateSet.objects.create(user=self.normal_user1, email_template_set=self.user1_email_template_set,
+                                            storage=StorageTypes.S3)
+        self.user2_email_template_set = EmailTemplateSet.objects.create(name='user2set', storage=StorageTypes.S3)
+        UserEmailTemplateSet.objects.create(user=self.normal_user2, email_template_set=self.user2_email_template_set,
+                                            storage=StorageTypes.S3)
+        self.user3_email_template_set = EmailTemplateSet.objects.create(name='user3set', storage=StorageTypes.S3)
+        UserEmailTemplateSet.objects.create(user=self.normal_user3, email_template_set=self.user3_email_template_set,
+                                            storage=StorageTypes.S3)
 
     def login_user1(self):
         self.client.login(username='user1', password='user1')
@@ -1423,7 +1427,7 @@ class EmailTemplateSetSetup(object):
             body="my body",
             subject="some subject",
         )
-        UserEmailTemplateSet.objects.create(
+        self.user_email_template_set = UserEmailTemplateSet.objects.create(
             user=self.user,
             email_template_set=self.core1ts
         )
@@ -1570,6 +1574,15 @@ class DukeUserViewSetTestCase(AuthenticatedResourceTestCase):
 
 
 class AzDeliveryViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user_email_template_set.storage = StorageTypes.AZURE
+        self.user_email_template_set.save()
+        self.core1ts.storage = StorageTypes.AZURE
+        self.core1ts.save()
+        self.core2ts.storage = StorageTypes.AZURE
+        self.core2ts.save()
+
     def test_get_list(self):
         other_delivery = AzDelivery.objects.create(
             source_project=AzContainerPath.objects.create(
@@ -1667,6 +1680,24 @@ class AzDeliveryViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTest
         self.assertEqual(response.status_code, 400)
         self.assertEqual(str(response.data[0]), 'Data Delivery Error: An active delivery for this project already exists.')
 
+    def test_put(self):
+        delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="api_user/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid='user2',
+            to_netid=self.user.username,
+            share_user_ids=['user3', 'user4']
+        )
+        url = reverse('v2-azdeliveries-list') + str(delivery.id) + '/'
+        data = {
+            'user_message': "Sample 3 was not included."
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, 200)
+        delivery.refresh_from_db()
+        self.assertEqual(delivery.user_message, 'Sample 3 was not included.')
+
     @patch('d4s2_api_v2.api.AzMessageFactory')
     def test_send(self, mock_message_factory):
         mock_message_factory.return_value.make_delivery_message.return_value = Mock(email_text="Email Details")
@@ -1724,3 +1755,80 @@ class AzDeliveryViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTest
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['manifest'], {'A': 1})
         self.assertEqual(response.data['status'], 'Signature Verified')
+
+    @patch('d4s2_api_v2.api.create_project_summary')
+    def test_summary(self, mock_create_project_summary):
+        summary = AzureProjectSummary(id='123', based_on='data')
+        summary.total_size = 1000
+        summary.file_count = 2
+        summary.folder_count = 3
+        summary.root_folder_count = 1
+        summary.error_msg = "Error Details"
+        mock_create_project_summary.return_value = summary
+        az_delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="api_user/mouse",
+                container_url="http://127.0.0.1"),
+            from_netid='user2',
+            to_netid=self.user.username,
+            share_user_ids=['user3', 'user4'],
+            email_template_set=self.core2ts
+        )
+        url = reverse('v2-azdeliveries-list') + str(az_delivery.id) + '/summary/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {
+            'id': '123',
+            'based_on': 'data',
+            'total_size': 1000,
+            'file_count': 2,
+            'folder_count': 3,
+            'root_folder_count': 1,
+            'error_msg': 'Error Details'
+        })
+
+
+class AzDeliveryPreviewViewTestCase(APITestCase):
+
+    def setUp(self):
+        self.user = django_user.objects.create_user(username='user', password='secret')
+        self.client.login(username='user', password='secret')
+        self.email_template_set = EmailTemplateSet.objects.create(name='someset', storage=StorageTypes.AZURE)
+        self.user_email_template_set = UserEmailTemplateSet.objects.create(
+            user=self.user, email_template_set=self.email_template_set,
+            storage=StorageTypes.AZURE)
+
+    def test_cannot_get_list(self):
+        url = reverse('v2-az-delivery_previews')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_cannot_get_single(self):
+        url = reverse('v2-az-delivery_previews') + '/some-id/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @patch('d4s2_api_v2.api.AzMessageFactory')
+    def test_create_preview(self, mock_message_factory):
+        instance = mock_message_factory.return_value.make_delivery_message.return_value
+        instance.send = Mock()
+        instance.email_text = 'Generated Email Text'
+
+        url = reverse('v2-az-delivery_previews')
+        data = {
+            'from_netid': 'user1',
+            'to_netid': 'user2',
+            'transfer_id': 1,
+            'user_message': 'Hello',
+            'simple_project_name': 'project1',
+            'project_url': 'someurl',
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['delivery_email_text'], 'Generated Email Text')
+        args, kwargs = mock_message_factory.call_args
+        delivery_preview = args[0]
+        self.assertEqual(delivery_preview.email_template_set, self.email_template_set)
+
+        # When previewing an email, send() should not be called
+        instance.send.assert_not_called()

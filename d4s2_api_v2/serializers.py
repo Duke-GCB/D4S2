@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from switchboard.dds_util import DDSUtil
-from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet, UserEmailTemplateSet, EmailTemplate
+from d4s2_api.models import S3Endpoint, S3User, S3Bucket, S3Delivery, EmailTemplateSet, UserEmailTemplateSet, \
+    EmailTemplate, StorageTypes
 from d4s2_api_v2.models import DDSDeliveryPreview
 from d4s2_api.models import AzDelivery, AzContainerPath, AzStorageConfig
-
+from d4s2_api.utils import get_netid_from_user
 
 
 class DDSUserSerializer(serializers.Serializer):
@@ -75,14 +76,19 @@ class DDSProjectPermissionSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     setup_for_delivery = serializers.SerializerMethodField()
+    setup_for_cloud_delivery = serializers.SerializerMethodField()
 
     def get_setup_for_delivery(self, user):
-        return UserEmailTemplateSet.user_is_setup(user)
+        return UserEmailTemplateSet.user_is_setup(user, StorageTypes.DDS)
+
+    def get_setup_for_cloud_delivery(self, user):
+        return UserEmailTemplateSet.user_is_setup(user, StorageTypes.AZURE)
 
     class Meta:
         model = User
         resource_name = 'users'
-        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'setup_for_delivery')
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'setup_for_delivery',
+                  'setup_for_cloud_delivery')
 
 
 class S3EndpointSerializer(serializers.ModelSerializer):
@@ -204,9 +210,13 @@ class AddUserSerializer(serializers.Serializer):
 class EmailTemplateSetSerializer(serializers.ModelSerializer):
     email_templates = serializers.SerializerMethodField()
     default = serializers.SerializerMethodField()
+    storage_name = serializers.SerializerMethodField()
 
     def get_email_templates(self, obj):
         return [x.id for x in obj.email_templates.order_by('template_type__sequence')]
+
+    def get_storage_name(self, obj):
+        return obj.get_storage_name()
 
     def get_default(self, obj):
         return UserEmailTemplateSet.objects.filter(
@@ -217,7 +227,7 @@ class EmailTemplateSetSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmailTemplateSet
         resource_name = 'email-template-set'
-        fields = ('id', 'name', 'cc_address', 'reply_address', 'email_templates', 'default')
+        fields = ('id', 'name', 'cc_address', 'reply_address', 'email_templates', 'default', 'storage', 'storage_name')
 
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
@@ -245,7 +255,7 @@ class DukeUserSerializer(serializers.Serializer):
     email = serializers.CharField()
 
     class Meta:
-        resource_name = 'duke-users'
+        resource_name = 'duke-user'
 
 
 class AzContainerPathSerializer(serializers.ModelSerializer):
@@ -261,21 +271,46 @@ class AzDeliverySerializer(serializers.ModelSerializer):
     source_project = AzContainerPathSerializer()
     destination_project = AzContainerPathSerializer(read_only=True)
     complete = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    outgoing = serializers.SerializerMethodField()
+    last_updated_on = serializers.SerializerMethodField()
+    url = serializers.SerializerMethodField()
 
     def get_complete(self, obj):
         return obj.is_complete()
 
+    def get_status(self, obj):
+        return obj.get_status().lower() # Lowercase to match legacy DDS status field
+
+    def get_outgoing(self, obj):
+        current_user_netid = get_netid_from_user(self.context['request'].user)
+        return obj.from_netid == current_user_netid
+
+    def get_last_updated_on(self, obj):
+        return obj.history.latest().history_date
+
+    def get_url(self, obj):
+        return obj.make_project_url()
+
     class Meta:
         model = AzDelivery
-        resource_name = 'azdelivery'
+        resource_name = 'az-deliveries'
         fields = ('id', 'source_project', 'from_netid', 'destination_project', 'to_netid', 'state', 'user_message',
                   'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set',
-                  'complete')
-        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set')
+                  'complete', 'status', 'outgoing', 'last_updated_on', 'url')
+        read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set', 'status',
+                            'outgoing', 'last_updated_on', 'url')
 
     def create(self, validated_data):
         validated_data['source_project'] = AzContainerPath.objects.create(**validated_data['source_project'])
         return super().create(validated_data)
+
+
+class AzDeliveryUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AzDelivery
+        resource_name = 'az-deliveries'
+        fields = ('id', 'user_message')
 
 
 class AzStorageConfigSerializer(serializers.ModelSerializer):
@@ -283,3 +318,36 @@ class AzStorageConfigSerializer(serializers.ModelSerializer):
         model = AzStorageConfig
         resource_name = 'azstorageconfig'
         fields = ('id', 'name', 'subscription_id', 'resource_group', 'storage_account', 'container_name')
+
+
+class AzDeliverySummarySerializer(serializers.Serializer):
+    id = serializers.CharField()
+    based_on = serializers.CharField()
+    total_size = serializers.IntegerField()
+    file_count = serializers.IntegerField()
+    folder_count = serializers.IntegerField()
+    root_folder_count = serializers.IntegerField()
+    error_msg = serializers.CharField()
+
+    class Meta:
+        resource_name = 'az-project-summary'
+
+
+class AzDeliveryPreviewSerializer(serializers.Serializer):
+    """
+    A serializer to represent a delivery preview, allowing for
+    email generation before saving to database or creating a transfer in DukeDS
+    transfer_id must be provided but may be blank.
+    For new deliveries it won't be known before creating the transfer in DukeDS, but for
+    resending existing deliveries, it can be provided and will be used in the accept url
+    """
+    from_netid = serializers.CharField(required=True)
+    to_netid = serializers.CharField(required=True)
+    transfer_id = serializers.CharField(allow_blank=True)
+    user_message = serializers.CharField(allow_blank=True)
+    simple_project_name = serializers.CharField(allow_blank=True)
+    project_url = serializers.CharField(allow_blank=True)
+    delivery_email_text = serializers.CharField(read_only=True)
+
+    class Meta:
+        resource_name = 'az-delivery-preview'

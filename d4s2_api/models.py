@@ -83,6 +83,20 @@ class ShareRole(object):
         return 'share_{}'.format(role)
 
 
+class StorageTypes(object):
+    """
+    States for delivery and share objects
+    """
+    DDS = 'dds'
+    AZURE = 'azure'
+    S3 = 's3'
+    CHOICES = (
+        (DDS, 'Duke Data Service'),
+        (AZURE, 'Azure Blob Storage'),
+        (S3, 'S3'),
+    )
+
+
 class EmailTemplateSet(models.Model):
     """
     Set of email templates with unique template types.
@@ -92,9 +106,16 @@ class EmailTemplateSet(models.Model):
     reply_address = models.EmailField(blank=True, help_text='Optional address to set as reply-to when using this template set (replacing the sending user\'s email address')
     group_name = models.CharField(max_length=64, null=False, blank=True,
                                   help_text='group manager group assigned to this set')
+    storage = models.CharField(max_length=64, choices=StorageTypes.CHOICES, default=StorageTypes.DDS)
 
     def __str__(self):
         return self.name
+
+    def get_storage_name(self):
+        for k,v in StorageTypes.CHOICES:
+            if k == self.storage:
+                return v
+        return "Unknown {}".format(self.storage)
 
     def template_for_name(self, name):
         try:
@@ -118,12 +139,15 @@ class EmailTemplateSet(models.Model):
             return []
 
     @staticmethod
-    def get_for_user(user):
+    def get_for_user(user, storage=None):
         """
         Include a users default template set and those for the current user's groups.
         """
         user_group_names = EmailTemplateSet.get_group_names_for_user(user)
-        return EmailTemplateSet.objects.filter(
+        query_set = EmailTemplateSet.objects
+        if storage:
+            query_set = query_set.filter(storage=storage)
+        return query_set.filter(
             Q(useremailtemplateset__user=user) |
             Q(group_name__in=user_group_names)
         )
@@ -317,20 +341,25 @@ class UserEmailTemplateSet(models.Model):
     """
     Specifies an email template to use for a user
     """
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     email_template_set = models.ForeignKey(EmailTemplateSet, on_delete=models.CASCADE, null=False)
+    storage = models.CharField(max_length=64, choices=StorageTypes.CHOICES, default=StorageTypes.DDS)
 
     def __str__(self):
         return 'User Email Template Set user <{}>, set: <{}>'.format(self.user.username, self.email_template_set.name)
 
     @staticmethod
-    def user_is_setup(user):
+    def user_is_setup(user, storage=StorageTypes.DDS):
         """
         Returns True if the user has their email templates setup
         :param user: User: user to check
+        :param storage: str: value from StorageTypes
         :return: boolean: True if user is setup correctly
         """
-        return UserEmailTemplateSet.objects.filter(user=user).count() > 0
+        return UserEmailTemplateSet.objects.filter(user=user,storage=storage).count() > 0
+
+    class Meta:
+        unique_together = ('user', 'storage')
 
 
 class S3EndpointManager(models.Manager):
@@ -499,14 +528,20 @@ class AzDelivery(DeliveryBase):
         return os.path.basename(self.source_project.path)
 
     def make_project_url(self):
+        return self.get_current_project().make_project_url()
+
+    def get_current_project(self):
         if self.state == State.ACCEPTED:
-            return self.destination_project.make_project_url()
+            return self.destination_project
         else:
-            return self.source_project.make_project_url()
+            return self.source_project
 
     @property
     def transfer_id(self):
         return self.id
+
+    def get_status(self):
+        return State.DELIVERY_CHOICES[self.state][1]
 
     def __str__(self):
         return 'Azure Delivery: {} - {}  State: {}  To: {}  Performed by: {}'.format(

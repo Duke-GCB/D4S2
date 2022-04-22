@@ -7,9 +7,10 @@ import urllib.parse
 from switchboard.userservice import get_user_for_netid
 from azure.identity import DefaultAzureCredential
 from azure.storage.filedatalake import DataLakeServiceClient
+from azure.core.exceptions import ResourceNotFoundError
 from msgraph.core import GraphClient
 from d4s2_api.models import AzDelivery, State, AzObjectManifest, AzDeliveryError, AzContainerPath, AzTransferStates, \
-    AzStorageConfig
+    AzStorageConfig, StorageTypes
 from background_task import background
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -93,12 +94,21 @@ class AzDataLakeProject(object):
             # Delete our copy
             self.directory_client.delete_directory()
 
+    def get_file_system_client(self):
+        return self.service.get_file_system_client(self.file_system_name)
+
+    def get_paths(self):
+        file_system_client = self.get_file_system_client()
+        return file_system_client.get_paths(self.path)
+
     def get_file_manifest(self):
-        file_system_client = self.service.get_file_system_client(self.file_system_name)
+        file_system_client = self.get_file_system_client()
         results = []
         for file_metadata in file_system_client.get_paths(self.path):
-            file_client = file_system_client.get_file_client(file_metadata.name)
-            if not file_metadata.is_directory:
+            if file_metadata.is_directory:
+                results.append(file_metadata)
+            else:
+                file_client = file_system_client.get_file_client(file_metadata.name)
                 file_properties = dict(file_client.get_file_properties())
                 del file_properties['lease']
                 # Fix nested content settings
@@ -144,6 +154,7 @@ class AzUsers(object):
 
 class AzDeliveryDetails(object):
     def __init__(self, delivery, user):
+        self.storage = StorageTypes.AZURE
         self.delivery = delivery
         self.email_template_set = delivery.email_template_set
         self.user = user
@@ -202,7 +213,7 @@ class AzMessageFactory(MessageFactory):
 
 
 class AzDeliveryType:
-    name = 'azure'
+    name = StorageTypes.AZURE
     delivery_cls = AzDelivery
     transfer_in_background = True
 
@@ -267,7 +278,8 @@ class TransferFunctions(object):
             transfer.mark_complete()
         except Exception as e:
             transfer.set_failed_and_record_exception(e)
-            raise
+            print(f"Transfer {delivery_id} failed.")
+            print(str(e))
 
     @staticmethod
     def restart_transfer(delivery_id):
@@ -374,3 +386,39 @@ class AzureTransfer(object):
         AzDeliveryError.objects.create(delivery=self.delivery, message=error_message)
         self.delivery.mark_failed()
         traceback.print_exc()
+
+
+class AzureProjectSummary(object):
+    def __init__(self, id, based_on):
+        self.id = id
+        self.based_on = based_on
+        self.total_size = 0
+        self.file_count = 0
+        self.folder_count = 0
+        self.root_folder_count = 0
+        self.sub_folder_count = 0
+        self.error_msg = None
+
+    def apply_path_dict(self, path_dict):
+        if path_dict["is_directory"]:
+            self.folder_count += 1
+            # Remote paths with three parts are top level directories "netid/projectname/dirname"
+            if len(path_dict["name"].split('/')) == 3:
+                self.root_folder_count += 1
+            else:
+                self.sub_folder_count += 1
+        else:
+            self.total_size += path_dict["content_length"]
+            self.file_count += 1
+
+
+def create_project_summary(delivery):
+    current_project = delivery.get_current_project()
+    summary = AzureProjectSummary(id=delivery.id, based_on="project contents")
+    try:
+        project = AzDataLakeProject(current_project.container_url, current_project.path)
+        for file_metadata in project.get_paths():
+            summary.apply_path_dict(file_metadata)
+    except ResourceNotFoundError:
+        summary.error_msg = f"No project found at {current_project.path}."
+    return summary
