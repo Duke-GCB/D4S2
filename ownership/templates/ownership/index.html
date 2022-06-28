@@ -32,17 +32,45 @@
         </td>
     </tr>
 </table>
-<div class="blurb">
-    <div>
-        <span>Click accept to make the final results available to you.</span>
-    </div>
-    <div>
-        <span>This will transfer ownership of the data to you.</span>
-    </div>
-</div>
-<br/>
 <form action="{% url 'ownership-process' %}" method="post">
     {% csrf_token %}
+
+    {% if delivery_type == 'azure' %}
+        <div>
+            <span class="details_label">Azure Destination URL:</span>
+            <input type="url" name="container_url" id="container_url"
+                placeholder="https://storage_account.dfs.core.windows.net/file_system_name"
+                pattern="https://.*" size="120" value="{{ container_url }}"
+                required>
+            <p class="error_message">{{ error_message }}</p>
+        </div>
+    {%  endif %}
+
+    <div class="blurb">
+        {% if delivery_type == 'azure' %}
+            <div>
+                <span>
+                    The <span class="instruction_field">Azure Destination URL field</span> determines the Azure Blob Container where the {{ project_title }} folder will be stored.
+                    To lookup this value:
+                    <ol>
+                        <li>Visit <a target="_blank" href="https://azurestorage.duhs.duke.edu">DHTS Storage as a Service</a></li>
+                        <li>Select the <span class="instruction_field">Storage Account</span> and
+                            <span class="instruction_field">File System</span> where you want to store the project</li>
+                        <li>Then click the (i) Action icon beside the Folder labeled <span class="instruction_field">{root}</span></li>
+                        <li>Copy the value for the URL in the <span class="instruction_field">Directory Details</span> popup window</li>
+                        <li>Paste the value into the <span class="instruction_field">Azure Destination URL</span> field above</li>
+                    </ol>
+                </span>
+            </div>
+        {%  endif %}
+        <div>
+            <span>Click accept to make the final results available to you.</span>
+        </div>
+        <div>
+            <span>This will transfer ownership of the data to you.</span>
+        </div>
+    </div>
+    <br/>
     <input type="hidden" name="transfer_id" value="{{ transfer_id }}">
     <input type="hidden" name="delivery_type" value="{{ delivery_type }}">
 
@@ -51,7 +79,7 @@
            class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored standard_button mdl-js-ripple-effect">
 
     <input type="submit" value="Decline"
-           name="decline"
+           name="decline" formnovalidate
            class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent standard_button mdl-js-ripple-effect">
 </form>
 

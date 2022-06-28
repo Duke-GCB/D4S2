@@ -6,10 +6,11 @@ try:
     from urllib.parse import urlencode
 except ImportError:
     from urllib import urlencode
-from d4s2_api.models import State
+from d4s2_api.models import State, AzDelivery
 from switchboard.s3_util import S3Exception, S3DeliveryType, S3NotRecipientException
 from switchboard.dds_util import DDSDeliveryType, DDSNotRecipientException
-from switchboard.azure_util import AzDeliveryType, AzNotRecipientException, AzDestinationProjectAlreadyExists
+from switchboard.azure_util import AzDeliveryType, AzNotRecipientException, AzDestinationProjectNotSetup, \
+    get_container_owner
 from d4s2_api.utils import MessageDirection
 
 
@@ -33,6 +34,7 @@ class DeliveryViewBase(TemplateView):
         self.error_details = None
         self.redirect_target = None
         self.warning_message = None
+        self.redirect_query_params = {}
         super(DeliveryViewBase, self).__init__(**kwargs)
 
     def handle_get(self):
@@ -66,6 +68,7 @@ class DeliveryViewBase(TemplateView):
             return context
         except (S3NotRecipientException, DDSNotRecipientException, AzNotRecipientException):
             self.set_error_details(403, NOT_RECIPIENT_MSG)
+            return {}
 
     def _get_request_var(self, key):
         return self.request.GET.get(key) or self.request.POST.get(key)
@@ -96,6 +99,9 @@ class DeliveryViewBase(TemplateView):
             self.set_error_details(400, MISSING_TRANSFER_ID_MSG)
         return None
 
+    def get_container_url(self):
+        return self._get_request_var('container_url')
+
     def set_redirect(self, target_view_name):
         self.response_type = ResponseType.REDIRECT
         self.redirect_target = target_view_name
@@ -113,13 +119,18 @@ class DeliveryViewBase(TemplateView):
         message = "This delivery has already been processed: {}.".format(status)
         self.set_error_details(400, message)
 
+    def set_already_transferring_error(self):
+        delivery = self.delivery
+        message = "This delivery is in the process of being transferred."
+        self.set_error_details(400, message)
+
     def make_error_response(self):
         return render_to_response('ownership/error.html',
                                   status=self.error_details.get('status'),
                                   context=self.error_details.get('context'))
 
     def _get_query_string(self):
-        query_dict = {}
+        query_dict = dict(self.redirect_query_params)
         if self.delivery:
             query_dict['transfer_id'] = self.delivery.transfer_id
         if self.warning_message:
@@ -153,9 +164,17 @@ class PromptView(DeliveryViewBase):
     http_method_names = ['get']
     template_name = 'ownership/index.html'
 
+    def get_context_data(self, **kwargs):
+        context = super(PromptView, self).get_context_data(**kwargs)
+        context['error_message'] = self.request.GET.get('error_message', '')
+        context['container_url'] = self.request.GET.get('container_url', '')
+        return context
+
     def handle_get(self):
         if self.delivery.is_complete():
             self.set_already_complete_error()
+        if self.delivery.state == State.TRANSFERRING:
+            self.set_already_transferring_error()
 
 
 class ProcessView(DeliveryViewBase):
@@ -171,8 +190,8 @@ class ProcessView(DeliveryViewBase):
         request = self.request
         try:
             self.warning_message = self.delivery_type.transfer_delivery(delivery, request.user)
-        except AzDestinationProjectAlreadyExists as dpae:
-            self.set_error_details(400, str(dpae))
+        except AzDestinationProjectNotSetup as dpns:
+            self.set_error_details(500, str(dpns))
         except S3Exception as e:
             self.set_error_details(500, 'Unable to transfer s3 ownership: {}'.format(str(e)))
         except DataServiceError as e:
@@ -184,13 +203,30 @@ class ProcessView(DeliveryViewBase):
         if self.delivery.is_complete():
             self.set_already_complete_error()
             return
+        if self.delivery.state == State.TRANSFERRING:
+            self.set_already_transferring_error()
+            return
         if 'decline' in self.request.POST:
             # Redirect to decline page
             self.set_redirect('ownership-decline')
         else:
-            # Cannot redirect to a POST, so we must process the acceptance here
-            self.set_redirect('ownership-accepted')
-            self.process_accept()  # May override response type with an error
+            if self.delivery_type == AzDeliveryType:
+                container_url = self.get_container_url()
+                owner = get_container_owner(container_url)
+                if self.request.user.username == owner:
+                    self.delivery.update_destination(container_url)
+                    self.set_redirect('ownership-accepted')
+                    self.process_accept()
+                else:
+                    self.redirect_query_params = {
+                        "error_message": "Invalid destination URL: You are not the owner of {}".format(container_url),
+                        "container_url": container_url
+                    }
+                    self.set_redirect('ownership-prompt')
+            else:
+                # Cannot redirect to a POST, so we must process the acceptance here
+                self.set_redirect('ownership-accepted')
+                self.process_accept()  # May override response type with an error
 
 
 class DeclineView(DeliveryViewBase):

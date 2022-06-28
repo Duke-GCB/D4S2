@@ -32,3 +32,7 @@ a.login_local {
     color: rgb(180,180,180);
     text-decoration: none;
 }
+
+.instruction_field {
+    font-weight: bold;
+}

@@ -1,12 +1,13 @@
 from django.test import TestCase
 from background_task.tasks import tasks
+import uuid
 from mock import patch, ANY, Mock, call
-from switchboard.azure_util import get_details_from_container_url, make_acl, project_exists, AzDataLakeProject, \
-    AzUsers, AzDeliveryDetails, AzDeliveryType, AzDelivery, AzContainerPath, State, TransferFunctions, AzureTransfer, \
-    User, settings, AzDeliveryError, AzStorageConfig, AzNotRecipientException, AzDestinationProjectAlreadyExists, \
-    AzureProjectSummary
+from switchboard.azure_util import get_details_from_container_url, make_acl, AzDeliveryDetails, AzDeliveryType, \
+    AzDelivery, State, TransferFunctions, AzureTransfer, \
+    User, settings, AzDeliveryError, AzNotRecipientException, \
+    AzureProjectSummary, decompose_dfs_url, get_container_details
 from d4s2_api.utils import MessageDirection
-from d4s2_api.models import AzTransferStates
+from d4s2_api.models import AzTransferStates, AzContainerPath
 from django.conf import settings
 
 
@@ -24,120 +25,6 @@ class TestFuncs(TestCase):
         user_id = '123'
         acl = make_acl(user_id, permissions='r-x')
         self.assertEqual(acl, 'user:123:r-x,default:user:123:r-x')
-
-    @patch('switchboard.azure_util.AzDataLakeProject')
-    def test_project_exists(self, mock_az_project):
-        result = project_exists(self.container_url, 'user1/mouse')
-        self.assertEqual(result, mock_az_project.return_value.exists.return_value)
-        mock_az_project.assert_called_with(self.container_url, 'user1/mouse')
-
-
-class TestAzDataLakeProject(TestCase):
-    def setUp(self):
-        AzStorageConfig.objects.create(
-            name='my_storage_acct',
-            subscription_id='subid',
-            resource_group='rg1',
-            storage_account='my_storage_acct',
-            container_name='my_container',
-            storage_account_key='sa_key'
-        )
-        AzStorageConfig.objects.create(
-            name='my_storage_acct',
-            subscription_id='subid',
-            resource_group='rg1',
-            storage_account='my_storage_acct',
-            container_name='other_container',
-            storage_account_key='sa_key2'
-        )
-        self.container_url = "https://my_storage_acct.blob.core.windows.net/my_container"
-        self.other_container_url = "https://my_storage_acct.blob.core.windows.net/other_container"
-        self.project = AzDataLakeProject(container_url=self.container_url, path="user1/mouse")
-        self.project.service = Mock()
-        self.project.directory_client = Mock()
-
-
-    def test_exists(self):
-        self.assertEqual(self.project.exists(), self.project.directory_client.exists.return_value)
-
-    def test_ensure_parent_directory(self):
-        self.project.service.get_directory_client.return_value.exists.return_value = False
-        self.project.ensure_parent_directory()
-        self.project.service.get_directory_client.return_value.create_directory.assert_called_with()
-
-    def test_move_same_container(self):
-        self.project.move(destination_container_url=self.container_url, destination_path="user2/mouse")
-        self.project.directory_client.rename_directory.assert_called_with('my_container/user2/mouse')
-
-    @patch('switchboard.azure_util.subprocess')
-    def test_move_different_container(self, mock_subprocess):
-        self.project.move(destination_container_url=self.other_container_url, destination_path="user2/mouse")
-        mock_subprocess.run.assert_called_with(
-            ['azcopy', 'copy', '--recursive',
-             'https://my_storage_acct.blob.core.windows.net/my_container/user1/mouse',
-             'https://my_storage_acct.blob.core.windows.net/other_container/user2/mouse'],
-            check=True)
-        self.project.directory_client.delete_directory.assert_called_with()
-
-    def test_get_file_manifest(self):
-        fsc = self.project.service.get_file_system_client.return_value
-        mock_dir = Mock()
-        mock_dir.is_directory = True
-        mock_file = Mock()
-        mock_file.is_directory = False
-        fsc.get_paths.return_value = [
-            mock_dir,
-            mock_file
-        ]
-
-        fc = fsc.get_file_client.return_value
-        fc.get_file_properties.return_value = {
-            'lease': 'SomeValue',
-            'content_settings': {
-                "content_type": "text/plain",
-                "content_md5": b"ABC"
-            }
-        }
-        manifest = self.project.get_file_manifest()
-        self.assertEqual(manifest, [
-            mock_dir,
-            {
-                'content_settings': {
-                    'content_type': 'text/plain',
-                    'content_md5': '414243'
-                }
-            }
-        ])
-
-    def test_add_download_user(self):
-        self.project.add_download_user(azure_user_id="123")
-        fsc = self.project.service.get_file_system_client.return_value
-        dc = fsc.get_directory_client.return_value
-        dc.update_access_control_recursive.assert_called_with(acl='user:123:r-x,default:user:123:r-x')
-
-    def test_set_owner(self):
-        fsc = self.project.service.get_file_system_client.return_value
-        mock_file = Mock()
-        mock_file.name = 'user1/mouse/file1.txt'
-        fsc.get_paths.return_value = [mock_file]
-        self.project.set_owner(azure_user_id="123")
-        fsc.get_file_client.assert_has_calls([
-            call('user1/mouse'),
-            call().set_access_control(owner='123'),
-            call('user1/mouse/file1.txt'),
-            call().set_access_control(owner='123'),
-        ])
-
-
-class TestAzUsers(TestCase):
-    @patch('switchboard.azure_util.GraphClient')
-    def test_get_azure_user_id(self, mock_graph_client):
-        mock_response = Mock()
-        mock_response.json.return_value = {"id": "789"}
-        mock_graph_client.return_value.get.return_value = mock_response
-        users = AzUsers(credential=None)
-        result = users.get_azure_user_id(netid='user1')
-        self.assertEqual(result, "789")
 
 
 class TestAzDeliveryDetails(TestCase):
@@ -246,33 +133,15 @@ class TestAzDeliveryType(TestCase):
             AzDeliveryType.make_delivery_util(delivery=Mock(to_netid='joe'), user=Mock(username='bob@sample.com'))
 
     @patch('switchboard.azure_util.TransferFunctions')
-    @patch('switchboard.azure_util.project_exists')
-    def test_transfer_delivery(self, mock_project_exists, mock_transfer_functions):
-        mock_project_exists.return_value = False
+    def test_transfer_delivery(self, mock_transfer_functions):
         delivery = Mock(to_netid='user2', source_project=Mock(container_url='someurl'))
         delivery.id = '123'
         delivery.get_simple_project_name.return_value = "mouse"
-        delivery.destination_project = None
         AzDeliveryType.transfer_delivery(delivery, Mock(username='user2@sample.com'))
-        self.assertEqual(delivery.destination_project.path, 'user2/mouse')
-        self.assertEqual(delivery.destination_project.container_url, 'someurl')
         mock_transfer_functions.transfer_delivery.assert_called_with('123')
 
     @patch('switchboard.azure_util.TransferFunctions')
-    @patch('switchboard.azure_util.project_exists')
-    def test_transfer_delivery_destinaton_exists(self, mock_project_exists, mock_transfer_functions):
-        mock_project_exists.return_value = True
-        delivery = Mock(to_netid='user2', source_project=Mock(container_url='someurl'))
-        delivery.id = '123'
-        delivery.get_simple_project_name.return_value = "mouse"
-        delivery.destination_project = None
-        with self.assertRaises(AzDestinationProjectAlreadyExists):
-            AzDeliveryType.transfer_delivery(delivery, Mock(username='user2@sample.com'))
-
-    @patch('switchboard.azure_util.TransferFunctions')
-    @patch('switchboard.azure_util.project_exists')
-    def test_transfer_delivery_wrong_user(self, mock_project_exists, mock_transfer_functions):
-        mock_project_exists.return_value = True
+    def test_transfer_delivery_wrong_user(self, mock_transfer_functions):
         delivery = Mock(to_netid='user2', source_project=Mock(container_url='someurl'))
         delivery.id = '123'
         delivery.get_simple_project_name.return_value = "mouse"
@@ -309,153 +178,33 @@ class TestTransferFunctions(TestCase):
         mock_azure_transfer.return_value.assert_has_calls(expected_calls)
 
     @patch('switchboard.azure_util.AzureTransfer')
-    def test_transfer_delivery_no_transfer(self, mock_azure_transfer):
+    def test_transfer_delivery(self, mock_azure_transfer):
         mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
         mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
-        TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False)
+        TransferFunctions.transfer_delivery(delivery_id='123')
         tasks.run_next_task()
         expected_calls = [
             call.ensure_transferring_state(),
-            call.give_download_users_permissions(),
-            call.update_owner_permissions(),
-            call.email_sender(),
-            call.email_recipient(),
-            call.mark_complete()
+            call.notify_transfer_service(),
         ]
         mock_azure_transfer.return_value.assert_has_calls(expected_calls)
-
-    @patch('switchboard.azure_util.AzureTransfer')
-    def test_transfer_delivery_no_add_users(self, mock_azure_transfer):
-        mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
-        mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
-        TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False)
-        tasks.run_next_task()
-        expected_calls = [
-            call.ensure_transferring_state(),
-            call.update_owner_permissions(),
-            call.email_sender(),
-            call.email_recipient(),
-            call.mark_complete()
-        ]
-        mock_azure_transfer.return_value.assert_has_calls(expected_calls)
-
-    @patch('switchboard.azure_util.AzureTransfer')
-    def test_transfer_delivery_no_change_owner(self, mock_azure_transfer):
-        mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
-        mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
-        TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False,
-                                            change_owner=False)
-        tasks.run_next_task()
-        expected_calls = [
-            call.ensure_transferring_state(),
-            call.email_sender(),
-            call.email_recipient(),
-            call.mark_complete()
-        ]
-        mock_azure_transfer.return_value.assert_has_calls(expected_calls)
-
-    @patch('switchboard.azure_util.AzureTransfer')
-    def test_transfer_delivery_no_sender(self, mock_azure_transfer):
-        mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
-        mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
-        TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False,
-                                            change_owner=False, email_sender=False)
-        tasks.run_next_task()
-        expected_calls = [
-            call.ensure_transferring_state(),
-            call.email_recipient(),
-            call.mark_complete()
-        ]
-        mock_azure_transfer.return_value.assert_has_calls(expected_calls)
-
-    @patch('switchboard.azure_util.AzureTransfer')
-    def test_transfer_delivery_no_recipient(self, mock_azure_transfer):
-        mock_azure_transfer.return_value.email_sender.return_value.email_text = "emailtext1"
-        mock_azure_transfer.return_value.email_recipient.return_value.email_text = "emailtext2"
-        TransferFunctions.transfer_delivery(delivery_id='123', transfer_project=False, add_download_users=False,
-                                            change_owner=False, email_sender=False, email_recipient=False)
-        tasks.run_next_task()
-        expected_calls = [
-            call.ensure_transferring_state(),
-            call.mark_complete()
-        ]
-        mock_azure_transfer.return_value.assert_has_calls(expected_calls)
-
-    @patch('switchboard.azure_util.TransferFunctions.transfer_delivery')
-    @patch('switchboard.azure_util.print')
-    def test_restart_transfer_bad_state(self, mock_print, mock_transfer_delivery):
-        delivery = AzDelivery.objects.create(
-            source_project=AzContainerPath.objects.create(
-                path="user1/mouse",
-                container_url="http://127.0.0.1"),
-            from_netid='user1',
-            destination_project=AzContainerPath.objects.create(
-                path="user2/mouse",
-                container_url="http://127.0.0.1"
-            ),
-            to_netid='user2',
-            share_user_ids=['user3', 'user4'],
-        )
-        TransferFunctions.restart_transfer(delivery.id)
-        mock_print.assert_called_with('Delivery {} is not in transferring state.'.format(delivery.id))
-
-    @patch('switchboard.azure_util.TransferFunctions.transfer_delivery')
-    @patch('switchboard.azure_util.print')
-    def test_restart_transfer_bad_state(self, mock_print, mock_transfer_delivery):
-        delivery = AzDelivery.objects.create(
-            source_project=AzContainerPath.objects.create(
-                path="user1/mouse",
-                container_url="http://127.0.0.1"),
-            from_netid='user1',
-            destination_project=AzContainerPath.objects.create(
-                path="user2/mouse",
-                container_url="http://127.0.0.1"
-            ),
-            to_netid='user2',
-            share_user_ids=['user3', 'user4'],
-            state=State.TRANSFERRING,
-        )
-        state_to_expected_params = [
-            # transfer state       transfer_project, add_download_users, change_owner
-            (AzTransferStates.NEW, True, True, True, True, True),
-            (AzTransferStates.CREATED_MANIFEST, True, True, True, True, True),
-            (AzTransferStates.TRANSFERRED_PROJECT, False, True, True, True, True),
-            (AzTransferStates.ADDED_DOWNLOAD_USERS, False, False, True, True, True),
-            (AzTransferStates.CHANGED_OWNER, False, False, False, True, True),
-            (AzTransferStates.EMAILED_SENDER, False, False, False, False, True),
-            (AzTransferStates.EMAILED_RECIPIENT, False, False, False, False, False)
-        ]
-        for transfer_state, transfer_project, add_download_users, change_owner, email_sender, email_recipient in\
-                state_to_expected_params:
-            delivery.transfer_state = transfer_state
-            delivery.save()
-            mock_transfer_delivery.reset()
-            TransferFunctions.restart_transfer(delivery.id)
-            mock_transfer_delivery.assert_called_with(
-                delivery.id,
-                transfer_project=transfer_project,
-                add_download_users=add_download_users,
-                change_owner=change_owner,
-                email_sender=email_sender,
-                email_recipient=email_recipient)
 
 
 class TestAzureTransfer(TestCase):
-    @patch('switchboard.azure_util.AzDataLakeProject')
-    def setUp(self, _):
+    def setUp(self):
         self.delivery = AzDelivery.objects.create(
             source_project=AzContainerPath.objects.create(
                 path="user1/mouse",
-                container_url="http://127.0.0.1"),
+                container_url="https://fromacct.blob.core.windows.net/fromcontainer"),
             from_netid='user1',
             destination_project=AzContainerPath.objects.create(
                 path="user2/mouse",
-                container_url="http://127.0.0.1"
+                container_url="https://toacct.blob.core.windows.net/tocontainer"
             ),
             to_netid='user2',
             share_user_ids=['user3', 'user4'],
         )
-        self.transfer = AzureTransfer(delivery_id=self.delivery.id, credential=Mock())
+        self.transfer = AzureTransfer(delivery_id=self.delivery.id)
         self.transfer.source_project = Mock(container_url="http://127.0.0.1", path='user1/mouse')
         self.transfer.destination_project = Mock(container_url="http://127.0.0.1", path='user2/mouse')
         self.transfer.azure_users = Mock()
@@ -468,58 +217,12 @@ class TestAzureTransfer(TestCase):
 
     @patch('switchboard.azure_util.print')
     def test_record_object_manifest(self, mock_print):
-        self.transfer.source_project.get_file_manifest.return_value = [{"name": "file1.txt"}]
-        self.transfer.record_object_manifest()
+        files_manifest = [{"name": "file1.txt"}]
+        self.transfer.record_object_manifest(files_manifest)
         self.delivery.refresh_from_db()
         self.assertEqual(self.delivery.transfer_state, AzTransferStates.CREATED_MANIFEST)
         self.assertIn('[{"name": "file1.txt"}]', self.delivery.manifest.content)
-        mock_print.assert_called_with('Recorded object manifest for user1/mouse.')
-
-    @patch('switchboard.azure_util.print')
-    def test_transfer_project(self, mock_print):
-        self.transfer.transfer_project()
-        self.transfer.source_project.move.assert_called_with('http://127.0.0.1', 'user2/mouse')
-        self.delivery.refresh_from_db()
-        self.assertEqual(self.delivery.transfer_state, AzTransferStates.TRANSFERRED_PROJECT)
-        mock_print.assert_has_calls([
-            call('Beginning project transfer for user1/mouse to user2/mouse.'),
-            call('Project transfer complete for user1/mouse to user2/mouse.')
-        ])
-
-    @patch('switchboard.azure_util.print')
-    def test_give_download_users_permissions(self, mock_print):
-        self.transfer.azure_users.get_azure_user_id.side_effect = ["111", "333", "444"]
-        self.transfer.give_download_users_permissions()
-        self.transfer.azure_users.get_azure_user_id.assert_has_calls([
-            call('user1'),
-            call('user3'),
-            call('user4')
-        ])
-        self.transfer.destination_project.add_download_user.assert_has_calls([
-            call("111"), call("333"), call("444")
-        ])
-        self.delivery.refresh_from_db()
-        self.assertEqual(self.delivery.transfer_state, AzTransferStates.ADDED_DOWNLOAD_USERS)
-
-
-    @patch('switchboard.azure_util.print')
-    def test_update_owner_permissions(self, mock_print):
-        self.transfer.azure_users.get_azure_user_id.return_value = "222"
-        self.transfer.update_owner_permissions()
-        self.transfer.azure_users.get_azure_user_id.assert_called_with("user2")
-        self.transfer.destination_project.set_owner.assert_called_with("222")
-        self.delivery.refresh_from_db()
-        self.assertEqual(self.delivery.transfer_state, AzTransferStates.CHANGED_OWNER)
-
-    @patch('switchboard.azure_util.print')
-    def test_update_owner_permissions(self, mock_print):
-        self.transfer.azure_users.get_azure_user_id.return_value = "222"
-        self.transfer.update_owner_permissions()
-        self.transfer.azure_users.get_azure_user_id.assert_called_with("user2")
-        self.transfer.destination_project.set_owner.assert_called_with("222")
-        self.delivery.refresh_from_db()
-        self.assertEqual(self.delivery.transfer_state, AzTransferStates.CHANGED_OWNER)
-        mock_print.assert_called_with('Updating owner permissions for {}.'.format(self.delivery.id))
+        mock_print.assert_called_with('Recorded object manifest for {}.'.format(self.delivery.id))
 
     @patch('switchboard.azure_util.print')
     @patch('switchboard.azure_util.AzMessageFactory')
@@ -559,6 +262,30 @@ class TestAzureTransfer(TestCase):
         self.delivery.refresh_from_db()
         self.assertEqual(self.delivery.state, State.FAILED)
 
+    @patch('switchboard.azure_util.requests')
+    @patch('switchboard.azure_util.uuid')
+    @patch('switchboard.azure_util.settings')
+    def test_notify_transfer_service(self, mock_settings, mock_uuid, mock_requests):
+        mock_settings.TRANSFER_PIPELINE_URL = 'https://sample.com'
+        my_uuid = uuid.uuid4()
+        mock_uuid.uuid4.return_value = my_uuid
+        self.transfer.notify_transfer_service()
+        mock_requests.post.assert_called_with(
+            'https://sample.com',
+            headers={'user-agent': 'duke-data-delivery/2.0.0'},
+            json={
+                'Source_StorageAccount': 'fromacct',
+                'Source_FileSystem': 'fromcontainer',
+                'Source_TopLevelFolder': 'user1/mouse',
+                'Sink_StorageAccount': 'toacct',
+                'Sink_FileSystem': 'tocontainer',
+                'Sink_TopLevelFolder': 'user2/mouse',
+                'Webhook_DeliveryID': self.transfer.delivery.id,
+                'Webhook_TransferUUID': str(my_uuid)
+            }
+        )
+        self.assertEqual(self.transfer.delivery.transfer_uuid, str(my_uuid))
+
 
 class TestAzureProjectSummary(TestCase):
     def test_apply_path_dict(self):
@@ -595,3 +322,24 @@ class TestAzureProjectSummary(TestCase):
         self.assertEqual(summary.folder_count, 2)
         self.assertEqual(summary.root_folder_count, 1)
         self.assertEqual(summary.sub_folder_count, 1)
+
+
+class TestGlobalFunctions(TestCase):
+    def test_decompose_dfs_url(self):
+        acct, container = decompose_dfs_url("https://myacct.dfs.core.windows.net/my-container")
+        self.assertEqual(acct, 'myacct')
+        self.assertEqual(container, 'my-container')
+
+    @patch('switchboard.azure_util.requests')
+    @patch('switchboard.azure_util.settings')
+    def test_get_container_details(self, mock_settings, mock_requests):
+        mock_settings.AZURE_SAAS_KEY = 'mykey'
+        mock_settings.AZURE_SAAS_URL = 'myurl'
+        response = Mock()
+        response.json.return_value = { "result": "ok"}
+        mock_requests.get.return_value = response
+        details = get_container_details("https://myacct.dfs.core.windows.net/my-container")
+        self.assertEqual(details, {"result": "ok"})
+        mock_requests.get.assert_called_with('myurl/api/FileSystems/myacct/my-container',
+                                             headers={'Saas-FileSystems-Api-Key': 'mykey'},
+                                             timeout=1)

@@ -14,6 +14,8 @@ from switchboard.azure_util import AzureProjectSummary
 from gcb_web_auth.models import GroupManagerConnection
 from switchboard import userservice
 from django.core.signing import Signer
+from django.contrib.auth.models import Group
+import json
 
 
 class DDSUsersViewSetTestCase(AuthenticatedResourceTestCase):
@@ -1623,26 +1625,43 @@ class AzDeliveryViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTest
         self.assertIn('This field is required', str(response.data["from_netid"]))
         self.assertIn('This field is required', str(response.data["to_netid"]))
 
-    @patch('d4s2_api_v2.api.project_exists')
-    def test_create(self, mock_project_exists):
-        mock_project_exists.return_value = True
+    @patch('d4s2_api_v2.api.get_container_details')
+    def test_create(self, mock_get_container_details):
+        mock_get_container_details.return_value = {"owner": self.user.username}
         url = reverse('v2-azdeliveries-list')
         response = self.client.post(url, {
             'source_project': {
                 'path': 'api_user/mouse',
                 'container_url': 'http://127.0.0.1'
             },
-            'from_netid': 'user2',
-            'to_netid': self.user.username,
+            'from_netid': self.user.username,
+            'to_netid': 'user2',
             'share_user_ids': ['user3', 'user4']
         }, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['state'], State.NEW)
-        mock_project_exists.assert_called_with('http://127.0.0.1', 'api_user/mouse')
 
-    @patch('d4s2_api_v2.api.project_exists')
-    def test_create_project_not_found(self, mock_project_exists):
-        mock_project_exists.return_value = False
+    @patch('d4s2_api_v2.api.get_container_details')
+    def test_create_project_not_found(self, mock_get_container_details):
+        mock_get_container_details.return_value = None
+        url = reverse('v2-azdeliveries-list')
+        container_url = 'http://127.0.0.1'
+        response = self.client.post(url, {
+            'source_project': {
+                'path': 'api_user/mouse',
+                'container_url': container_url
+            },
+            'from_netid': self.user.username,
+            'to_netid': 'user2',
+            'share_user_ids': ['user3', 'user4']
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(str(response.data[0]),
+                         f'Data Delivery Error: Unable to find project {container_url} in Storage-as-a-Service.')
+
+    @patch('d4s2_api_v2.api.get_container_details')
+    def test_create_wrong_user(self, mock_get_container_details):
+        mock_get_container_details.return_value = {"owner": "userZ"}
         url = reverse('v2-azdeliveries-list')
         response = self.client.post(url, {
             'source_project': {
@@ -1654,27 +1673,27 @@ class AzDeliveryViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTest
             'share_user_ids': ['user3', 'user4']
         }, format='json')
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(str(response.data[0]), 'Data Delivery Error: Unable to find project api_user/mouse.')
+        self.assertEqual(str(response.data[0]), 'Data Delivery Error: This project is owned by userZ not you(user).')
 
-    @patch('d4s2_api_v2.api.project_exists')
-    def test_create_project_delivery_already_exists(self, mock_project_exists):
+    @patch('d4s2_api_v2.api.get_container_details')
+    def test_create_project_delivery_already_exists(self, mock_get_container_details):
+        mock_get_container_details.return_value = {"owner": self.user.username}
         AzDelivery.objects.create(
             source_project=AzContainerPath.objects.create(
                 path="api_user/mouse",
                 container_url="http://127.0.0.1"),
-            from_netid='user2',
-            to_netid=self.user.username,
+            from_netid=self.user.username,
+            to_netid='user2',
             share_user_ids=['user3', 'user4']
         )
-        mock_project_exists.return_value = True
         url = reverse('v2-azdeliveries-list')
         response = self.client.post(url, {
             'source_project': {
                 'path': 'api_user/mouse',
                 'container_url': 'http://127.0.0.1'
             },
-            'from_netid': 'user2',
-            'to_netid': self.user.username,
+            'from_netid': self.user.username,
+            'to_netid': 'user2',
             'share_user_ids': ['user3', 'user4']
         }, format='json')
         self.assertEqual(response.status_code, 400)
@@ -1832,3 +1851,98 @@ class AzDeliveryPreviewViewTestCase(APITestCase):
 
         # When previewing an email, send() should not be called
         instance.send.assert_not_called()
+
+
+class AzTransferListViewTestCase(APITestCase):
+    def setUp(self):
+        self.delivery = AzDelivery.objects.create(
+            source_project=AzContainerPath.objects.create(
+                path="user1/rat",
+                container_url="http://127.0.0.1"),
+            destination_project=AzContainerPath.objects.create(
+                path="user2/rat",
+                container_url="http://127.0.0.2"),
+            from_netid="user1",
+            to_netid='user2',
+            share_user_ids=['user3', 'user4']
+        )
+
+    def add_user_to_transfer_poster_group(self):
+        self.user = User.objects.create_user(username='user1@sample.com', password='12345')
+        login = self.client.login(username='user1@sample.com', password='12345')
+        group = Group.objects.create(name='transfer_poster')
+        group.user_set.add(self.user)
+
+    def test_post_not_in_group(self):
+        url = reverse('v2-az-transfers')
+        data = {
+            'transfer_uuid': str(uuid.uuid4()),
+            'delivery_id': self.delivery.id,
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, 401)
+
+    def test_post_delivery_not_found(self):
+        self.add_user_to_transfer_poster_group()
+        url = reverse('v2-az-transfers')
+        my_uuid = str(uuid.uuid4())
+        data = {
+            'transfer_uuid': my_uuid,
+            'delivery_id': self.delivery.id,
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data,
+                         f'Unable to find delivery for delivery_id:{self.delivery.id} and transfer_uuid:{my_uuid}')
+
+    def test_post_delivery_wrong_state(self):
+        self.add_user_to_transfer_poster_group()
+        my_uuid = str(uuid.uuid4())
+        self.delivery.transfer_uuid = my_uuid
+        self.delivery.save()
+        url = reverse('v2-az-transfers')
+        data = {
+            'transfer_uuid': my_uuid,
+            'delivery_id': self.delivery.id,
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, f'Delivery {self.delivery.id} not in TRANSFERRING state.')
+
+    def test_post_error_message(self):
+        self.add_user_to_transfer_poster_group()
+        my_uuid = str(uuid.uuid4())
+        self.delivery.transfer_uuid = my_uuid
+        self.delivery.save()
+        url = reverse('v2-az-transfers')
+        data = {
+            'transfer_uuid': my_uuid,
+            'delivery_id': self.delivery.id,
+            'error_message': 'pipes clogged'
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.delivery.refresh_from_db()
+        self.assertEqual(self.delivery.state, State.FAILED)
+
+    @patch('switchboard.azure_util.AzMessageFactory')
+    @patch('switchboard.azure_util.settings')
+    def test_post_delivery(self, mock_settings, mock_az_message_factory):
+        self.add_user_to_transfer_poster_group()
+        mock_az_message_factory.return_value.make_processed_message.return_value = Mock(email_text='sometext')
+        my_uuid = str(uuid.uuid4())
+        self.delivery.transfer_uuid = my_uuid
+        self.delivery.state = State.TRANSFERRING
+        self.delivery.save()
+        url = reverse('v2-az-transfers')
+        data = {
+            'transfer_uuid': my_uuid,
+            'delivery_id': self.delivery.id,
+            'manifest': 'something'
+        }
+        mock_settings.USERNAME_EMAIL_HOST = 'sample.com'
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.delivery.refresh_from_db()
+        self.assertEqual(self.delivery.state, State.ACCEPTED)
+        self.assertIn('"files": "something"', self.delivery.manifest.content)

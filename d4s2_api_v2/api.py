@@ -13,7 +13,7 @@ from d4s2_api_v2.serializers import DDSUserSerializer, DDSProjectSerializer, DDS
     DDSProjectPermissionSerializer, DDSDeliveryPreviewSerializer, DDSAuthProviderSerializer, DDSAffiliateSerializer, \
     AddUserSerializer, DDSProjectSummarySerializer, EmailTemplateSetSerializer, EmailTemplateSerializer, \
     DukeUserSerializer, AzDeliverySerializer, AzDeliveryUpdateSerializer, AzStorageConfigSerializer, AzDeliverySummarySerializer, \
-    AzDeliveryPreviewSerializer, StorageTypes
+    AzDeliveryPreviewSerializer, StorageTypes, AzTransferSerializer
 from d4s2_api.models import DDSDelivery, S3Endpoint, S3User, S3UserTypes, S3Bucket, S3Delivery, EmailTemplateSet, \
     EmailTemplate
 from d4s2_api_v1.api import AlreadyNotifiedException, get_force_param, build_accept_url, DeliveryViewSet, \
@@ -22,9 +22,11 @@ from switchboard.s3_util import S3Exception, S3NoSuchBucket, SendDeliveryOperati
 from d4s2_api_v2.models import DDSDeliveryPreview, AzDeliveryPreview
 from d4s2_api.models import AzDelivery, State, AzStorageConfig
 from switchboard.userservice import get_users_for_query, get_user_for_netid, get_netid_from_user
-from switchboard.azure_util import project_exists, AzMessageFactory, create_project_summary
+from switchboard.azure_util import AzMessageFactory, create_project_summary, get_container_details
 from django.core.signing import Signer, BadSignature
 from rest_framework.authtoken.models import Token
+from rest_framework.views import APIView
+from switchboard.azure_util import AzureTransfer
 
 
 class DataServiceUnavailable(APIException):
@@ -419,6 +421,7 @@ class DukeUserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = DukeUserSerializer(person)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
                         mixins.RetrieveModelMixin, mixins.ListModelMixin, mixins.UpdateModelMixin,
                         viewsets.GenericViewSet):
@@ -451,6 +454,14 @@ class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
 
     def before_saving_new_model(self, serializer):
         validated_data = serializer.validated_data
+        source_container_url = validated_data["source_project"]["container_url"]
+        container_details = get_container_details(container_url=source_container_url)
+        if not container_details:
+            raise ValidationError(f"Data Delivery Error: Unable to find project {source_container_url} in Storage-as-a-Service.")
+        container_owner = container_details['owner']
+        if container_owner != self.request.user.username:
+            raise ValidationError(f"Data Delivery Error: This project is owned by {container_owner} not you({self.request.user.username}).")
+
         existing_delivery = AzDelivery.get_incomplete_delivery(
             from_netid=validated_data["from_netid"],
             source_container_url=validated_data["source_project"]["container_url"],
@@ -458,9 +469,6 @@ class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
         )
         if existing_delivery:
             raise ValidationError("Data Delivery Error: An active delivery for this project already exists.")
-        source_project = validated_data["source_project"]
-        if not project_exists(source_project["container_url"], source_project["path"]):
-            raise ValidationError("Data Delivery Error: Unable to find project {}.".format(source_project["path"]))
 
     @action(detail=True, methods=['POST'])
     def send(self, request, pk=None):
@@ -537,3 +545,41 @@ class AzDeliveryPreviewView(ModelWithEmailTemplateSetMixin, generics.CreateAPIVi
         serializer = self.get_serializer(instance=delivery_preview)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class AzTransferListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    """
+    Record a transfer result.
+    """
+    def post(self, request, format=None):
+        # User must be in the 'transfer_poster' group to post transfers
+        if request.user.groups.filter(name="transfer_poster"):
+            serializer = AzTransferSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            validated_data = serializer.validated_data
+            delivery_id = validated_data["delivery_id"]
+            transfer_uuid = validated_data["transfer_uuid"]
+            error_message = validated_data.get("error_message")
+            file_manifest = validated_data.get("manifest")
+            try:
+                # Make sure the transfer_uuid matches our delivery
+                delivery = AzDelivery.objects.get(pk=delivery_id, transfer_uuid=transfer_uuid)
+                transfer = AzureTransfer(delivery.id)
+                if error_message:
+                    transfer.set_failed_and_record_message(error_message)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                elif delivery.state == State.TRANSFERRING:
+                    transfer.record_object_manifest(file_manifest)
+                    transfer.mark_complete()
+                    transfer.email_sender()
+                    transfer.email_recipient()
+                else:
+                    return Response(f"Delivery {delivery_id} not in TRANSFERRING state.",
+                                    status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except AzDelivery.DoesNotExist:
+                msg = f"Unable to find delivery for delivery_id:{delivery_id} and transfer_uuid:{transfer_uuid}"
+                return Response(msg, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)

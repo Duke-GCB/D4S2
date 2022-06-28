@@ -522,13 +522,21 @@ class AzDelivery(DeliveryBase):
     share_user_ids = ArrayField(models.CharField(max_length=255), blank=True, default=[])
     transfer_state = models.IntegerField(choices=AzTransferStates.CHOICES, default=AzTransferStates.NEW,
                                          help_text='State within transfer')
-
+    fund_code = models.CharField(max_length=255, help_text='Fund code used to bill storage costs.', blank=True)
+    transfer_uuid = models.UUIDField(null=True, help_text='UUID field used with transfer webhook.',)
 
     def get_simple_project_name(self):
         return os.path.basename(self.source_project.path)
 
     def make_project_url(self):
-        return self.get_current_project().make_project_url()
+        project = self.get_current_project()
+        if project:
+            return project.make_project_url()
+        return ""
+
+    def update_destination(self, container_url):
+        self.destination_project = AzContainerPath.objects.create(path=self.source_project.path, container_url=container_url)
+        self.save()
 
     def get_current_project(self):
         if self.state == State.ACCEPTED:
