@@ -38,8 +38,8 @@ Sequencing Core **Customer**(PI) that needs to take ownership of the data. The P
 The **Logic App** runs inside the Azure Cloud. It listens for a POST message and passes the payload into the **Data Factory**. [Logic App documentation](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-overview).
 
 ## Data Factory
-The **Data Factory** runs inside the Azure Cloud. It uses a `Copy data` activity to copy files from the **Sequencing Core** container to the **Customer**'s container. It calls a **Function App** to retrieve metadata including a checksum about the files being delivered.
-[Data Factory documentation](https://docs.microsoft.com/en-us/azure/data-factory/introduction). It calls a Web activity to send the file metadata to **Duke Data Delivery**.
+The **Data Factory** runs inside the Azure Cloud. It uses a `Copy data` activity to copy files from the **Sequencing Core** container to the **Customer**'s container. It calls a **Function App** to retrieve metadata including a checksum about the files being delivered. It calls a Web activity to send the file metadata to **Duke Data Delivery**.
+[Data Factory documentation](https://docs.microsoft.com/en-us/azure/data-factory/introduction). 
 
 ## Function App    
 The **Function App** runs inside the Azure Cloud. It uses Azure python libraries to list files in the container and lookup the MD5 checksum values.
