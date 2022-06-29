@@ -24,7 +24,7 @@ sequenceDiagram
 ## Sequencing Core
 Sequencing Core staff use the command line and some python scripts on an OIT Linux VM at Duke.
 These scripts use azcopy to upload data files to Azure Blob Storage.
-Another python script POST to Duke Data Delivery to begin the delivery to the customer.
+Another python script is use to send a POST to Duke Data Delivery to begin the delivery to the customer.
 
 ## Duke Data Delivery (aka D4S2)
 Website that allows users to deliver data to their customers. This website runs on a DHTS Linux VM at Duke.
