@@ -22,7 +22,7 @@ sequenceDiagram
 ```
 
 ## Sequencing Core
-Sequencing Core staff use the command line and some python scripts on an OIT Linux VM at Duke.
+Sequencing Core staff use the command line scripts on an OIT Linux VM at Duke to upload and deliver data.
 These scripts use azcopy to upload data files to Azure Blob Storage.
 Another python script is use to send a POST to Duke Data Delivery to begin the delivery to the customer.
 
