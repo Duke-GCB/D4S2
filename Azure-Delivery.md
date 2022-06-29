@@ -24,7 +24,7 @@ sequenceDiagram
 ## Sequencing Core
 Sequencing Core staff use command line scripts on an OIT Linux VM at Duke to upload and deliver data.
 These scripts use azcopy to upload data files to Azure Blob Storage.
-Another python script is use to send a POST to Duke Data Delivery to begin the delivery to the customer.
+Another python script is used to send a POST to Duke Data Delivery to begin delivery to the **Customer**.
 
 ## Duke Data Delivery (aka D4S2)
 Website that allows users to deliver data to their customers. This website runs on a DHTS Linux VM at Duke.
@@ -33,7 +33,6 @@ The website has no permissions in the Azure Blob Storage.
 
 ## Customer
 Sequencing Core **Customer**(PI) that needs to take ownership of the data. The PI's lab members will need to download the data.
-
 
 ## Logic App
 The **Logic App** runs inside the Azure Cloud. It listens for a POST message and passes the payload into the **Data Factory**. [Logic App documentation](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-overview).
