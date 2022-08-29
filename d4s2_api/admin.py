@@ -39,7 +39,7 @@ admin.site.register(S3ObjectManifest)
 
 def restart_transfer(modeladmin, request, queryset):
     for delivery in queryset:
-        TransferFunctions.restart_transfer(delivery.id)
+        TransferFunctions.transfer_delivery(delivery.id)
 
 
 class AzDeliveryAdmin(SimpleHistoryAdmin):

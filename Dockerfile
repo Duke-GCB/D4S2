@@ -1,4 +1,4 @@
-FROM python:3.6.8
+FROM python:3.8
 MAINTAINER dan.leehr@duke.edu
 
 # Set timezone

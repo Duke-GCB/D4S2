@@ -297,7 +297,7 @@ class AzDeliverySerializer(serializers.ModelSerializer):
         resource_name = 'az-deliveries'
         fields = ('id', 'source_project', 'from_netid', 'destination_project', 'to_netid', 'state', 'user_message',
                   'share_user_ids', 'decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set',
-                  'complete', 'status', 'outgoing', 'last_updated_on', 'url')
+                  'complete', 'status', 'outgoing', 'last_updated_on', 'url', 'fund_code')
         read_only_fields = ('decline_reason', 'performed_by', 'delivery_email_text', 'email_template_set', 'status',
                             'outgoing', 'last_updated_on', 'url')
 
@@ -351,3 +351,10 @@ class AzDeliveryPreviewSerializer(serializers.Serializer):
 
     class Meta:
         resource_name = 'az-delivery-preview'
+
+
+class AzTransferSerializer(serializers.Serializer):
+    transfer_uuid = serializers.CharField(required=True)
+    delivery_id = serializers.CharField(required=True)
+    error_message = serializers.CharField(required=False)
+    manifest = serializers.JSONField(required=False)
