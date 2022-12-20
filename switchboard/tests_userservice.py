@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.contrib.auth.models import User as django_user
 from switchboard.userservice import create_email_from_netid, get_netid_from_user, get_user_for_netid, \
     get_users_for_query, _get_json_response
 from rest_framework.exceptions import NotFound
@@ -17,6 +18,20 @@ class UserServiceFunctions(TestCase):
     def test_get_netid_from_user(self):
         user = Mock(username="joe@sample.com")
         self.assertEqual(get_netid_from_user(user), "joe")
+
+    @patch("switchboard.userservice._get_json_response")
+    def test_get_user_for_netid_from_db(self, mock_get_json_response):
+        user = django_user.objects.create_user(username='joe@sample.com', password='secret', first_name="Joe",
+                                               last_name="Smith", email="joe.smith@sample.com")
+        mock_get_json_response.return_value = []
+        with self.settings(DIRECTORY_SERVICE_URL="https://sample.com", USERNAME_EMAIL_HOST="sample.com"):
+            user = get_user_for_netid("joe")
+        self.assertEqual(user.id, "joe")
+        self.assertEqual(user.username, "joe")
+        self.assertEqual(user.full_name, "Joe Smith")
+        self.assertEqual(user.first_name, "Joe")
+        self.assertEqual(user.last_name, "Smith")
+        self.assertEqual(user.email, "joe.smith@sample.com")
 
     @patch("switchboard.userservice._get_json_response")
     def test_get_user_for_netid_not_found(self, mock_get_json_response):

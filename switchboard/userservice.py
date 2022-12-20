@@ -3,6 +3,7 @@ from rest_framework.exceptions import APIException, NotFound
 import requests
 import re
 from d4s2_api.utils import get_netid_from_user
+from django.contrib.auth.models import User as DBUser
 
 
 class UserServiceException(APIException):
@@ -23,6 +24,16 @@ class User(object):
         self.full_name = display_name
         self.first_name = given_name
         self.last_name = sn
+        self.email = email
+
+
+class RawUser(object):
+    def __init__(self, netid, display_name, given_name, last_name, email):
+        self.id = netid
+        self.username = netid
+        self.full_name = display_name
+        self.first_name = given_name
+        self.last_name = last_name
         self.email = email
 
 
@@ -63,6 +74,10 @@ def get_users_for_query(q):
 
 
 def get_user_for_netid(netid):
+    # Service accounts do not show up in ldap so use our local user database
+    user_from_db = lookup_db_user_from_netid(netid)
+    if user_from_db:
+        return user_from_db
     url = _make_directory_service_url("/ldap/people/netid/{}".format(netid))
     resp = _get_json_response(url)
     if len(resp) != 1:
@@ -76,3 +91,18 @@ def create_email_from_netid(netid):
     if settings.USERNAME_EMAIL_HOST:
         return '{}@{}'.format(netid, settings.USERNAME_EMAIL_HOST)
     return None
+
+
+def lookup_db_user_from_netid(netid):
+    username = '{}@{}'.format(netid, settings.USERNAME_EMAIL_HOST)
+    try:
+        db_user =  DBUser.objects.get(username=username)
+        return RawUser(
+            netid=netid,
+            display_name=db_user.first_name + " " + db_user.last_name,
+            given_name=db_user.first_name,
+            last_name=db_user.last_name,
+            email=db_user.email
+        )
+    except DBUser.DoesNotExist:
+        return None

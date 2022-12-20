@@ -461,7 +461,8 @@ class AzDeliveryViewSet(ModelWithEmailTemplateSetMixin, mixins.CreateModelMixin,
         container_owner = container_details['owner']
         if container_owner != self.request.user.username:
             raise ValidationError(f"Data Delivery Error: This project is owned by {container_owner} not you({self.request.user.username}).")
-
+        # from_netid is always the user who created the delivery
+        validated_data["from_netid"] = get_netid_from_user(self.request.user)
         existing_delivery = AzDelivery.get_incomplete_delivery(
             from_netid=validated_data["from_netid"],
             source_container_url=validated_data["source_project"]["container_url"],

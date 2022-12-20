@@ -1640,6 +1640,7 @@ class AzDeliveryViewSetTestCase(EmailTemplateSetSetup, AuthenticatedResourceTest
         }, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['state'], State.NEW)
+        self.assertEqual(response.data['from_netid'], self.user.username)
 
     @patch('d4s2_api_v2.api.get_container_details')
     def test_create_project_not_found(self, mock_get_container_details):
