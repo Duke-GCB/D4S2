@@ -9,7 +9,7 @@ from switchboard.azure_util import get_details_from_container_url, make_acl, AzD
 from d4s2_api.utils import MessageDirection
 from d4s2_api.models import AzTransferStates, AzContainerPath
 from django.conf import settings
-
+import requests.exceptions
 
 class TestFuncs(TestCase):
     def setUp(self):
@@ -338,6 +338,20 @@ class TestGlobalFunctions(TestCase):
         response = Mock()
         response.json.return_value = { "result": "ok"}
         mock_requests.get.return_value = response
+        details = get_container_details("https://myacct.dfs.core.windows.net/my-container")
+        self.assertEqual(details, {"result": "ok"})
+        mock_requests.get.assert_called_with('myurl/api/FileSystems/myacct/my-container',
+                                             headers={'Saas-FileSystems-Api-Key': 'mykey'},
+                                             timeout=1)
+
+    @patch('switchboard.azure_util.requests')
+    @patch('switchboard.azure_util.settings')
+    def test_get_container_details_retry_once(self, mock_settings, mock_requests):
+        mock_settings.AZURE_SAAS_KEY = 'mykey'
+        mock_settings.AZURE_SAAS_URL = 'myurl'
+        response = Mock()
+        response.json.return_value = { "result": "ok"}
+        mock_requests.get.side_effect = [requests.exceptions.ReadTimeout(), response]
         details = get_container_details("https://myacct.dfs.core.windows.net/my-container")
         self.assertEqual(details, {"result": "ok"})
         mock_requests.get.assert_called_with('myurl/api/FileSystems/myacct/my-container',

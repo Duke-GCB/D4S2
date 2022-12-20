@@ -2,8 +2,9 @@ import uuid
 import json
 import traceback
 import requests
+import time
 from urllib.parse import urlparse
-import requests.exceptions
+from requests.exceptions import ReadTimeout, HTTPError
 from d4s2_api.utils import MessageFactory, MessageDirection
 import urllib.parse
 from switchboard.userservice import get_user_for_netid
@@ -291,6 +292,15 @@ def decompose_dfs_url(url):
 
 
 def get_container_details(container_url):
+    result = get_container_details_internal(container_url=container_url)
+    # retry to better handle flaky response from Storage-as-a-Service
+    if not result:
+        time.sleep(0.5)
+        result = get_container_details_internal(container_url=container_url)
+    return result
+
+
+def get_container_details_internal(container_url):
     try:
         headers = { "Saas-FileSystems-Api-Key": settings.AZURE_SAAS_KEY }
         account,container = decompose_dfs_url(container_url)
@@ -298,9 +308,9 @@ def get_container_details(container_url):
         response = requests.get(url, headers=headers, timeout=1)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.ReadTimeout as ex:
+    except ReadTimeout as ex:
         return None
-    except requests.exceptions.HTTPError as ex:
+    except HTTPError as ex:
         return None
 
 
