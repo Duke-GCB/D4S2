@@ -305,7 +305,7 @@ def get_container_details_internal(container_url):
         headers = { "Saas-FileSystems-Api-Key": settings.AZURE_SAAS_KEY }
         account,container = decompose_dfs_url(container_url)
         url = f"{settings.AZURE_SAAS_URL}/api/FileSystems/{account}/{container}"
-        response = requests.get(url, headers=headers, timeout=1)
+        response = requests.get(url, headers=headers, timeout=5)
         response.raise_for_status()
         return response.json()
     except ReadTimeout as ex:

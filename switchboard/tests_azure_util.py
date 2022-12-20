@@ -342,7 +342,7 @@ class TestGlobalFunctions(TestCase):
         self.assertEqual(details, {"result": "ok"})
         mock_requests.get.assert_called_with('myurl/api/FileSystems/myacct/my-container',
                                              headers={'Saas-FileSystems-Api-Key': 'mykey'},
-                                             timeout=1)
+                                             timeout=5)
 
     @patch('switchboard.azure_util.requests')
     @patch('switchboard.azure_util.settings')
@@ -356,4 +356,4 @@ class TestGlobalFunctions(TestCase):
         self.assertEqual(details, {"result": "ok"})
         mock_requests.get.assert_called_with('myurl/api/FileSystems/myacct/my-container',
                                              headers={'Saas-FileSystems-Api-Key': 'mykey'},
-                                             timeout=1)
+                                             timeout=5)
